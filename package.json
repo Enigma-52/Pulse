@@ -6,9 +6,5 @@
     "sdk/*",
     "demo/*",
     "ui/*"
-  ],
-  "scripts": {
-    "lint": "echo \"no root lint configured yet\"",
-    "test": "echo \"no root tests configured yet\""
-  }
+  ]
 }
