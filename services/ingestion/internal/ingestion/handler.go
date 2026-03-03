@@ -3,8 +3,11 @@ package ingestion
 import (
 	"encoding/json"
 	"io"
+	"context"
 	"log"
 	"net/http"
+
+	"github.com/segmentio/kafka-go"
 )
 
 type Envelope struct {
@@ -14,7 +17,15 @@ type Envelope struct {
 	Logs        json.RawMessage `json:"logs"`
 }
 
-func HandleIngest(w http.ResponseWriter, r *http.Request) {
+type Handler struct {
+	writer *kafka.Writer
+}
+
+func NewHandler(writer *kafka.Writer) *Handler {
+	return &Handler{writer: writer}
+}
+
+func (h *Handler) HandleIngest(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
 	body, err := io.ReadAll(r.Body)
@@ -35,6 +46,15 @@ func HandleIngest(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Printf("received telemetry from service=%s env=%s", env.ServiceName, env.Environment)
+
+	if h.writer != nil {
+		msg := kafka.Message{
+			Value: body,
+		}
+		if err := h.writer.WriteMessages(context.Background(), msg); err != nil {
+			log.Printf("failed to write to Kafka: %v", err)
+		}
+	}
 
 	w.WriteHeader(http.StatusAccepted)
 }
