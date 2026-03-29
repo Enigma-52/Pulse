@@ -6,6 +6,12 @@ services:
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "2181"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
     networks:
       - pulse-net
 
@@ -13,7 +19,7 @@ services:
     image: confluentinc/cp-kafka:7.5.0
     depends_on:
       zookeeper:
-        condition: service_started
+        condition: service_healthy
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
@@ -35,14 +41,20 @@ services:
 
   clickhouse:
     image: clickhouse/clickhouse-server:24.3
+    environment:
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_PASSWORD: pulse
+    ports:
+      - "8123:8123"
+      - "9000:9000"
     volumes:
       - clickhouse_data:/var/lib/clickhouse
     healthcheck:
       test: ["CMD", "curl", "-sf", "http://localhost:8123/ping"]
       interval: 10s
       timeout: 5s
-      retries: 10
-      start_period: 20s
+      retries: 20
+      start_period: 60s
     networks:
       - pulse-net
 
@@ -71,7 +83,7 @@ services:
       PULSE_CLICKHOUSE_ADDR: clickhouse:9000
       PULSE_CLICKHOUSE_DB: default
       PULSE_CLICKHOUSE_USER: default
-      PULSE_CLICKHOUSE_PASSWORD: ""
+      PULSE_CLICKHOUSE_PASSWORD: pulse
     depends_on:
       kafka:
         condition: service_healthy
@@ -90,10 +102,16 @@ services:
       PULSE_CLICKHOUSE_ADDR: clickhouse:9000
       PULSE_CLICKHOUSE_DB: default
       PULSE_CLICKHOUSE_USER: default
-      PULSE_CLICKHOUSE_PASSWORD: ""
+      PULSE_CLICKHOUSE_PASSWORD: pulse
     depends_on:
       clickhouse:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8082/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
     networks:
       - pulse-net
 
@@ -106,7 +124,8 @@ services:
     volumes:
       - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
-      - query-api
+      query-api:
+        condition: service_healthy
     networks:
       - pulse-net
 
