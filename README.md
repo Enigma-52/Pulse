@@ -1,4 +1,4 @@
-## Pulse
+# Pulse
 
 
 ██████╗ ██╗   ██╗██╗     ███████╗███████╗
@@ -8,43 +8,68 @@
 ██║     ╚██████╔╝███████╗███████║███████╗
 ╚═╝      ╚═════╝ ╚══════╝╚══════╝╚══════╝
 
-Pulse is a lightweight, developer-first observability platform that gives early-stage teams production-grade traces, metrics, and logs without the usual complexity or infra overhead.
 
-## Frontend apps
+Pulse is an open-source observability platform for traces, metrics, and logs.
+It is built to be easy to run and quick to understand.
 
-Pulse now has two separate frontend apps:
+## What Pulse gives you
 
-1. `frontend/` — public site for landing pages and documentation entry points.
-2. `future-web/` — product dashboard UI used after Pulse is deployed/initialized.
+- A single dashboard to inspect service health and request flow
+- Trace, log, and metric visibility in one place
+- A deploy flow that brings up the full stack in one command
+- A clean local setup for product and backend development
 
-### Run public frontend
+## What runs in Pulse
 
-```bash
-cd frontend
-npm install
-npm run dev
-```
+Pulse includes both backend and frontend components.
 
-### Run product dashboard frontend
+### Backend platform
 
-```bash
-cd future-web
-npm install
-npm run dev
-```
+- Ingestion service (accepts telemetry from apps/SDKs)
+- Worker service (processes telemetry data)
+- Query API service (serves data to the UI)
+- Kafka + Zookeeper (stream pipeline)
+- ClickHouse (observability data storage)
 
-## One-command deploy
+### Frontend apps
+
+1. `frontend/`  
+Public-facing site (landing/docs entry points)
+
+2. `future-web/`  
+Product dashboard used by Pulse users after deployment
+
+## Quick start (one-command deploy)
 
 ```bash
 cd deploy
 ./install.sh
 ```
 
-This deploys the Pulse runtime stack and serves the product dashboard UI at `http://localhost:3301`.
+After install:
 
-## Docs
+- Product UI: `http://localhost:3301`
+- Ingestion API: `http://localhost:8081/v1/ingest`
+- Query API: `http://localhost:8082`
 
+## Run frontend apps locally
+
+```bash
+# Public app
+cd frontend
+npm install
+npm run dev
+
+# Product dashboard app
+cd ../future-web
+npm install
+npm run dev
+```
+
+## Documentation
+
+- Platform overview: `docs/overview.md`
+- Features: `docs/features.md`
 - Architecture: `docs/architecture.md`
-- Feature breakdown: `docs/features.md`
 - Local development: `docs/local-dev.md`
-- Install inventory (what gets installed): `docs/install-includes.md`
+- Install inventory: `docs/install-includes.md`
