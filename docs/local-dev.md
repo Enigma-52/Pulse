@@ -40,16 +40,16 @@ go run ./cmd/ingestion
 
 The ingestion server listens on `http://localhost:8081/v1/ingest` and accepts batched telemetry from SDKs.
 
-### 3. Run the worker stub (Go, optional for Phase 1)
+### 3. Run the worker (Go)
 
 ```bash
 cd services/worker
 go run ./cmd/worker
 ```
 
-For now this is a stub that logs startup; later it will consume Kafka topics and write to ClickHouse.
+The worker consumes Kafka topics and writes to ClickHouse.
 
-### 4. Run the query API stub (Go)
+### 4. Run the query API (Go)
 
 ```bash
 cd services/query-api
@@ -59,15 +59,35 @@ go run ./cmd/query-api
 The query API listens on `http://localhost:8082` and exposes:
 
 - `GET /healthz` – health check.
-- `GET /traces` – mock trace list, to be wired to ClickHouse in a later phase.
+- Query endpoints for traces, logs, and metrics.
 
-### 5. Run the demo Node backend
+### 5. Run the product dashboard frontend (`future-web`)
+
+```bash
+cd future-web
+npm install
+npm run dev
+```
+
+The dashboard app runs on `http://localhost:8080` by default.
+
+### 6. Run the public frontend (`frontend`)
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+The public app runs on `http://localhost:5174`.
+
+### 7. Run the demo Node backend (optional)
 
 From the repo root:
 
 ```bash
-npm install
 cd demo/backend-node
+npm install
 npm run dev
 ```
 
@@ -78,19 +98,6 @@ Relevant environment variables:
 - `PULSE_INGEST_URL` – defaults to `http://localhost:8081/v1/ingest`.
 - `PULSE_API_KEY` – defaults to `dev-api-key`.
 
-### 6. Run the React UI shell
+With these pieces running, you have a full local loop:
 
-From the repo root:
-
-```bash
-cd ui/web
-npm install
-npm run dev
-```
-
-The UI shell runs on `http://localhost:5173` and will eventually use the Query API to show trace lists and details.
-
-With these pieces running, you have a full local Phase 1 loop:
-
-SDK (`@pulse/node`) → demo backend → ingestion (Go) → Kafka/ClickHouse (infra) → query API stub (Go) → React UI shell.
-
+SDK (`@pulse/node`) → demo backend → ingestion (Go) → Kafka/ClickHouse → query API (Go) → dashboard UI (`future-web`).

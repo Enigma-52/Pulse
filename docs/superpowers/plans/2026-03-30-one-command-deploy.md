@@ -17,7 +17,7 @@
 | `services/ingestion/Dockerfile` | Create | Multi-stage Go build → alpine runner for ingestion service |
 | `services/worker/Dockerfile` | Create | Multi-stage Go build → alpine runner for worker service |
 | `services/query-api/Dockerfile` | Create | Multi-stage Go build → alpine runner for query-api service |
-| `ui/web/Dockerfile` | Create | Multi-stage Node build (vite) → nginx:alpine static file server |
+| `future-web/Dockerfile` | Create | Multi-stage Node build (vite) → nginx:alpine static file server |
 | `deploy/nginx/default.conf` | Create | nginx: serve React SPA, proxy `/api/*` → `query-api:8082` |
 | `deploy/docker-compose.yml` | Create | Full stack compose: infra + all services + UI + health checks |
 | `deploy/install.sh` | Create | Prereq checks, `docker compose up -d --build`, readiness poll, success output |
@@ -148,7 +148,7 @@ git commit -m "feat: add Dockerfile for query-api service"
 
 **Files:**
 - Create: `deploy/nginx/default.conf`
-- Create: `ui/web/Dockerfile`
+- Create: `future-web/Dockerfile`
 
 - [ ] **Step 1: Create the nginx config**
 
@@ -176,7 +176,7 @@ server {
 - [ ] **Step 2: Create the UI Dockerfile**
 
 ```dockerfile
-# ui/web/Dockerfile
+# future-web/Dockerfile
 FROM node:20-alpine AS builder
 WORKDIR /app
 COPY package.json package-lock.json* ./
@@ -195,14 +195,14 @@ Note: the nginx config is mounted/copied via the compose file (see Task 5).
 - [ ] **Step 3: Verify the UI Dockerfile builds**
 
 ```bash
-docker build -t pulse-ui-test ui/web/
+docker build -t pulse-ui-test future-web/
 ```
 Expected: build completes. The builder stage runs `vite build`, the nginx stage copies `dist/`. No errors.
 
 - [ ] **Step 4: Commit**
 
 ```bash
-git add deploy/nginx/default.conf ui/web/Dockerfile
+git add deploy/nginx/default.conf future-web/Dockerfile
 git commit -m "feat: add nginx config and UI Dockerfile"
 ```
 
@@ -318,7 +318,7 @@ services:
 
   ui:
     build:
-      context: ../ui/web
+      context: ../future-web
       dockerfile: Dockerfile
     ports:
       - "3301:80"
