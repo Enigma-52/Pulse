@@ -45,7 +45,7 @@ Two-stage build:
 
 Each service has its own `go.mod`, so each Dockerfile builds from its own service directory context.
 
-### UI (`ui/web/Dockerfile`)
+### UI (`future-web/Dockerfile`)
 Two-stage build:
 1. **Build stage**: `node:20-alpine` — runs `npm install && npm run build`, outputs `dist/`
 2. **Run stage**: `nginx:alpine` — copies `dist/` and `deploy/nginx/default.conf`
@@ -67,7 +67,7 @@ Two-stage build:
 | `ingestion` | built from `services/ingestion` | `8081` | kafka healthy |
 | `worker` | built from `services/worker` | — | kafka healthy, clickhouse healthy |
 | `query-api` | built from `services/query-api` | `8082` | clickhouse healthy |
-| `ui` | built from `ui/web` | `3301` | query-api started |
+| `ui` | built from `future-web` | `3301` | query-api started |
 
 **Network**: single `pulse-net` bridge network for all services.
 
