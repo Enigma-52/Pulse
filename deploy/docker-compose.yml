@@ -117,7 +117,7 @@ services:
 
   ui:
     build:
-      context: ../ui/web
+      context: ../future-web
       dockerfile: Dockerfile
     ports:
       - "3301:80"
