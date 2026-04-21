@@ -1,10 +1,20 @@
 import { useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, GitBranch, BarChart3, ScrollText, Network } from "lucide-react";
+import { ArrowLeft, GitBranch, BarChart3, ScrollText, Network, type LucideIcon } from "lucide-react";
 import { traces, traceSpans, logs } from "@/lib/mockData";
 import Flamegraph, { spanColorFor } from "@/components/Flamegraph";
 
 type Tab = "flamegraph" | "waterfall" | "services" | "graph" | "logs" | "raw";
+type TabDef = { key: Tab; label: string; icon?: LucideIcon };
+
+const tabs: TabDef[] = [
+  { key: "flamegraph", label: "Flamegraph", icon: BarChart3 },
+  { key: "waterfall", label: "Waterfall", icon: GitBranch },
+  { key: "services", label: "By service", icon: Network },
+  { key: "graph", label: "Service graph", icon: Network },
+  { key: "logs", label: "Logs", icon: ScrollText },
+  { key: "raw", label: "Raw" },
+];
 
 export default function TraceDetail() {
   const { id } = useParams();
@@ -123,24 +133,17 @@ export default function TraceDetail() {
 
       {/* Tabs */}
       <div className="border-b border-border flex gap-1 text-xs font-medium">
-        {([
-          ["flamegraph", "Flamegraph", BarChart3],
-          ["waterfall", "Waterfall", GitBranch],
-          ["services", "By service", Network],
-          ["graph", "Service graph", Network],
-          ["logs", "Logs", ScrollText],
-          ["raw", "Raw", null],
-        ] as [Tab, string, any][]).map(([k, label, Icon]) => (
+        {tabs.map(({ key, label, icon: Icon }) => (
           <button
-            key={k}
-            onClick={() => setTab(k)}
+            key={key}
+            onClick={() => setTab(key)}
             className={`px-3 py-2 -mb-px border-b flex items-center gap-1.5 ${
-              tab === k
+              tab === key
                 ? "border-foreground text-foreground"
                 : "border-transparent text-muted-foreground hover:text-foreground"
             }`}
           >
-            {Icon && <Icon className="w-3.5 h-3.5" strokeWidth={1.75} />}
+            {Icon ? <Icon className="w-3.5 h-3.5" strokeWidth={1.75} /> : null}
             {label}
           </button>
         ))}
