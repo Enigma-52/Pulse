@@ -3,34 +3,29 @@ package main
 import (
 	"log"
 	"net/http"
-	"os"
 	"strings"
 
-	"github.com/gorilla/mux"
+	"github.com/pulse-observability/pulse/services/ingestion/internal/config"
 	"github.com/pulse-observability/pulse/services/ingestion/internal/ingestion"
+	"github.com/pulse-observability/pulse/services/ingestion/internal/server"
 	"github.com/segmentio/kafka-go"
 )
 
 func main() {
-	brokers := os.Getenv("PULSE_KAFKA_BROKERS")
-	if brokers == "" {
-		brokers = "localhost:9092"
-	}
+	cfg := config.Load()
+
 	writer := &kafka.Writer{
-		Addr:     kafka.TCP(strings.Split(brokers, ",")...),
-		Topic:    "traces_raw",
+		Addr:     kafka.TCP(strings.Split(cfg.KafkaBrokers, ",")...),
+		Topic:    cfg.KafkaTopic,
 		Balancer: &kafka.LeastBytes{},
 	}
 	defer writer.Close()
 
-	r := mux.NewRouter()
 	handler := ingestion.NewHandler(writer)
-	r.HandleFunc("/v1/ingest", handler.HandleIngest).Methods(http.MethodPost)
+	srv := server.New(handler)
 
-	addr := ":8081"
-	log.Printf("Pulse ingestion server listening on %s", addr)
-	if err := http.ListenAndServe(addr, r); err != nil {
+	log.Printf("Pulse ingestion server listening on %s", cfg.ServerAddr)
+	if err := http.ListenAndServe(cfg.ServerAddr, srv); err != nil {
 		log.Fatalf("server error: %v", err)
 	}
 }
-
