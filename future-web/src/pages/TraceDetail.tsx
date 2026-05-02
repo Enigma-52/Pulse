@@ -1,7 +1,8 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, GitBranch, BarChart3, ScrollText, Network, type LucideIcon } from "lucide-react";
-import { traces, traceSpans, logs } from "@/lib/mockData";
+import { ArrowLeft, GitBranch, BarChart3, ScrollText, Network, Loader2, type LucideIcon } from "lucide-react";
+import { traces as mockTraces, traceSpans as mockSpans, logs as mockLogs, type Span, type Log } from "@/lib/mockData";
+import { fetchTraceDetail, type TraceDetail as TraceDetailData } from "@/lib/api";
 import Flamegraph, { spanColorFor } from "@/components/Flamegraph";
 
 type Tab = "flamegraph" | "waterfall" | "services" | "graph" | "logs" | "raw";
@@ -18,38 +19,63 @@ const tabs: TabDef[] = [
 
 export default function TraceDetail() {
   const { id } = useParams();
-  const trace = traces.find(t => t.id === id) ?? traces[0];
-  const total = trace.duration;
   const [tab, setTab] = useState<Tab>("flamegraph");
+  const [loading, setLoading] = useState(true);
+  const [traceData, setTraceData] = useState<TraceDetailData | null>(null);
+
+  useEffect(() => {
+    if (!id) return;
+    setLoading(true);
+    fetchTraceDetail(id)
+      .then((data) => {
+        setTraceData(data);
+      })
+      .catch(() => {
+        setTraceData(null);
+      })
+      .finally(() => setLoading(false));
+  }, [id]);
+
+  // Fallback to mock data if API returns nothing
+  const useMock = !loading && !traceData;
+  const mockTrace = mockTraces.find((t) => t.id === id) ?? mockTraces[0];
+
+  const traceId = traceData?.id ?? mockTrace.id;
+  const traceName = traceData?.name ?? mockTrace.name;
+  const traceService = traceData?.service ?? mockTrace.service;
+  const traceStatus = traceData?.status ?? mockTrace.status;
+  const traceTimestamp = traceData?.timestamp ?? mockTrace.timestamp;
+  const total = traceData?.duration ?? mockTrace.duration;
+  const spans: Span[] = traceData?.spans ?? mockSpans;
+  const linkedLogs: Log[] = traceData?.logs ?? mockLogs.filter((l) => l.trace_id === traceId);
 
   // Per-service aggregation
   const serviceStats = useMemo(() => {
     const map = new Map<string, { service: string; spans: number; total: number; self: number; errors: number }>();
-    for (const s of traceSpans) {
+    for (const s of spans) {
       const cur = map.get(s.service) ?? { service: s.service, spans: 0, total: 0, self: 0, errors: 0 };
       cur.spans += 1;
       cur.total += s.duration;
-      // self time = duration minus children durations
-      const children = traceSpans.filter(c => c.parentId === s.id);
+      const children = spans.filter((c) => c.parentId === s.id);
       const childTotal = children.reduce((a, c) => a + c.duration, 0);
       cur.self += Math.max(0, s.duration - childTotal);
       if (s.status === "error") cur.errors += 1;
       map.set(s.service, cur);
     }
     return Array.from(map.values()).sort((a, b) => b.self - a.self);
-  }, []);
+  }, [spans]);
 
-  // Build trace-scoped service graph (which service called which)
+  // Build trace-scoped service graph
   const traceEdges = useMemo(() => {
     const set = new Set<string>();
     const list: { from: string; to: string; calls: number }[] = [];
-    for (const s of traceSpans) {
+    for (const s of spans) {
       if (!s.parentId) continue;
-      const parent = traceSpans.find(p => p.id === s.parentId);
+      const parent = spans.find((p) => p.id === s.parentId);
       if (!parent || parent.service === s.service) continue;
       const key = `${parent.service}->${s.service}`;
       if (set.has(key)) {
-        const e = list.find(x => x.from === parent.service && x.to === s.service)!;
+        const e = list.find((x) => x.from === parent.service && x.to === s.service)!;
         e.calls += 1;
       } else {
         set.add(key);
@@ -57,12 +83,12 @@ export default function TraceDetail() {
       }
     }
     return list;
-  }, []);
+  }, [spans]);
 
   // Layout services horizontally by depth-of-first-occurrence
   const traceServiceNodes = useMemo(() => {
     const depth = new Map<string, number>();
-    for (const s of traceSpans) {
+    for (const s of spans) {
       const d = depth.get(s.service);
       if (d === undefined || s.depth < d) depth.set(s.service, s.depth);
     }
@@ -82,9 +108,16 @@ export default function TraceDetail() {
       });
     });
     return positions;
-  }, []);
+  }, [spans]);
 
-  const linkedLogs = logs.filter(l => l.trace_id === trace.id);
+  if (loading) {
+    return (
+      <div className="p-6 flex items-center justify-center min-h-[400px]">
+        <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+        <span className="ml-2 text-sm text-muted-foreground">Loading trace…</span>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6">
@@ -95,19 +128,24 @@ export default function TraceDetail() {
       <div>
         <div className="flex items-center gap-3">
           <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded border ${
-            trace.status === "ok" ? "border-status-ok/40 text-status-ok" : "border-status-error/40 text-status-error"
+            traceStatus === "ok" ? "border-status-ok/40 text-status-ok" : "border-status-error/40 text-status-error"
           }`}>
-            {trace.status.toUpperCase()}
+            {traceStatus.toUpperCase()}
           </span>
           <div className="data-label">Trace</div>
+          {useMock && (
+            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded border border-yellow-500/40 text-yellow-500">
+              MOCK DATA
+            </span>
+          )}
         </div>
-        <h1 className="text-xl font-mono mt-1">{trace.name}</h1>
+        <h1 className="text-xl font-mono mt-1">{traceName}</h1>
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-xs font-mono text-muted-foreground">
-          <span>id: {trace.id}</span>
+          <span>id: {traceId}</span>
           <span>·</span>
-          <span>{trace.timestamp}</span>
+          <span>{traceTimestamp}</span>
           <span>·</span>
-          <span>{traceSpans.length} spans</span>
+          <span>{spans.length} spans</span>
           <span>·</span>
           <span>{serviceStats.length} services</span>
           <span>·</span>
@@ -119,9 +157,9 @@ export default function TraceDetail() {
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         {[
           ["Duration", `${total}ms`],
-          ["Spans", String(traceSpans.length)],
+          ["Spans", String(spans.length)],
           ["Services", String(serviceStats.length)],
-          ["Errors", String(traceSpans.filter(s => s.status === "error").length)],
+          ["Errors", String(spans.filter((s) => s.status === "error").length)],
           ["Critical path", `${Math.round(total * 0.78)}ms`],
         ].map(([k, v]) => (
           <div key={k} className="panel p-4">
@@ -150,7 +188,7 @@ export default function TraceDetail() {
       </div>
 
       {/* Tab content */}
-      {tab === "flamegraph" && <Flamegraph spans={traceSpans} total={total} />}
+      {tab === "flamegraph" && <Flamegraph spans={spans} total={total} />}
 
       {tab === "waterfall" && (
         <div className="panel">
@@ -161,11 +199,11 @@ export default function TraceDetail() {
           <div className="px-5 py-2 border-b border-border flex text-[10px] font-mono text-muted-foreground">
             <div className="w-[40%]" />
             <div className="flex-1 flex justify-between">
-              {[0, 0.25, 0.5, 0.75, 1].map(p => <span key={p}>{Math.round(total * p)}ms</span>)}
+              {[0, 0.25, 0.5, 0.75, 1].map((p) => <span key={p}>{Math.round(total * p)}ms</span>)}
             </div>
           </div>
           <div className="divide-y divide-border">
-            {traceSpans.map(s => (
+            {spans.map((s) => (
               <div key={s.id} className="grid grid-cols-12 items-center px-5 py-2 hover:bg-secondary/40 text-xs">
                 <div className="col-span-3 flex items-center gap-2 min-w-0" style={{ paddingLeft: s.depth * 14 }}>
                   <span
@@ -201,7 +239,7 @@ export default function TraceDetail() {
               <span className="text-[10px] font-mono text-muted-foreground">self time</span>
             </div>
             <div className="divide-y divide-border">
-              {serviceStats.map(s => {
+              {serviceStats.map((s) => {
                 const pct = (s.self / total) * 100;
                 return (
                   <Link
@@ -241,7 +279,7 @@ export default function TraceDetail() {
                 </tr>
               </thead>
               <tbody>
-                {serviceStats.map(s => (
+                {serviceStats.map((s) => (
                   <tr key={s.service} className="border-b border-border last:border-0 hover:bg-secondary/40">
                     <td className="px-5 py-2 font-mono">
                       <span className="inline-flex items-center gap-2">
@@ -287,7 +325,7 @@ export default function TraceDetail() {
                 );
               })}
               {Object.entries(traceServiceNodes).map(([svc, p]) => {
-                const stats = serviceStats.find(s => s.service === svc);
+                const stats = serviceStats.find((s) => s.service === svc);
                 return (
                   <g key={svc} transform={`translate(${p.x}, ${p.y})`}>
                     <rect x={-72} y={-26} width={144} height={52} rx={4} fill="hsl(var(--card))" stroke="hsl(var(--border))" />
@@ -313,7 +351,7 @@ export default function TraceDetail() {
             <div className="px-5 py-8 text-xs text-muted-foreground">No correlated logs in this window.</div>
           ) : (
             <div className="divide-y divide-border font-mono text-xs">
-              {linkedLogs.map(l => (
+              {linkedLogs.map((l) => (
                 <Link key={l.id} to={`/app/logs/${l.id}`} className="grid grid-cols-12 px-5 py-2 hover:bg-secondary/40">
                   <div className="col-span-2 text-muted-foreground">{l.timestamp}</div>
                   <div className="col-span-1">
@@ -335,7 +373,7 @@ export default function TraceDetail() {
         <div className="panel p-5">
           <div className="data-label mb-3">Raw OTLP</div>
           <pre className="text-[11px] font-mono text-muted-foreground bg-secondary/40 p-3 rounded overflow-auto max-h-[600px]">
-{JSON.stringify({ trace_id: trace.id, name: trace.name, duration_ms: total, spans: traceSpans }, null, 2)}
+{JSON.stringify({ trace_id: traceId, name: traceName, duration_ms: total, spans }, null, 2)}
           </pre>
         </div>
       )}

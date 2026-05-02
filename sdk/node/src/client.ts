@@ -1,4 +1,4 @@
-import type { Span, SpanHandle, StartSpanOptions } from "./tracing";
+import type { Span, SpanHandle, StartSpanOptions, SpanEvent } from "./tracing";
 import type { LogEvent, LogLevel, LogFields } from "./logging";
 import { generateId } from "./tracing";
 
@@ -46,13 +46,15 @@ export class PulseClient {
 
   startSpan(name: string, options: StartSpanOptions = {}): SpanHandle {
     const span: Span = {
-      traceId: generateId(),
+      traceId: options.traceId ?? generateId(),
       spanId: generateId(),
       parentSpanId: options.parentSpanId,
       name,
+      kind: options.kind,
       startTime: Date.now(),
       status: "ok",
-      attributes: options.attributes
+      attributes: options.attributes,
+      events: []
     };
 
     const handle: SpanHandle = {
@@ -74,6 +76,10 @@ export class PulseClient {
       setAttribute: (key, value) => {
         span.attributes = span.attributes ?? {};
         span.attributes[key] = value;
+      },
+      addEvent: (name, attrs) => {
+        span.events = span.events ?? [];
+        span.events.push({ time: Date.now(), name, attrs });
       }
     };
 
