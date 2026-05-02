@@ -3,8 +3,8 @@
 
 ██████╗ ██╗   ██╗██╗     ███████╗███████╗
 ██╔══██╗██║   ██║██║     ██╔════╝██╔════╝
-██████╔╝██║   ██║██║     ███████╗█████╗  
-██╔═══╝ ██║   ██║██║     ╚════██║██╔══╝  
+██████╔╝██║   ██║██║     ███████╗█████╗
+██╔═══╝ ██║   ██║██║     ╚════██║██╔══╝
 ██║     ╚██████╔╝███████╗███████║███████╗
 ╚═╝      ╚═════╝ ╚══════╝╚══════╝╚══════╝
 
@@ -33,10 +33,10 @@ Pulse includes both backend and frontend components.
 
 ### Frontend apps
 
-1. `frontend/`  
+1. `frontend/`
 Public-facing site (landing/docs entry points)
 
-2. `future-web/`  
+2. `future-web/`
 Product dashboard used by Pulse users after deployment
 
 ## Quick start (one-command deploy)
@@ -68,6 +68,8 @@ npm run dev
 
 ## Documentation
 
+- Latest status: `docs/current-status.md`
+- Project-wide TODO: `docs/todo.md`
 - Platform overview: `docs/overview.md`
 - Features: `docs/features.md`
 - Architecture: `docs/architecture.md`
