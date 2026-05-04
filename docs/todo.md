@@ -8,6 +8,7 @@ Updated: 2026-05-02
 - [ ] Add project/service binding and reject unauthorized telemetry.
 - [ ] Define envelope schema versioning and strict validation rules.
 - [ ] Standardize error response model across services.
+- [ ] Update Landing Page from Lovable with doc upgrade
 
 ## P1 - Query/API capabilities
 
