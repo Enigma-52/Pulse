@@ -1,5 +1,7 @@
+import { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
-import { logs, LogLevel } from "@/lib/mockData";
+import type { LogLevel, Log } from "@/lib/mockData";
+import { fetchLogs } from "@/lib/api";
 
 const levelStyle: Record<LogLevel, string> = {
   info: "text-status-info border-status-info/40",
@@ -9,6 +11,40 @@ const levelStyle: Record<LogLevel, string> = {
 };
 
 export default function Logs() {
+  const [logs, setLogs] = useState<Log[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [activeLevel, setActiveLevel] = useState<LogLevel | null>(null);
+  const [search, setSearch] = useState("");
+
+  const loadLogs = useCallback(async (level?: LogLevel | null, searchQuery?: string) => {
+    setLoading(true);
+    try {
+      const data = await fetchLogs({
+        level: level ?? undefined,
+        search: searchQuery || undefined,
+      });
+      setLogs(data);
+    } catch {
+      setLogs([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadLogs();
+  }, [loadLogs]);
+
+  const handleLevelClick = (level: LogLevel) => {
+    const next = activeLevel === level ? null : level;
+    setActiveLevel(next);
+    loadLogs(next, search);
+  };
+
+  const handleRun = () => {
+    loadLogs(activeLevel, search);
+  };
+
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
@@ -25,16 +61,23 @@ export default function Logs() {
 
       <div className="flex gap-2">
         <input
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          onKeyDown={e => e.key === "Enter" && handleRun()}
           placeholder='level = "error" AND service = "payments-service"'
           className="h-9 flex-1 px-3 text-xs font-mono rounded bg-secondary border border-border focus:outline-none focus:border-ring placeholder:text-muted-foreground"
         />
-        <button className="h-9 px-3 text-xs font-medium rounded bg-secondary border border-border hover:border-ring">Run</button>
+        <button onClick={handleRun} className="h-9 px-3 text-xs font-medium rounded bg-secondary border border-border hover:border-ring">Run</button>
         <button className="h-9 px-3 text-xs font-medium rounded bg-primary text-primary-foreground hover:bg-primary/90">Save view</button>
       </div>
 
       <div className="flex gap-2 flex-wrap">
         {(["info", "warn", "error", "debug"] as LogLevel[]).map(l => (
-          <button key={l} className={`px-2.5 py-1 text-[10px] font-mono uppercase rounded border ${levelStyle[l]} hover:bg-secondary`}>
+          <button
+            key={l}
+            onClick={() => handleLevelClick(l)}
+            className={`px-2.5 py-1 text-[10px] font-mono uppercase rounded border ${levelStyle[l]} hover:bg-secondary ${activeLevel === l ? "bg-secondary ring-1 ring-ring" : ""}`}
+          >
             {l} · {logs.filter(x => x.level === l).length}
           </button>
         ))}
@@ -42,25 +85,31 @@ export default function Logs() {
 
       <div className="panel font-mono text-xs">
         <div className="divide-y divide-border">
-          {logs.map(l => (
-            <Link key={l.id} to={`/app/logs/${l.id}`} className="grid grid-cols-12 px-4 py-2 hover:bg-secondary/40">
-              <div className="col-span-2 text-muted-foreground">{l.timestamp}</div>
-              <div className="col-span-1">
-                <span className={`px-1.5 py-0.5 rounded border text-[10px] ${levelStyle[l.level]}`}>
-                  {l.level.toUpperCase()}
-                </span>
-              </div>
-              <div className="col-span-2 text-muted-foreground truncate">{l.service}</div>
-              <div className="col-span-7 truncate">
-                {l.message}
-                {Object.entries(l.attributes).slice(0, 2).map(([k, v]) => (
-                  <span key={k} className="ml-3 text-muted-foreground">
-                    <span className="text-foreground/60">{k}=</span>{String(v)}
+          {loading ? (
+            <div className="px-4 py-8 text-center text-muted-foreground">Loading logs…</div>
+          ) : logs.length === 0 ? (
+            <div className="px-4 py-8 text-center text-muted-foreground">No logs found</div>
+          ) : (
+            logs.map(l => (
+              <Link key={l.id} to={`/app/logs/${l.id}`} className="grid grid-cols-12 px-4 py-2 hover:bg-secondary/40">
+                <div className="col-span-2 text-muted-foreground">{l.timestamp}</div>
+                <div className="col-span-1">
+                  <span className={`px-1.5 py-0.5 rounded border text-[10px] ${levelStyle[l.level]}`}>
+                    {l.level.toUpperCase()}
                   </span>
-                ))}
-              </div>
-            </Link>
-          ))}
+                </div>
+                <div className="col-span-2 text-muted-foreground truncate">{l.service}</div>
+                <div className="col-span-7 truncate">
+                  {l.message}
+                  {Object.entries(l.attributes).slice(0, 2).map(([k, v]) => (
+                    <span key={k} className="ml-3 text-muted-foreground">
+                      <span className="text-foreground/60">{k}=</span>{String(v)}
+                    </span>
+                  ))}
+                </div>
+              </Link>
+            ))
+          )}
         </div>
       </div>
     </div>
