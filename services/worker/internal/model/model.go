@@ -21,8 +21,28 @@ type Span struct {
 	Events       []SpanEvent            `json:"events"`
 }
 
+type LogEntry struct {
+	Timestamp int64                  `json:"timestamp"`
+	Level     string                 `json:"level"`
+	Message   string                 `json:"message"`
+	Fields    map[string]interface{} `json:"fields,omitempty"`
+	TraceID   string                 `json:"traceId,omitempty"`
+	SpanID    string                 `json:"spanId,omitempty"`
+}
+
+type MetricPoint struct {
+	Name       string                 `json:"name"`
+	Type       string                 `json:"type"`
+	Value      float64                `json:"value"`
+	Unit       string                 `json:"unit"`
+	Timestamp  int64                  `json:"timestamp"`
+	Attributes map[string]interface{} `json:"attributes,omitempty"`
+}
+
 type Envelope struct {
-	ServiceName string `json:"serviceName"`
-	Environment string `json:"environment"`
-	Spans       []Span `json:"spans"`
+	ServiceName string        `json:"serviceName"`
+	Environment string        `json:"environment"`
+	Spans       []Span        `json:"spans"`
+	Logs        []LogEntry    `json:"logs"`
+	Metrics     []MetricPoint `json:"metrics"`
 }

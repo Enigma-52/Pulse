@@ -20,8 +20,8 @@ func main() {
 		log.Fatalf("failed to connect to ClickHouse: %v", err)
 	}
 
-	if err := s.EnsureTable(ctx); err != nil {
-		log.Fatalf("failed to ensure traces table: %v", err)
+	if err := s.EnsureTables(ctx); err != nil {
+		log.Fatalf("failed to ensure tables: %v", err)
 	}
 
 	reader := consumer.NewKafkaReader(cfg.Kafka)

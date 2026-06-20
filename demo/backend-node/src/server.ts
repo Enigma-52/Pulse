@@ -138,12 +138,12 @@ app.post("/api/orders", async (_req, res) => {
   const orderId = `ord_${crypto.randomUUID().slice(0, 8)}`;
 
   // Order creation
+  let total = 0;
   await pulse.withSpan("orders.create", {
     kind: "internal",
     attributes: { "order.id": orderId, "order.items": itemCount },
   }, async (orderSpan) => {
     // Look up products and calculate total
-    let total = 0;
     const items: { sku: string; qty: number; price: number }[] = [];
 
     for (const sku of chosenSkus) {
@@ -201,11 +201,17 @@ app.post("/api/orders", async (_req, res) => {
     pulse.log("info", "Order created", { order_id: orderId, user_id: userId, total });
   });
 
+  // Metrics
+  pulse.counter("http.requests.total", 1, { unit: "req", attributes: { method: "POST", route: "/api/orders", status_code: 200 } });
+  pulse.counter("orders.created", 1, { unit: "order" });
+  pulse.histogram("order.value", total, { unit: "USD" });
+
   res.json({ status: "ok", orderId });
 });
 
 // ── GET /ok ── simple health check ─────────────────────────────────────
 app.get("/ok", async (_req, res) => {
+  pulse.counter("http.requests.total", 1, { unit: "req", attributes: { method: "GET", route: "/ok", status_code: 200 } });
   res.status(200).json({ status: "ok" });
 });
 
@@ -217,6 +223,13 @@ app.get("/slow", async (_req, res) => {
   }, async () => {
     return stmts.getAnalytics.get();
   });
+
+  pulse.counter("http.requests.total", 1, { unit: "req", attributes: { method: "GET", route: "/slow", status_code: 200 } });
+  const analytics = result as Record<string, number> | undefined;
+  if (analytics) {
+    pulse.gauge("db.connections.active", Math.floor(3 + Math.random() * 10), { unit: "conn" });
+    pulse.gauge("orders.total_count", analytics.total_orders ?? 0, { unit: "order" });
+  }
 
   res.status(200).json({ status: "ok", analytics: result });
 });
@@ -259,8 +272,11 @@ app.get("/error", async (_req, res) => {
       });
     });
 
+    pulse.counter("http.requests.total", 1, { unit: "req", attributes: { method: "GET", route: "/error", status_code: 200 } });
     res.json({ status: "ok", orderId });
   } catch (err) {
+    pulse.counter("http.requests.total", 1, { unit: "req", attributes: { method: "GET", route: "/error", status_code: 500 } });
+    pulse.counter("http.request.errors", 1, { unit: "err" });
     pulse.log("error", "Payment failed", { order_id: orderId, error: (err as Error).message });
     res.status(500).json({ error: "Payment failed", orderId });
   }
