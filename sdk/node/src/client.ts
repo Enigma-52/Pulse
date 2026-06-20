@@ -1,7 +1,14 @@
 import type { Span, SpanHandle, StartSpanOptions, SpanEvent } from "./tracing";
 import type { LogEvent, LogLevel, LogFields } from "./logging";
+import type { MetricPoint } from "./metrics";
 import { generateId } from "./tracing";
 import { getActiveContext, runWithContext, type SpanContext } from "./context";
+
+export interface FlushError {
+  envelope: TelemetryEnvelope;
+  error: unknown;
+  attempt: number;
+}
 
 export interface PulseClientConfig {
   ingestUrl: string;
@@ -11,6 +18,11 @@ export interface PulseClientConfig {
   flushIntervalMs?: number;
   batchSize?: number;
   maxQueueSize?: number;
+  maxRetries?: number;
+  retryBaseMs?: number;
+  retryMaxMs?: number;
+  shutdownTimeoutMs?: number;
+  onFlushError?: (err: FlushError) => void;
 }
 
 export interface TelemetryEnvelope {
@@ -19,19 +31,27 @@ export interface TelemetryEnvelope {
   environment: string;
   spans: Span[];
   logs: LogEvent[];
+  metrics: MetricPoint[];
 }
 
 export class PulseClient {
-  private readonly config: Required<PulseClientConfig>;
+  private readonly config: Required<Omit<PulseClientConfig, "onFlushError">> & { onFlushError?: (err: FlushError) => void };
   private readonly spanBuffer: Span[] = [];
   private readonly logBuffer: LogEvent[] = [];
+  private readonly metricBuffer: MetricPoint[] = [];
   private flushTimer?: NodeJS.Timeout;
+  private inflightFlushes = 0;
 
   constructor(config: PulseClientConfig) {
     const {
       flushIntervalMs = 2000,
       batchSize = 100,
       maxQueueSize = 1000,
+      maxRetries = 3,
+      retryBaseMs = 200,
+      retryMaxMs = 5000,
+      shutdownTimeoutMs = 10000,
+      onFlushError,
       ...rest
     } = config;
 
@@ -39,14 +59,18 @@ export class PulseClient {
       ...rest,
       flushIntervalMs,
       batchSize,
-      maxQueueSize
+      maxQueueSize,
+      maxRetries,
+      retryBaseMs,
+      retryMaxMs,
+      shutdownTimeoutMs,
+      onFlushError
     };
 
     this.startFlushTimer();
   }
 
   startSpan(name: string, options: StartSpanOptions = {}): SpanHandle {
-    // Auto-inherit trace context from active span if not explicitly provided
     const activeCtx = getActiveContext();
     const traceId = options.traceId ?? activeCtx?.traceId ?? generateId();
     const parentSpanId = options.parentSpanId ?? activeCtx?.spanId;
@@ -104,7 +128,6 @@ export class PulseClient {
     };
 
     try {
-      // Run the function within this span's context so nested spans auto-inherit
       const result = await runWithContext(ctx, () => fn(handle));
       handle.end();
       return result;
@@ -123,7 +146,6 @@ export class PulseClient {
     fields?: LogFields,
     context?: { traceId?: string; spanId?: string }
   ): void {
-    // Auto-correlate logs with active span if no explicit context
     const activeCtx = getActiveContext();
     const event: LogEvent = {
       timestamp: Date.now(),
@@ -134,6 +156,55 @@ export class PulseClient {
       spanId: context?.spanId ?? activeCtx?.spanId
     };
     this.enqueueLog(event);
+  }
+
+  debug(message: string, fields?: LogFields): void {
+    this.log("debug", message, fields);
+  }
+
+  info(message: string, fields?: LogFields): void {
+    this.log("info", message, fields);
+  }
+
+  warn(message: string, fields?: LogFields): void {
+    this.log("warn", message, fields);
+  }
+
+  error(message: string, fields?: LogFields): void {
+    this.log("error", message, fields);
+  }
+
+  counter(name: string, value: number = 1, options?: { unit?: string; attributes?: Record<string, string | number | boolean> }): void {
+    this.enqueueMetric({
+      name,
+      type: "counter",
+      value,
+      unit: options?.unit ?? "",
+      timestamp: Date.now(),
+      attributes: options?.attributes
+    });
+  }
+
+  gauge(name: string, value: number, options?: { unit?: string; attributes?: Record<string, string | number | boolean> }): void {
+    this.enqueueMetric({
+      name,
+      type: "gauge",
+      value,
+      unit: options?.unit ?? "",
+      timestamp: Date.now(),
+      attributes: options?.attributes
+    });
+  }
+
+  histogram(name: string, value: number, options?: { unit?: string; attributes?: Record<string, string | number | boolean> }): void {
+    this.enqueueMetric({
+      name,
+      type: "histogram",
+      value,
+      unit: options?.unit ?? "",
+      timestamp: Date.now(),
+      attributes: options?.attributes
+    });
   }
 
   private enqueueSpan(span: Span): void {
@@ -156,6 +227,16 @@ export class PulseClient {
     }
   }
 
+  private enqueueMetric(metric: MetricPoint): void {
+    if (this.metricBuffer.length >= this.config.maxQueueSize) {
+      this.metricBuffer.shift();
+    }
+    this.metricBuffer.push(metric);
+    if (this.metricBuffer.length >= this.config.batchSize) {
+      void this.flush();
+    }
+  }
+
   private startFlushTimer(): void {
     if (this.flushTimer) return;
     this.flushTimer = setInterval(() => {
@@ -170,39 +251,100 @@ export class PulseClient {
   }
 
   async flush(): Promise<void> {
-    if (this.spanBuffer.length === 0 && this.logBuffer.length === 0) {
+    if (this.spanBuffer.length === 0 && this.logBuffer.length === 0 && this.metricBuffer.length === 0) {
       return;
     }
 
     const spans = this.spanBuffer.splice(0, this.config.batchSize);
     const logs = this.logBuffer.splice(0, this.config.batchSize);
+    const metrics = this.metricBuffer.splice(0, this.config.batchSize);
 
     const envelope: TelemetryEnvelope = {
       projectId: undefined,
       serviceName: this.config.serviceName,
       environment: this.config.environment,
       spans,
-      logs
+      logs,
+      metrics
     };
 
+    this.inflightFlushes++;
     try {
-      await fetch(this.config.ingestUrl, {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-          "x-pulse-api-key": this.config.apiKey
-        },
-        body: JSON.stringify(envelope),
-        keepalive: true
-      } as RequestInit);
-    } catch {
-      // For now, swallow errors; a future iteration can add callbacks/metrics.
+      await this.sendWithRetry(envelope);
+    } finally {
+      this.inflightFlushes--;
     }
   }
 
-  shutdown(): void {
+  private async sendWithRetry(envelope: TelemetryEnvelope): Promise<void> {
+    const { maxRetries, retryBaseMs, retryMaxMs } = this.config;
+
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        const res = await fetch(this.config.ingestUrl, {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            "x-pulse-api-key": this.config.apiKey
+          },
+          body: JSON.stringify(envelope),
+          keepalive: true
+        } as RequestInit);
+
+        // Don't retry client errors (4xx) — they won't succeed on retry
+        if (res.ok || (res.status >= 400 && res.status < 500)) {
+          return;
+        }
+
+        // Server error (5xx) — retry
+        if (attempt < maxRetries) {
+          await this.backoff(attempt, retryBaseMs, retryMaxMs);
+          continue;
+        }
+
+        this.config.onFlushError?.({ envelope, error: new Error(`HTTP ${res.status}`), attempt });
+      } catch (err) {
+        if (attempt < maxRetries) {
+          await this.backoff(attempt, retryBaseMs, retryMaxMs);
+          continue;
+        }
+        this.config.onFlushError?.({ envelope, error: err, attempt });
+      }
+    }
+  }
+
+  private backoff(attempt: number, baseMs: number, maxMs: number): Promise<void> {
+    const jitter = Math.random() * 0.5 + 0.75; // 0.75–1.25x
+    const delay = Math.min(baseMs * 2 ** attempt * jitter, maxMs);
+    return new Promise((r) => setTimeout(r, delay));
+  }
+
+  async shutdown(): Promise<void> {
     this.stopFlushTimer();
-    void this.flush();
+
+    // Drain remaining buffers
+    const flushPromises: Promise<void>[] = [];
+    while (this.spanBuffer.length > 0 || this.logBuffer.length > 0 || this.metricBuffer.length > 0) {
+      flushPromises.push(this.flush());
+    }
+
+    // Wait for all inflight + drain flushes with a timeout
+    const allDone = Promise.all(flushPromises).then(() => {
+      // Also wait for any flushes that were already inflight before shutdown
+      return new Promise<void>((resolve) => {
+        const check = () => {
+          if (this.inflightFlushes <= 0) return resolve();
+          setTimeout(check, 50);
+        };
+        check();
+      });
+    });
+
+    const timeout = new Promise<void>((resolve) =>
+      setTimeout(resolve, this.config.shutdownTimeoutMs)
+    );
+
+    await Promise.race([allDone, timeout]);
   }
 }
 

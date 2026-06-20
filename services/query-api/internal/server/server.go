@@ -12,7 +12,11 @@ func New(h *handler.Handler) http.Handler {
 	r.HandleFunc("/healthz", h.HandleHealth).Methods(http.MethodGet)
 	r.HandleFunc("/traces", h.HandleTraces).Methods(http.MethodGet, http.MethodOptions)
 	r.HandleFunc("/traces/{trace_id}", h.HandleTraceDetail).Methods(http.MethodGet, http.MethodOptions)
+	r.HandleFunc("/logs", h.HandleLogs).Methods(http.MethodGet, http.MethodOptions)
 	r.HandleFunc("/services/{service}/overview", h.HandleServiceOverview).Methods(http.MethodGet, http.MethodOptions)
+	r.HandleFunc("/metrics", h.HandleMetricsList).Methods(http.MethodGet, http.MethodOptions)
+	r.HandleFunc("/metrics/{name}/series", h.HandleMetricSeries).Methods(http.MethodGet, http.MethodOptions)
+	r.HandleFunc("/dashboard/summary", h.HandleDashboardSummary).Methods(http.MethodGet, http.MethodOptions)
 	r.Use(corsMiddleware)
 	return r
 }

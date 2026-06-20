@@ -21,5 +21,11 @@ func (p *Processor) Process(ctx context.Context, value []byte) error {
 	if err := json.Unmarshal(value, &env); err != nil {
 		return err
 	}
-	return p.store.InsertSpans(ctx, env)
+	if err := p.store.InsertSpans(ctx, env); err != nil {
+		return err
+	}
+	if err := p.store.InsertLogs(ctx, env); err != nil {
+		return err
+	}
+	return p.store.InsertMetrics(ctx, env)
 }

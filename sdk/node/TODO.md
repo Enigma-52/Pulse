@@ -11,9 +11,9 @@ Updated: 2026-05-02
 
 ## Next
 
-- [ ] Add retry with backoff for failed flushes.
-- [ ] Add flush failure callback/hooks for host apps.
-- [ ] Add graceful shutdown flush guarantee and timeout controls.
+- [x] Add retry with backoff for failed flushes.
+- [x] Add flush failure callback/hooks for host apps.
+- [x] Add graceful shutdown flush guarantee and timeout controls.
 - [ ] Add configurable sampling strategy.
 - [ ] Add optional OTLP compatibility export mode.
 - [ ] Add stronger typing/validation for attribute and log field payloads.

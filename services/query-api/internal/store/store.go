@@ -178,6 +178,210 @@ WHERE service = ?
 	return &out, nil
 }
 
+func (s *Store) GetLogs(ctx context.Context, filters model.LogFilters) ([]model.LogEntry, error) {
+	query, args := buildLogQuery(filters)
+
+	rows, err := s.conn.Query(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var logs []model.LogEntry
+	for rows.Next() {
+		var l model.LogEntry
+		var fieldsJSON string
+		if err := rows.Scan(
+			&l.Timestamp,
+			&l.Level,
+			&l.Message,
+			&l.Service,
+			&l.Environment,
+			&l.TraceID,
+			&l.SpanID,
+			&fieldsJSON,
+		); err != nil {
+			return nil, err
+		}
+		if fieldsJSON != "" && fieldsJSON != "{}" {
+			_ = json.Unmarshal([]byte(fieldsJSON), &l.Fields)
+		}
+		if l.Fields == nil {
+			l.Fields = map[string]interface{}{}
+		}
+		logs = append(logs, l)
+	}
+	return logs, nil
+}
+
+func (s *Store) GetMetricsList(ctx context.Context) ([]model.MetricMeta, error) {
+	// Current 5-minute window
+	rows, err := s.conn.Query(ctx, `
+SELECT name, any(type) as type, any(unit) as unit, avg(value) as current_value
+FROM metrics
+WHERE timestamp >= now() - INTERVAL 5 MINUTE
+GROUP BY name
+ORDER BY name
+`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	type current struct {
+		Name  string
+		Type  string
+		Unit  string
+		Value float64
+	}
+	var currents []current
+	for rows.Next() {
+		var c current
+		if err := rows.Scan(&c.Name, &c.Type, &c.Unit, &c.Value); err != nil {
+			return nil, err
+		}
+		currents = append(currents, c)
+	}
+
+	// Previous 5-minute window for delta calculation
+	prevRows, err := s.conn.Query(ctx, `
+SELECT name, avg(value) as prev_value
+FROM metrics
+WHERE timestamp >= now() - INTERVAL 10 MINUTE AND timestamp < now() - INTERVAL 5 MINUTE
+GROUP BY name
+`)
+	if err != nil {
+		return nil, err
+	}
+	defer prevRows.Close()
+
+	prevMap := make(map[string]float64)
+	for prevRows.Next() {
+		var name string
+		var val float64
+		if err := prevRows.Scan(&name, &val); err != nil {
+			return nil, err
+		}
+		prevMap[name] = val
+	}
+
+	metrics := make([]model.MetricMeta, 0, len(currents))
+	for _, c := range currents {
+		m := model.MetricMeta{
+			Name:  c.Name,
+			Type:  c.Type,
+			Unit:  c.Unit,
+			Value: c.Value,
+		}
+		if prev, ok := prevMap[c.Name]; ok && prev != 0 {
+			m.Delta = ((c.Value - prev) / prev) * 100.0
+		}
+		metrics = append(metrics, m)
+	}
+	return metrics, nil
+}
+
+func (s *Store) GetMetricSeries(ctx context.Context, name string, minutes int, intervalSeconds int) ([]model.MetricSeriesPoint, error) {
+	rows, err := s.conn.Query(ctx, `
+SELECT
+	toStartOfInterval(timestamp, INTERVAL ? SECOND) as ts,
+	avg(value) as value
+FROM metrics
+WHERE name = ? AND timestamp >= now() - INTERVAL ? MINUTE
+GROUP BY ts
+ORDER BY ts
+`, intervalSeconds, name, minutes)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var points []model.MetricSeriesPoint
+	for rows.Next() {
+		var p model.MetricSeriesPoint
+		if err := rows.Scan(&p.Timestamp, &p.Value); err != nil {
+			return nil, err
+		}
+		points = append(points, p)
+	}
+	return points, nil
+}
+
+func (s *Store) GetDashboardSummary(ctx context.Context) (*model.DashboardSummary, error) {
+	rows, err := s.conn.Query(ctx, `
+SELECT
+	count() / 300.0 as request_rate,
+	quantile(0.99)(duration_ms) as p99_latency,
+	countIf(status = 'error') * 100.0 / count() as error_rate,
+	count() as trace_count
+FROM traces
+WHERE parent_span_id = '' AND start_time >= now() - INTERVAL 5 MINUTE
+`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	if !rows.Next() {
+		return &model.DashboardSummary{}, nil
+	}
+
+	var out model.DashboardSummary
+	if err := rows.Scan(&out.RequestRate, &out.P99Latency, &out.ErrorRate, &out.TraceCount); err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func buildLogQuery(filters model.LogFilters) (string, []any) {
+	var sb strings.Builder
+	args := make([]any, 0, 8)
+
+	sb.WriteString(`
+SELECT
+	timestamp,
+	level,
+	message,
+	service,
+	environment,
+	trace_id,
+	span_id,
+	fields_json
+FROM logs
+WHERE 1=1
+`)
+
+	if filters.Service != "" {
+		sb.WriteString(" AND service = ?")
+		args = append(args, filters.Service)
+	}
+	if filters.Level != "" {
+		sb.WriteString(" AND level = ?")
+		args = append(args, filters.Level)
+	}
+	if filters.Search != "" {
+		sb.WriteString(" AND position(message, ?) > 0")
+		args = append(args, filters.Search)
+	}
+	if filters.TraceID != "" {
+		sb.WriteString(" AND trace_id = ?")
+		args = append(args, filters.TraceID)
+	}
+	if filters.HasStart {
+		sb.WriteString(" AND timestamp >= ?")
+		args = append(args, filters.Start)
+	}
+	if filters.HasEnd {
+		sb.WriteString(" AND timestamp <= ?")
+		args = append(args, filters.End)
+	}
+
+	sb.WriteString(" ORDER BY timestamp DESC LIMIT ? OFFSET ?")
+	args = append(args, filters.Limit, filters.Offset)
+
+	return sb.String(), args
+}
+
 func buildTraceQuery(filters model.TraceFilters) (string, []any) {
 	var sb strings.Builder
 	args := make([]any, 0, 12)

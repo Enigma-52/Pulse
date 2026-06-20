@@ -30,7 +30,7 @@ func Connect(cfg config.ClickHouseConfig) (*Store, error) {
 	return &Store{conn: conn}, nil
 }
 
-func (s *Store) EnsureTable(ctx context.Context) error {
+func (s *Store) EnsureTables(ctx context.Context) error {
 	const ddl = `
 CREATE TABLE IF NOT EXISTS traces (
 	trace_id String,
@@ -63,6 +63,41 @@ ORDER BY (service, start_time)
 	for _, m := range migrations {
 		_ = s.conn.Exec(ctx, m)
 	}
+
+	const logsDDL = `
+CREATE TABLE IF NOT EXISTS logs (
+	timestamp DateTime64(3),
+	level String,
+	message String,
+	service String,
+	environment String,
+	trace_id String DEFAULT '',
+	span_id String DEFAULT '',
+	fields_json String DEFAULT '{}'
+) ENGINE = MergeTree
+ORDER BY (service, timestamp)
+`
+	if err := s.conn.Exec(ctx, logsDDL); err != nil {
+		return err
+	}
+
+	const metricsDDL = `
+CREATE TABLE IF NOT EXISTS metrics (
+	name String,
+	type String,
+	value Float64,
+	unit String,
+	timestamp DateTime64(3),
+	service String,
+	environment String,
+	attributes_json String DEFAULT '{}'
+) ENGINE = MergeTree
+ORDER BY (service, name, timestamp)
+`
+	if err := s.conn.Exec(ctx, metricsDDL); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -119,6 +154,81 @@ INSERT INTO traces (
 			env.ServiceName, env.Environment, route, span.Name, kind,
 			span.DurationMs, span.Status, span.Error,
 			start, end, string(attrsJSON), eventsJSON,
+		); err != nil {
+			return err
+		}
+	}
+
+	return batch.Send()
+}
+
+func (s *Store) InsertLogs(ctx context.Context, env model.Envelope) error {
+	if len(env.Logs) == 0 {
+		return nil
+	}
+
+	batch, err := s.conn.PrepareBatch(ctx, `
+INSERT INTO logs (
+	timestamp, level, message, service, environment, trace_id, span_id, fields_json
+) VALUES
+`)
+	if err != nil {
+		return err
+	}
+
+	for _, l := range env.Logs {
+		ts := time.UnixMilli(l.Timestamp)
+
+		fieldsJSON := "{}"
+		if len(l.Fields) > 0 {
+			b, err := json.Marshal(l.Fields)
+			if err != nil {
+				return err
+			}
+			fieldsJSON = string(b)
+		}
+
+		if err := batch.Append(
+			ts, l.Level, l.Message,
+			env.ServiceName, env.Environment,
+			l.TraceID, l.SpanID, fieldsJSON,
+		); err != nil {
+			return err
+		}
+	}
+
+	return batch.Send()
+}
+
+func (s *Store) InsertMetrics(ctx context.Context, env model.Envelope) error {
+	if len(env.Metrics) == 0 {
+		return nil
+	}
+
+	batch, err := s.conn.PrepareBatch(ctx, `
+INSERT INTO metrics (
+	name, type, value, unit, timestamp, service, environment, attributes_json
+) VALUES
+`)
+	if err != nil {
+		return err
+	}
+
+	for _, m := range env.Metrics {
+		ts := time.UnixMilli(m.Timestamp)
+
+		attrsJSON := "{}"
+		if len(m.Attributes) > 0 {
+			b, err := json.Marshal(m.Attributes)
+			if err != nil {
+				return err
+			}
+			attrsJSON = string(b)
+		}
+
+		if err := batch.Append(
+			m.Name, m.Type, m.Value, m.Unit, ts,
+			env.ServiceName, env.Environment, attrsJSON,
 		); err != nil {
 			return err
 		}
