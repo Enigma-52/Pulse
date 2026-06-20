@@ -1,6 +1,7 @@
 import type { Span, SpanHandle, StartSpanOptions, SpanEvent } from "./tracing";
 import type { LogEvent, LogLevel, LogFields } from "./logging";
 import { generateId } from "./tracing";
+import { getActiveContext, runWithContext, type SpanContext } from "./context";
 
 export interface PulseClientConfig {
   ingestUrl: string;
@@ -45,15 +46,20 @@ export class PulseClient {
   }
 
   startSpan(name: string, options: StartSpanOptions = {}): SpanHandle {
+    // Auto-inherit trace context from active span if not explicitly provided
+    const activeCtx = getActiveContext();
+    const traceId = options.traceId ?? activeCtx?.traceId ?? generateId();
+    const parentSpanId = options.parentSpanId ?? activeCtx?.spanId;
+
     const span: Span = {
-      traceId: options.traceId ?? generateId(),
+      traceId,
       spanId: generateId(),
-      parentSpanId: options.parentSpanId,
+      parentSpanId,
       name,
       kind: options.kind,
       startTime: Date.now(),
       status: "ok",
-      attributes: options.attributes,
+      attributes: options.attributes ? { ...options.attributes } : {},
       events: []
     };
 
@@ -91,13 +97,19 @@ export class PulseClient {
     options: StartSpanOptions,
     fn: (span: SpanHandle) => Promise<T> | T
   ): Promise<T> {
-    const span = this.startSpan(name, options);
+    const handle = this.startSpan(name, options);
+    const ctx: SpanContext = {
+      traceId: handle.span.traceId,
+      spanId: handle.span.spanId
+    };
+
     try {
-      const result = await fn(span);
-      span.end();
+      // Run the function within this span's context so nested spans auto-inherit
+      const result = await runWithContext(ctx, () => fn(handle));
+      handle.end();
       return result;
     } catch (err) {
-      span.end({
+      handle.end({
         status: "error",
         error: err instanceof Error ? err.message : String(err)
       });
@@ -111,13 +123,15 @@ export class PulseClient {
     fields?: LogFields,
     context?: { traceId?: string; spanId?: string }
   ): void {
+    // Auto-correlate logs with active span if no explicit context
+    const activeCtx = getActiveContext();
     const event: LogEvent = {
       timestamp: Date.now(),
       level,
       message,
       fields,
-      traceId: context?.traceId,
-      spanId: context?.spanId
+      traceId: context?.traceId ?? activeCtx?.traceId,
+      spanId: context?.spanId ?? activeCtx?.spanId
     };
     this.enqueueLog(event);
   }
@@ -195,4 +209,3 @@ export class PulseClient {
 export function createClient(config: PulseClientConfig): PulseClient {
   return new PulseClient(config);
 }
-
