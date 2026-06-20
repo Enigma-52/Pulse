@@ -10,25 +10,30 @@ declare module "express-serve-static-core" {
 
 export function createExpressMiddleware(client: PulseClient) {
   return function pulseMiddleware(req: Request, res: Response, next: NextFunction) {
-    const span = client.startSpan("http_request", {
+    // Use withSpan so all downstream code inherits trace context automatically
+    void client.withSpan(`${req.method} ${req.path}`, {
+      kind: "server",
       attributes: {
         "http.method": req.method,
-        "http.path": req.path
+        "http.route": req.path,
+        "http.user_agent": req.get("user-agent") ?? "",
+        "net.peer.ip": req.ip ?? "",
       }
+    }, async (span) => {
+      req.pulseTraceId = span.span.traceId;
+      req.pulseSpanId = span.span.spanId;
+
+      await new Promise<void>((resolve) => {
+        res.on("finish", () => {
+          span.setAttribute("http.status_code", res.statusCode);
+          if (res.statusCode >= 400) {
+            span.span.status = "error";
+          }
+          resolve();
+        });
+        res.on("close", resolve);
+        next();
+      });
     });
-
-    req.pulseTraceId = span.span.traceId;
-    req.pulseSpanId = span.span.spanId;
-
-    const endSpan = () => {
-      span.setAttribute("http.status_code", res.statusCode);
-      span.end();
-    };
-
-    res.on("finish", endSpan);
-    res.on("close", endSpan);
-
-    next();
   };
 }
-

@@ -1,10 +1,12 @@
 import express from "express";
-import { createClient } from "@pulse/node";
+import Database from "better-sqlite3";
+import crypto from "crypto";
+import { createClient, createExpressMiddleware } from "@pulse/node";
 
 const app = express();
 app.use(express.json());
 
-const pulseClient = createClient({
+const pulse = createClient({
   ingestUrl: process.env.PULSE_INGEST_URL ?? "http://localhost:8081/v1/ingest",
   apiKey: process.env.PULSE_API_KEY ?? "dev-api-key",
   serviceName: "api-gateway",
@@ -12,267 +14,281 @@ const pulseClient = createClient({
   flushIntervalMs: 1000,
 });
 
-// Helper to simulate async work
-const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
+app.use(createExpressMiddleware(pulse));
 
-// Generate a realistic order creation trace with multiple "services"
-app.post("/api/orders", async (req, res) => {
-  const root = pulseClient.startSpan("POST /api/orders", {
-    kind: "server",
-    attributes: {
-      "http.method": "POST",
-      "http.route": "/api/orders",
-      "http.status_code": 200,
-      "http.user_agent": req.get("user-agent") ?? "unknown",
-      "net.peer.ip": req.ip ?? "127.0.0.1",
-    },
+// ── Database setup ───────────────────────────────────────────────────────
+const db = new Database(":memory:");
+db.pragma("journal_mode = WAL");
+
+db.exec(`
+  CREATE TABLE users (
+    id TEXT PRIMARY KEY,
+    email TEXT NOT NULL,
+    name TEXT NOT NULL,
+    created_at TEXT DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE sessions (
+    token TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(id),
+    expires_at TEXT NOT NULL
+  );
+
+  CREATE TABLE products (
+    sku TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    price REAL NOT NULL,
+    stock INTEGER NOT NULL DEFAULT 100
+  );
+
+  CREATE TABLE orders (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(id),
+    total REAL NOT NULL,
+    item_count INTEGER NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending',
+    created_at TEXT DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE order_items (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    order_id TEXT NOT NULL REFERENCES orders(id),
+    sku TEXT NOT NULL REFERENCES products(sku),
+    qty INTEGER NOT NULL,
+    price REAL NOT NULL
+  );
+
+  CREATE TABLE notifications (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    order_id TEXT NOT NULL,
+    channel TEXT NOT NULL,
+    template TEXT NOT NULL,
+    sent_at TEXT DEFAULT (datetime('now'))
+  );
+`);
+
+// Seed data
+db.exec(`
+  INSERT INTO users (id, email, name) VALUES
+    ('u_4421', 'alice@example.com', 'Alice Johnson'),
+    ('u_4422', 'bob@example.com', 'Bob Smith');
+
+  INSERT INTO sessions (token, user_id, expires_at) VALUES
+    ('sess_abc123', 'u_4421', datetime('now', '+1 day')),
+    ('sess_def456', 'u_4422', datetime('now', '+1 day'));
+
+  INSERT INTO products (sku, name, price, stock) VALUES
+    ('SKU-21084', 'Wireless Mouse', 29.80, 100),
+    ('SKU-21085', 'Mechanical Keyboard', 49.90, 50),
+    ('SKU-21086', 'USB-C Hub', 9.70, 200);
+`);
+
+// Prepared statements
+const stmts = {
+  getSession: db.prepare("SELECT * FROM sessions WHERE token = ? AND expires_at > datetime('now')"),
+  getUser: db.prepare("SELECT * FROM users WHERE id = ?"),
+  getProduct: db.prepare("SELECT * FROM products WHERE sku = ?"),
+  reserveStock: db.prepare("UPDATE products SET stock = stock - ? WHERE sku = ? AND stock >= ?"),
+  restoreStock: db.prepare("UPDATE products SET stock = stock + ? WHERE sku = ?"),
+  insertOrder: db.prepare("INSERT INTO orders (id, user_id, total, item_count, status) VALUES (?, ?, ?, ?, ?)"),
+  insertOrderItem: db.prepare("INSERT INTO order_items (order_id, sku, qty, price) VALUES (?, ?, ?, ?)"),
+  updateOrderStatus: db.prepare("UPDATE orders SET status = ? WHERE id = ?"),
+  insertNotification: db.prepare("INSERT INTO notifications (order_id, channel, template) VALUES (?, ?, ?)"),
+  getOrder: db.prepare("SELECT * FROM orders WHERE id = ?"),
+  listOrders: db.prepare("SELECT * FROM orders ORDER BY created_at DESC LIMIT ?"),
+  getAnalytics: db.prepare(`
+    SELECT
+      COUNT(*) as total_orders,
+      SUM(total) as revenue,
+      AVG(total) as avg_order_value,
+      COUNT(CASE WHEN status = 'confirmed' THEN 1 END) as confirmed,
+      COUNT(CASE WHEN status = 'failed' THEN 1 END) as failed
+    FROM orders
+  `),
+};
+
+const skus = ["SKU-21084", "SKU-21085", "SKU-21086"];
+
+// ── POST /api/orders ── realistic multi-service trace ──────────────────
+app.post("/api/orders", async (_req, res) => {
+  const userId = "u_4421";
+  const sessionToken = "sess_abc123";
+
+  // Auth check — real DB lookup
+  const session = await pulse.withSpan("auth.verify_token", {
+    kind: "client",
+    attributes: { "rpc.system": "grpc", "rpc.method": "VerifyToken", "user.id": userId },
+  }, async () => {
+    return await pulse.withSpan("db.query", {
+      kind: "client",
+      attributes: { "db.system": "sqlite", "db.operation": "SELECT", "db.statement": "SELECT * FROM sessions WHERE token = ?" },
+    }, async () => {
+      return stmts.getSession.get(sessionToken);
+    });
   });
-  root.addEvent("request.received");
-  const traceId = root.span.traceId;
 
-  try {
-    // Auth verification
-    const authSpan = pulseClient.startSpan("auth.verify_token", {
-      traceId,
-      parentSpanId: root.span.spanId,
-      kind: "client",
-      attributes: { "rpc.system": "grpc", "rpc.method": "VerifyToken", "user.id": "u_4421" },
-    });
+  if (!session) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
 
-    // Redis cache lookup
-    const redisSpan = pulseClient.startSpan("redis.get", {
-      traceId,
-      parentSpanId: authSpan.span.spanId,
-      kind: "client",
-      attributes: { "db.system": "redis", "db.operation": "GET", "db.statement": "GET session:u_4421" },
-    });
-    await delay(2 + Math.random() * 3);
-    redisSpan.end();
-    await delay(8 + Math.random() * 10);
-    authSpan.end();
+  // Pick random items
+  const itemCount = 1 + Math.floor(Math.random() * 3);
+  const chosenSkus = Array.from({ length: itemCount }, () => skus[Math.floor(Math.random() * skus.length)]);
+  const orderId = `ord_${crypto.randomUUID().slice(0, 8)}`;
 
-    // Order creation
-    const orderSpan = pulseClient.startSpan("orders.create", {
-      traceId,
-      parentSpanId: root.span.spanId,
-      kind: "internal",
-      attributes: {
-        "order.id": `ord_${Math.floor(Math.random() * 10000)}`,
-        "order.total": 89.4,
-        "order.items": 3,
-      },
-    });
+  // Order creation
+  await pulse.withSpan("orders.create", {
+    kind: "internal",
+    attributes: { "order.id": orderId, "order.items": itemCount },
+  }, async (orderSpan) => {
+    // Look up products and calculate total
+    let total = 0;
+    const items: { sku: string; qty: number; price: number }[] = [];
+
+    for (const sku of chosenSkus) {
+      const product = await pulse.withSpan("db.query", {
+        kind: "client",
+        attributes: { "db.system": "sqlite", "db.operation": "SELECT", "db.statement": "SELECT * FROM products WHERE sku = ?" },
+      }, async () => {
+        return stmts.getProduct.get(sku) as { sku: string; price: number } | undefined;
+      });
+
+      if (product) {
+        items.push({ sku, qty: 1, price: product.price });
+        total += product.price;
+      }
+    }
+
+    orderSpan.setAttribute("order.total", total);
     orderSpan.addEvent("validation.passed");
 
     // Inventory reservation
-    const invSpan = pulseClient.startSpan("inventory.reserve", {
-      traceId,
-      parentSpanId: orderSpan.span.spanId,
+    await pulse.withSpan("inventory.reserve", {
       kind: "client",
-      attributes: { "inventory.sku": "SKU-21084", "inventory.qty": 3 },
+      attributes: { "inventory.item_count": items.length },
+    }, async () => {
+      for (const item of items) {
+        await pulse.withSpan("db.execute", {
+          kind: "client",
+          attributes: { "db.system": "sqlite", "db.operation": "UPDATE", "db.statement": "UPDATE products SET stock = stock - ? WHERE sku = ?" },
+        }, async () => {
+          stmts.reserveStock.run(item.qty, item.sku, item.qty);
+        });
+      }
     });
 
-    const pgUpdateSpan = pulseClient.startSpan("postgres.update", {
-      traceId,
-      parentSpanId: invSpan.span.spanId,
+    // Persist order
+    await pulse.withSpan("db.execute", {
       kind: "client",
-      attributes: {
-        "db.system": "postgresql",
-        "db.name": "inventory",
-        "db.statement": "UPDATE stock SET qty = qty - $1 WHERE sku = $2",
-      },
-    });
-    await delay(10 + Math.random() * 10);
-    pgUpdateSpan.end();
-    await delay(5 + Math.random() * 10);
-    invSpan.end();
-
-    // Payment processing
-    const paySpan = pulseClient.startSpan("payments.charge", {
-      traceId,
-      parentSpanId: orderSpan.span.spanId,
-      kind: "client",
-      attributes: { "payment.provider": "stripe", "payment.amount": 89.4, "payment.currency": "USD" },
+      attributes: { "db.system": "sqlite", "db.operation": "INSERT", "db.statement": "INSERT INTO orders (...) VALUES (...)" },
+    }, async () => {
+      stmts.insertOrder.run(orderId, userId, total, items.length, "confirmed");
+      for (const item of items) {
+        stmts.insertOrderItem.run(orderId, item.sku, item.qty, item.price);
+      }
     });
 
-    const stripeSpan = pulseClient.startSpan("stripe.api.call", {
-      traceId,
-      parentSpanId: paySpan.span.spanId,
-      kind: "client",
-      attributes: {
-        "http.method": "POST",
-        "http.url": "https://api.stripe.com/v1/charges",
-        "http.status_code": 200,
-      },
+    // Send notification — real DB insert
+    await pulse.withSpan("notifications.send", {
+      kind: "internal",
+      attributes: { "notification.channel": "email", "notification.template": "order_confirmation" },
+    }, async () => {
+      stmts.insertNotification.run(orderId, "email", "order_confirmation");
     });
-    stripeSpan.addEvent("request.start");
-    await delay(80 + Math.random() * 100);
-    stripeSpan.addEvent("response.received");
-    stripeSpan.end();
-    await delay(5 + Math.random() * 10);
-    paySpan.end();
-
-    // Insert order into DB
-    const pgInsertSpan = pulseClient.startSpan("postgres.insert", {
-      traceId,
-      parentSpanId: orderSpan.span.spanId,
-      kind: "client",
-      attributes: {
-        "db.system": "postgresql",
-        "db.name": "orders",
-        "db.statement": "INSERT INTO orders (...) VALUES (...)",
-      },
-    });
-    await delay(10 + Math.random() * 10);
-    pgInsertSpan.end();
-
-    // Publish to Kafka
-    const kafkaSpan = pulseClient.startSpan("kafka.publish", {
-      traceId,
-      parentSpanId: orderSpan.span.spanId,
-      kind: "producer",
-      attributes: {
-        "messaging.system": "kafka",
-        "messaging.destination": "orders.events",
-        "messaging.message_id": `msg_${Math.floor(Math.random() * 10000)}`,
-      },
-    });
-    await delay(3 + Math.random() * 5);
-
-    // Notification consumer
-    const notifSpan = pulseClient.startSpan("notifications.send", {
-      traceId,
-      parentSpanId: kafkaSpan.span.spanId,
-      kind: "consumer",
-      attributes: {
-        "messaging.system": "kafka",
-        "notification.channel": "email",
-        "notification.template": "order_confirmation",
-      },
-    });
-    await delay(4 + Math.random() * 6);
-    notifSpan.end();
-    kafkaSpan.end();
 
     orderSpan.addEvent("order.persisted");
-    orderSpan.end();
+    pulse.log("info", "Order created", { order_id: orderId, user_id: userId, total });
+  });
 
-    // Log correlated to trace
-    pulseClient.log("info", "Order created", {
-      order_id: orderSpan.span.attributes?.["order.id"],
-      user_id: "u_4421",
-      total: 89.4,
-    }, { traceId, spanId: orderSpan.span.spanId });
-
-    pulseClient.log("info", "Charge initiated", {
-      amount: 89.4,
-      currency: "USD",
-    }, { traceId, spanId: paySpan.span.spanId });
-
-    root.addEvent("response.sent");
-    root.end({ attributes: { "http.status_code": 200 } });
-    res.json({ status: "ok", traceId });
-  } catch (err) {
-    root.end({ status: "error", error: err instanceof Error ? err.message : String(err) });
-    res.status(500).json({ error: "Internal error" });
-  }
+  res.json({ status: "ok", orderId });
 });
 
-// Simple health check with single span
+// ── GET /ok ── simple health check ─────────────────────────────────────
 app.get("/ok", async (_req, res) => {
-  await pulseClient.withSpan("ok_handler", { kind: "server" }, async () => {
-    res.status(200).json({ status: "ok" });
-  });
+  res.status(200).json({ status: "ok" });
 });
 
-// Slow endpoint with nested DB call
+// ── GET /slow ── analytics query ───────────────────────────────────────
 app.get("/slow", async (_req, res) => {
-  const root = pulseClient.startSpan("GET /slow", {
-    kind: "server",
-    attributes: { "http.method": "GET", "http.route": "/slow" },
-  });
-  const traceId = root.span.traceId;
-
-  const dbSpan = pulseClient.startSpan("postgres.query", {
-    traceId,
-    parentSpanId: root.span.spanId,
+  const result = await pulse.withSpan("db.query", {
     kind: "client",
-    attributes: {
-      "db.system": "postgresql",
-      "db.name": "analytics",
-      "db.statement": "SELECT * FROM reports WHERE ...",
-    },
+    attributes: { "db.system": "sqlite", "db.operation": "SELECT", "db.statement": "SELECT COUNT(*), SUM(total), AVG(total) ... FROM orders" },
+  }, async () => {
+    return stmts.getAnalytics.get();
   });
-  const d = 100 + Math.random() * 700;
-  await delay(d);
-  dbSpan.end();
-  root.end({ attributes: { "http.status_code": 200 } });
-  res.status(200).json({ status: "slow", delay: Math.round(d), traceId });
+
+  res.status(200).json({ status: "ok", analytics: result });
 });
 
-// Error endpoint with payment failure simulation
+// ── GET /error ── payment failure simulation ───────────────────────────
 app.get("/error", async (_req, res) => {
-  const root = pulseClient.startSpan("POST /api/payments/charge", {
-    kind: "server",
-    attributes: { "http.method": "POST", "http.route": "/api/payments/charge" },
-  });
-  const traceId = root.span.traceId;
+  const orderId = `ord_${crypto.randomUUID().slice(0, 8)}`;
 
-  const stripeSpan = pulseClient.startSpan("stripe.api.call", {
-    traceId,
-    parentSpanId: root.span.spanId,
-    kind: "client",
-    attributes: {
-      "http.method": "POST",
-      "http.url": "https://api.stripe.com/v1/charges",
-    },
-  });
-  stripeSpan.addEvent("request.start");
-  await delay(800 + Math.random() * 1200);
+  try {
+    await pulse.withSpan("orders.create", {
+      kind: "internal",
+      attributes: { "order.id": orderId },
+    }, async () => {
+      // Insert a pending order
+      await pulse.withSpan("db.execute", {
+        kind: "client",
+        attributes: { "db.system": "sqlite", "db.operation": "INSERT", "db.statement": "INSERT INTO orders (...) VALUES (...)" },
+      }, async () => {
+        stmts.insertOrder.run(orderId, "u_4421", 149.99, 1, "pending");
+      });
 
-  if (Math.random() < 0.7) {
-    stripeSpan.addEvent("timeout");
-    stripeSpan.end({ status: "error", error: "Stripe API timeout after 1800ms", attributes: { "http.status_code": 504 } });
-    root.end({ status: "error", error: "Payment failed", attributes: { "http.status_code": 504 } });
-    pulseClient.log("error", "Stripe API timeout after 1800ms", {
-      provider: "stripe",
-      retries: 2,
-      status_code: 504,
-    }, { traceId });
-    res.status(504).json({ error: "Payment timeout", traceId });
-  } else {
-    stripeSpan.addEvent("response.received");
-    stripeSpan.end({ attributes: { "http.status_code": 200 } });
-    root.end({ attributes: { "http.status_code": 200 } });
-    res.json({ status: "ok", traceId });
+      // Simulate payment failure
+      if (Math.random() < 0.7) {
+        // Mark order as failed in DB
+        await pulse.withSpan("db.execute", {
+          kind: "client",
+          attributes: { "db.system": "sqlite", "db.operation": "UPDATE", "db.statement": "UPDATE orders SET status = 'failed' WHERE id = ?" },
+        }, async () => {
+          stmts.updateOrderStatus.run("failed", orderId);
+        });
+
+        throw new Error("Payment declined");
+      }
+
+      await pulse.withSpan("db.execute", {
+        kind: "client",
+        attributes: { "db.system": "sqlite", "db.operation": "UPDATE", "db.statement": "UPDATE orders SET status = 'confirmed' WHERE id = ?" },
+      }, async () => {
+        stmts.updateOrderStatus.run("confirmed", orderId);
+      });
+    });
+
+    res.json({ status: "ok", orderId });
+  } catch (err) {
+    pulse.log("error", "Payment failed", { order_id: orderId, error: (err as Error).message });
+    res.status(500).json({ error: "Payment failed", orderId });
   }
 });
 
-// Generate traffic endpoint — creates a burst of traces
-app.post("/generate", async (_req, res) => {
+// ── POST /generate ── burst traffic generator ──────────────────────────
+app.post("/generate", async (req, res) => {
+  const count = Number(req.query.count) || 5;
   const endpoints = [
     { method: "POST", path: "/api/orders" },
     { method: "GET", path: "/slow" },
     { method: "GET", path: "/error" },
     { method: "GET", path: "/ok" },
   ];
-  const count = Number(_req.query.count) || 5;
 
   for (let i = 0; i < count; i++) {
     const ep = endpoints[Math.floor(Math.random() * endpoints.length)];
     try {
       await fetch(`http://localhost:${port}${ep.path}`, { method: ep.method });
-    } catch {
-      // ignore
-    }
+    } catch { /* ignore */ }
   }
 
-  await pulseClient.flush();
+  await pulse.flush();
   res.json({ generated: count });
 });
 
 const port = Number(process.env.PORT ?? 4000);
 app.listen(port, () => {
   console.log(`Demo backend listening on http://localhost:${port}`);
-  console.log(`Generate traces: curl -X POST http://localhost:${port}/generate?count=10`);
+  console.log(`Generate traces: curl -X POST "http://localhost:${port}/generate?count=10"`);
 });
