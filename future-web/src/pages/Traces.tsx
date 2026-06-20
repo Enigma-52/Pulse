@@ -1,8 +1,19 @@
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import ServiceGraph from "@/components/ServiceGraph";
-import { traces } from "@/lib/mockData";
+import type { Trace } from "@/lib/mockData";
+import { fetchTraces } from "@/lib/api";
 
 export default function Traces() {
+  const [traces, setTraces] = useState<Trace[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchTraces()
+      .then(setTraces)
+      .finally(() => setLoading(false));
+  }, []);
+
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
@@ -38,7 +49,15 @@ export default function Traces() {
             </tr>
           </thead>
           <tbody>
-            {traces.map(t => (
+            {loading ? (
+              <tr>
+                <td colSpan={7} className="px-5 py-10 text-center text-sm text-muted-foreground">Loading traces...</td>
+              </tr>
+            ) : traces.length === 0 ? (
+              <tr>
+                <td colSpan={7} className="px-5 py-10 text-center text-sm text-muted-foreground">No traces found</td>
+              </tr>
+            ) : traces.map(t => (
               <tr key={t.id} className="border-b border-border last:border-0 hover:bg-secondary/40">
                 <td className="px-5 py-2.5 font-mono text-xs text-muted-foreground">{t.timestamp}</td>
                 <td className="px-5 py-2.5 font-mono text-xs">

@@ -1,12 +1,54 @@
+import { useState, useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
-import { metrics, genSeries } from "@/lib/mockData";
+import { fetchMetrics, fetchMetricSeries } from "@/lib/api";
+import type { Metric } from "@/lib/mockData";
+import { genSeries } from "@/lib/mockData";
 
 export default function MetricDetail() {
   const { id } = useParams();
-  const metric = metrics.find(m => m.id === id) ?? metrics[0];
-  const series = genSeries(120, metric.value, metric.value * 0.3, 13);
+  const [metric, setMetric] = useState<Metric | null>(null);
+  const [series, setSeries] = useState<{ t: number; value: number }[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchMetrics().then((all) => {
+      const found = all.find((m) => m.id === id) ?? all[0] ?? null;
+      setMetric(found);
+      if (found) {
+        fetchMetricSeries(found.name, 60, 30).then((pts) => {
+          if (pts.length > 0) {
+            setSeries(pts);
+          } else {
+            setSeries(genSeries(120, found.value, found.value * 0.3, 13));
+          }
+          setLoading(false);
+        });
+      } else {
+        setLoading(false);
+      }
+    });
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div className="p-6">
+        <div className="text-sm text-muted-foreground">Loading metric…</div>
+      </div>
+    );
+  }
+
+  if (!metric) {
+    return (
+      <div className="p-6">
+        <Link to="/app/metrics" className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground">
+          <ArrowLeft className="w-3 h-3" /> Back to metrics
+        </Link>
+        <div className="text-sm text-muted-foreground mt-4">No metrics data</div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6">

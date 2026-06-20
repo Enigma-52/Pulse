@@ -1,8 +1,20 @@
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { ResponsiveContainer, AreaChart, Area } from "recharts";
-import { metrics, genSeries } from "@/lib/mockData";
+import { fetchMetrics } from "@/lib/api";
+import type { Metric } from "@/lib/mockData";
+import { genSeries } from "@/lib/mockData";
 
 export default function Metrics() {
+  const [metrics, setMetrics] = useState<Metric[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchMetrics()
+      .then(setMetrics)
+      .finally(() => setLoading(false));
+  }, []);
+
   return (
     <div className="p-6 space-y-6">
       <div>
@@ -18,6 +30,11 @@ export default function Metrics() {
         <button className="h-9 px-3 text-xs font-medium rounded bg-secondary border border-border hover:border-ring">Execute</button>
       </div>
 
+      {loading ? (
+        <div className="text-sm text-muted-foreground">Loading metrics…</div>
+      ) : metrics.length === 0 ? (
+        <div className="text-sm text-muted-foreground">No metrics data</div>
+      ) : (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {metrics.map((m, i) => {
           const series = genSeries(40, m.value, m.value * 0.3, i + 1);
@@ -58,6 +75,7 @@ export default function Metrics() {
           );
         })}
       </div>
+      )}
     </div>
   );
 }
