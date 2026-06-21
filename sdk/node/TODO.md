@@ -18,3 +18,5 @@ Updated: 2026-05-02
 - [ ] Add optional OTLP compatibility export mode.
 - [ ] Add stronger typing/validation for attribute and log field payloads.
 - [ ] Add tests for queue limits, flush timing, and middleware lifecycle.
+
+yo
