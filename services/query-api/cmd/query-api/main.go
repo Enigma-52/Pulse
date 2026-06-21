@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net/http"
 
@@ -16,6 +17,10 @@ func main() {
 	s, err := store.Connect(cfg.ClickHouse)
 	if err != nil {
 		log.Fatalf("failed to connect to ClickHouse: %v", err)
+	}
+
+	if err := s.EnsureUsersTable(context.Background()); err != nil {
+		log.Fatalf("failed to create users table: %v", err)
 	}
 
 	h := handler.New(s)
