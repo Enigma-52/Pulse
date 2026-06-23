@@ -307,16 +307,21 @@ ORDER BY ts
 	return points, nil
 }
 
-func (s *Store) GetDashboardSummary(ctx context.Context) (*model.DashboardSummary, error) {
-	rows, err := s.conn.Query(ctx, `
+func (s *Store) GetDashboardSummary(ctx context.Context, minutes int) (*model.DashboardSummary, error) {
+	if minutes <= 0 {
+		minutes = 15
+	}
+	seconds := float64(minutes * 60)
+
+	rows, err := s.conn.Query(ctx, fmt.Sprintf(`
 SELECT
-	count() / 300.0 as request_rate,
+	count() / %f as request_rate,
 	quantile(0.99)(duration_ms) as p99_latency,
 	countIf(status = 'error') * 100.0 / count() as error_rate,
 	count() as trace_count
 FROM traces
-WHERE parent_span_id = '' AND start_time >= now() - INTERVAL 5 MINUTE
-`)
+WHERE parent_span_id = '' AND start_time >= now() - INTERVAL ? MINUTE
+`, seconds), minutes)
 	if err != nil {
 		return nil, err
 	}
@@ -331,6 +336,113 @@ WHERE parent_span_id = '' AND start_time >= now() - INTERVAL 5 MINUTE
 		return nil, err
 	}
 	return &out, nil
+}
+
+func (s *Store) QueryMetrics(ctx context.Context, q model.MetricQuery) ([]model.MetricQuerySeries, error) {
+	var sb strings.Builder
+	args := make([]any, 0, 6)
+
+	sb.WriteString(`
+SELECT
+	name,
+	any(unit) as unit,
+	toStartOfInterval(timestamp, INTERVAL ? SECOND) as ts,
+	avg(value) as value
+FROM metrics
+WHERE timestamp >= now() - INTERVAL ? MINUTE
+`)
+	args = append(args, q.Interval, q.Minutes)
+
+	if q.Name != "" {
+		sb.WriteString(" AND position(name, ?) > 0")
+		args = append(args, q.Name)
+	}
+	if q.Service != "" {
+		sb.WriteString(" AND service = ?")
+		args = append(args, q.Service)
+	}
+	if q.Type != "" {
+		sb.WriteString(" AND type = ?")
+		args = append(args, q.Type)
+	}
+
+	sb.WriteString(" GROUP BY name, ts ORDER BY name, ts")
+
+	rows, err := s.conn.Query(ctx, sb.String(), args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	seriesMap := make(map[string]*model.MetricQuerySeries)
+	var order []string
+
+	for rows.Next() {
+		var name, unit string
+		var p model.MetricSeriesPoint
+		if err := rows.Scan(&name, &unit, &p.Timestamp, &p.Value); err != nil {
+			return nil, err
+		}
+		if _, ok := seriesMap[name]; !ok {
+			seriesMap[name] = &model.MetricQuerySeries{Name: name, Unit: unit}
+			order = append(order, name)
+		}
+		seriesMap[name].Points = append(seriesMap[name].Points, p)
+	}
+
+	result := make([]model.MetricQuerySeries, 0, len(order))
+	for _, name := range order {
+		result = append(result, *seriesMap[name])
+	}
+	return result, nil
+}
+
+func (s *Store) GetServicesList(ctx context.Context, minutes int) ([]model.ServiceSummary, error) {
+	if minutes <= 0 {
+		minutes = 15
+	}
+	rows, err := s.conn.Query(ctx, `
+SELECT
+	service,
+	count() AS trace_count,
+	countIf(status = 'error' OR error != '') AS error_count,
+	if(trace_count = 0, 0, (error_count / trace_count) * 100.0) AS error_rate,
+	avg(duration_ms) AS avg_duration_ms,
+	quantile(0.5)(duration_ms) AS p50_duration_ms,
+	quantile(0.95)(duration_ms) AS p95_duration_ms,
+	quantile(0.99)(duration_ms) AS p99_duration_ms,
+	max(start_time) AS last_seen
+FROM traces
+WHERE start_time >= now() - INTERVAL ? MINUTE
+GROUP BY service
+ORDER BY trace_count DESC
+`, minutes)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var services []model.ServiceSummary
+	for rows.Next() {
+		var s model.ServiceSummary
+		var lastSeen time.Time
+		if err := rows.Scan(
+			&s.Service,
+			&s.TraceCount,
+			&s.ErrorCount,
+			&s.ErrorRate,
+			&s.AvgDurationMs,
+			&s.P50DurationMs,
+			&s.P95DurationMs,
+			&s.P99DurationMs,
+			&lastSeen,
+		); err != nil {
+			return nil, err
+		}
+		s.LastSeen = lastSeen.Format(time.RFC3339)
+		services = append(services, s)
+	}
+	return services, nil
 }
 
 func buildLogQuery(filters model.LogFilters) (string, []any) {

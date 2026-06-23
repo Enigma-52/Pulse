@@ -1,40 +1,50 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 import { fetchMetrics, fetchMetricSeries } from "@/lib/api";
 import type { Metric } from "@/lib/mockData";
 import { genSeries } from "@/lib/mockData";
+import TimeRangeSelector, { type TimeRange, TIME_RANGES, rangeToMinutes, rangeToInterval } from "@/components/TimeRangeSelector";
 
 export default function MetricDetail() {
   const { id } = useParams();
   const [metric, setMetric] = useState<Metric | null>(null);
   const [series, setSeries] = useState<{ t: number; value: number }[]>([]);
   const [loading, setLoading] = useState(true);
+  const [range, setRange] = useState<TimeRange>("1h");
+
+  const loadSeries = useCallback((m: Metric, r: TimeRange) => {
+    const minutes = rangeToMinutes(r);
+    const interval = rangeToInterval(r);
+    fetchMetricSeries(m.name, minutes, interval).then((pts) => {
+      if (pts.length > 0) {
+        setSeries(pts);
+      } else {
+        setSeries(genSeries(120, m.value, m.value * 0.3, 13));
+      }
+    });
+  }, []);
 
   useEffect(() => {
     fetchMetrics().then((all) => {
       const found = all.find((m) => m.id === id) ?? all[0] ?? null;
       setMetric(found);
       if (found) {
-        fetchMetricSeries(found.name, 60, 30).then((pts) => {
-          if (pts.length > 0) {
-            setSeries(pts);
-          } else {
-            setSeries(genSeries(120, found.value, found.value * 0.3, 13));
-          }
-          setLoading(false);
-        });
-      } else {
-        setLoading(false);
+        loadSeries(found, range);
       }
+      setLoading(false);
     });
   }, [id]);
+
+  useEffect(() => {
+    if (metric) loadSeries(metric, range);
+  }, [range, metric, loadSeries]);
 
   if (loading) {
     return (
       <div className="p-6">
-        <div className="text-sm text-muted-foreground">Loading metric…</div>
+        <div className="text-sm text-muted-foreground">Loading metric...</div>
       </div>
     );
   }
@@ -67,7 +77,7 @@ export default function MetricDetail() {
           ["Current", `${metric.value} ${metric.unit}`],
           ["Avg (15m)", `${(metric.value * 0.92).toFixed(1)} ${metric.unit}`],
           ["Max (15m)", `${(metric.value * 1.18).toFixed(1)} ${metric.unit}`],
-          ["Δ", `${metric.delta >= 0 ? "+" : ""}${metric.delta}%`],
+          ["\u0394", `${metric.delta >= 0 ? "+" : ""}${metric.delta}%`],
         ].map(([k, v]) => (
           <div key={k} className="panel p-4">
             <div className="data-label">{k}</div>
@@ -82,11 +92,7 @@ export default function MetricDetail() {
             <div className="data-label">{metric.unit}</div>
             <div className="text-sm mt-1 font-mono text-muted-foreground">{metric.name}</div>
           </div>
-          <div className="flex gap-1 text-xs font-mono">
-            {["5m", "15m", "1h", "6h", "24h", "7d"].map(r => (
-              <button key={r} className={`px-2 py-1 rounded border ${r === "1h" ? "border-ring text-foreground" : "border-border text-muted-foreground hover:border-ring/40"}`}>{r}</button>
-            ))}
-          </div>
+          <TimeRangeSelector value={range} onChange={setRange} ranges={TIME_RANGES} />
         </div>
         <div className="h-80">
           <ResponsiveContainer>

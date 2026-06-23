@@ -172,8 +172,21 @@ function formatTimestamp(iso: string): string {
 
 // ── Traces ──────────────────────────────────────────────────────────────
 
-export async function fetchTraces(): Promise<Trace[]> {
-  const res = await fetch(`${API_BASE}/traces?limit=50`, { headers: authHeaders() });
+export async function fetchTraces(params?: {
+  service?: string;
+  status?: string;
+  start?: string;
+  end?: string;
+  limit?: number;
+}): Promise<Trace[]> {
+  const q = new URLSearchParams();
+  q.set("limit", String(params?.limit ?? 50));
+  if (params?.service) q.set("service", params.service);
+  if (params?.status) q.set("status", params.status);
+  if (params?.start) q.set("start", params.start);
+  if (params?.end) q.set("end", params.end);
+
+  const res = await fetch(`${API_BASE}/traces?${q}`, { headers: authHeaders() });
   if (!res.ok) return [];
   const data: { items: APITrace[] } = await res.json();
   if (!data.items) return [];
@@ -182,7 +195,7 @@ export async function fetchTraces(): Promise<Trace[]> {
     name: t.route || "unknown",
     service: t.service,
     duration: t.duration_ms,
-    spans: 0, // not available in list view
+    spans: 0,
     status: (t.status === "error" ? "error" : "ok") as "ok" | "error",
     timestamp: formatTimestamp(t.timestamp),
   }));
@@ -238,12 +251,16 @@ export async function fetchLogs(params?: {
   service?: string;
   level?: string;
   search?: string;
+  start?: string;
+  end?: string;
   limit?: number;
 }): Promise<Log[]> {
   const q = new URLSearchParams();
   if (params?.service) q.set("service", params.service);
   if (params?.level) q.set("level", params.level);
   if (params?.search) q.set("search", params.search);
+  if (params?.start) q.set("start", params.start);
+  if (params?.end) q.set("end", params.end);
   q.set("limit", String(params?.limit ?? 100));
 
   const res = await fetch(`${API_BASE}/logs?${q}`, { headers: authHeaders() });
@@ -297,6 +314,59 @@ export async function fetchMetricSeries(
   }));
 }
 
+export async function queryMetrics(params: {
+  name?: string;
+  service?: string;
+  type?: string;
+  minutes?: number;
+  interval?: number;
+}): Promise<{
+  series: { name: string; unit: string; points: { t: number; value: number }[] }[];
+}> {
+  const q = new URLSearchParams();
+  if (params.name) q.set("name", params.name);
+  if (params.service) q.set("service", params.service);
+  if (params.type) q.set("type", params.type);
+  q.set("minutes", String(params.minutes ?? 15));
+  q.set("interval", String(params.interval ?? 30));
+
+  const res = await fetch(`${API_BASE}/metrics/query?${q}`, { headers: authHeaders() });
+  if (!res.ok) return { series: [] };
+  const data = await res.json();
+  if (!data.series) return { series: [] };
+  return {
+    series: data.series.map((s: { name: string; unit: string; points: { timestamp: string; value: number }[] }) => ({
+      name: s.name,
+      unit: s.unit,
+      points: (s.points || []).map((p: { timestamp: string; value: number }, i: number) => ({
+        t: i,
+        value: p.value,
+      })),
+    })),
+  };
+}
+
+// ── Services ─────────────────────────────────────────────────────────────
+
+export interface ServiceSummary {
+  service: string;
+  trace_count: number;
+  error_count: number;
+  error_rate: number;
+  avg_duration_ms: number;
+  p50_duration_ms: number;
+  p95_duration_ms: number;
+  p99_duration_ms: number;
+  last_seen: string;
+}
+
+export async function fetchServicesList(minutes = 15): Promise<ServiceSummary[]> {
+  const res = await fetch(`${API_BASE}/services?minutes=${minutes}`, { headers: authHeaders() });
+  if (!res.ok) return [];
+  const data: { items: ServiceSummary[] } = await res.json();
+  return data.items || [];
+}
+
 // ── Dashboard ───────────────────────────────────────────────────────────
 
 export interface DashboardData {
@@ -306,8 +376,8 @@ export interface DashboardData {
   traceCount: number;
 }
 
-export async function fetchDashboardSummary(): Promise<DashboardData> {
-  const res = await fetch(`${API_BASE}/dashboard/summary`, { headers: authHeaders() });
+export async function fetchDashboardSummary(minutes = 15): Promise<DashboardData> {
+  const res = await fetch(`${API_BASE}/dashboard/summary?minutes=${minutes}`, { headers: authHeaders() });
   if (!res.ok) return { requestRate: 0, p99Latency: 0, errorRate: 0, traceCount: 0 };
   const data: APIDashboardSummary = await res.json();
   return {

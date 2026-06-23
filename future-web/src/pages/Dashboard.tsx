@@ -1,23 +1,41 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 import StatCard from "@/components/StatCard";
+import TimeRangeSelector, { type TimeRange, rangeToMinutes, rangeToLabel, rangeToStartEnd, rangeToInterval } from "@/components/TimeRangeSelector";
 import { genSeries } from "@/lib/mockData";
 import type { Trace } from "@/lib/mockData";
 import { fetchTraces, fetchDashboardSummary, fetchMetricSeries, type DashboardData } from "@/lib/api";
 import { Link } from "react-router-dom";
+import AutoRefreshPicker from "@/components/AutoRefreshPicker";
+import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 
 export default function Dashboard() {
   const [summary, setSummary] = useState<DashboardData | null>(null);
   const [traces, setTraces] = useState<Trace[]>([]);
   const [reqSeries, setReqSeries] = useState(genSeries(60, 0, 0, 7));
+  const [range, setRange] = useState<TimeRange>("15m");
 
-  useEffect(() => {
-    fetchDashboardSummary().then(setSummary);
-    fetchTraces().then((t) => setTraces(t.slice(0, 6)));
-    fetchMetricSeries("http.requests.total", 15, 15).then((s) => {
+  const load = useCallback((r: TimeRange) => {
+    const minutes = rangeToMinutes(r);
+    const { start, end } = rangeToStartEnd(r);
+    const interval = rangeToInterval(r);
+
+    fetchDashboardSummary(minutes).then(setSummary);
+    fetchTraces({ start, end, limit: 6 }).then(setTraces);
+    fetchMetricSeries("http.requests.total", minutes, interval).then((s) => {
       if (s.length > 0) setReqSeries(s);
     });
   }, []);
+
+  useEffect(() => {
+    load(range);
+  }, [range, load]);
+
+  const refresh = useAutoRefresh(() => load(range));
+
+  const handleRangeChange = (r: TimeRange) => {
+    setRange(r);
+  };
 
   const rate = summary?.requestRate ?? 0;
   const p99 = summary?.p99Latency ?? 0;
@@ -25,9 +43,15 @@ export default function Dashboard() {
 
   return (
     <div className="p-6 space-y-6">
-      <div>
-        <h1 className="text-xl font-medium tracking-tight">Overview</h1>
-        <p className="text-sm text-muted-foreground mt-1">production · last 15 minutes</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-medium tracking-tight">Overview</h1>
+          <p className="text-sm text-muted-foreground mt-1">production · {rangeToLabel(range)}</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <AutoRefreshPicker value={refresh.interval} onChange={refresh.setInterval} isActive={refresh.isActive} />
+          <TimeRangeSelector value={range} onChange={handleRangeChange} />
+        </div>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -43,11 +67,6 @@ export default function Dashboard() {
             <div>
               <div className="data-label">Request volume</div>
               <div className="text-sm mt-1">All services · req/s</div>
-            </div>
-            <div className="flex gap-1 text-xs font-mono">
-              {["5m", "15m", "1h", "6h", "24h"].map(r => (
-                <button key={r} className={`px-2 py-1 rounded border ${r === "15m" ? "border-ring text-foreground" : "border-border text-muted-foreground hover:border-ring/40"}`}>{r}</button>
-              ))}
             </div>
           </div>
           <div className="h-64">
