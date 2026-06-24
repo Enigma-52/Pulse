@@ -1,9 +1,10 @@
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { Activity, BarChart3, GitBranch, Home, LogOut, ScrollText, Search, Settings } from "lucide-react";
+import { Activity, BarChart3, GitBranch, Home, LogOut, ScrollText, Search, Settings, Server } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 
 const nav = [
   { to: "/app", label: "Overview", icon: Home, end: true },
+  { to: "/app/services", label: "Services", icon: Server },
   { to: "/app/traces", label: "Traces", icon: GitBranch },
   { to: "/app/logs", label: "Logs", icon: ScrollText },
   { to: "/app/metrics", label: "Metrics", icon: BarChart3 },

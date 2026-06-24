@@ -17,6 +17,7 @@ import Logs from "./pages/Logs";
 import LogDetail from "./pages/LogDetail";
 import Metrics from "./pages/Metrics";
 import MetricDetail from "./pages/MetricDetail";
+import Services from "./pages/Services";
 import ServiceDetail from "./pages/ServiceDetail";
 
 const queryClient = new QueryClient();
@@ -45,9 +46,10 @@ const App = () => (
               <Route path="traces/:id" element={<TraceDetail />} />
               <Route path="logs" element={<Logs />} />
               <Route path="logs/:id" element={<LogDetail />} />
+              <Route path="services" element={<Services />} />
+              <Route path="services/:id" element={<ServiceDetail />} />
               <Route path="metrics" element={<Metrics />} />
               <Route path="metrics/:id" element={<MetricDetail />} />
-              <Route path="services/:id" element={<ServiceDetail />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
