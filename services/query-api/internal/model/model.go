@@ -127,6 +127,40 @@ type DashboardSummary struct {
 	TraceCount  uint64  `json:"trace_count"`
 }
 
+type ServiceSummary struct {
+	Service       string  `json:"service"`
+	TraceCount    uint64  `json:"trace_count"`
+	ErrorCount    uint64  `json:"error_count"`
+	ErrorRate     float64 `json:"error_rate"`
+	AvgDurationMs float64 `json:"avg_duration_ms"`
+	P50DurationMs float64 `json:"p50_duration_ms"`
+	P95DurationMs float64 `json:"p95_duration_ms"`
+	P99DurationMs float64 `json:"p99_duration_ms"`
+	LastSeen      string  `json:"last_seen"`
+}
+
+type ServicesListResponse struct {
+	Items []ServiceSummary `json:"items"`
+}
+
+type MetricQuery struct {
+	Name     string
+	Service  string
+	Type     string
+	Minutes  int
+	Interval int
+}
+
+type MetricQuerySeries struct {
+	Name   string              `json:"name"`
+	Unit   string              `json:"unit"`
+	Points []MetricSeriesPoint `json:"points"`
+}
+
+type MetricQueryResponse struct {
+	Series []MetricQuerySeries `json:"series"`
+}
+
 type TraceFilters struct {
 	Service       string
 	Route         string

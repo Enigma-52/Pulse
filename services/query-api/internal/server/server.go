@@ -22,8 +22,10 @@ func New(h *handler.Handler) http.Handler {
 	protected.HandleFunc("/traces", h.HandleTraces).Methods(http.MethodGet, http.MethodOptions)
 	protected.HandleFunc("/traces/{trace_id}", h.HandleTraceDetail).Methods(http.MethodGet, http.MethodOptions)
 	protected.HandleFunc("/logs", h.HandleLogs).Methods(http.MethodGet, http.MethodOptions)
+	protected.HandleFunc("/services", h.HandleServicesList).Methods(http.MethodGet, http.MethodOptions)
 	protected.HandleFunc("/services/{service}/overview", h.HandleServiceOverview).Methods(http.MethodGet, http.MethodOptions)
 	protected.HandleFunc("/metrics", h.HandleMetricsList).Methods(http.MethodGet, http.MethodOptions)
+	protected.HandleFunc("/metrics/query", h.HandleMetricsQuery).Methods(http.MethodGet, http.MethodOptions)
 	protected.HandleFunc("/metrics/{name}/series", h.HandleMetricSeries).Methods(http.MethodGet, http.MethodOptions)
 	protected.HandleFunc("/dashboard/summary", h.HandleDashboardSummary).Methods(http.MethodGet, http.MethodOptions)
 
