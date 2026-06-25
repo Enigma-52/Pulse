@@ -1,5 +1,6 @@
-import { NavLink, Outlet, useLocation } from "react-router-dom";
-import { Activity, BarChart3, GitBranch, Home, ScrollText, Search, Settings } from "lucide-react";
+import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { Activity, BarChart3, GitBranch, Home, LogOut, ScrollText, Search, Settings } from "lucide-react";
+import { useAuth } from "@/lib/auth";
 
 const nav = [
   { to: "/app", label: "Overview", icon: Home, end: true },
@@ -10,6 +11,8 @@ const nav = [
 
 export default function AppLayout() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { logout } = useAuth();
   const crumb = location.pathname.split("/").filter(Boolean).slice(1);
 
   return (
@@ -55,10 +58,13 @@ export default function AppLayout() {
         </nav>
 
         <div className="p-3 border-t border-sidebar-border">
-          <NavLink to="/" className="flex items-center gap-2.5 px-2 py-1.5 text-sm rounded text-sidebar-foreground hover:bg-sidebar-accent">
-            <Settings className="w-4 h-4" strokeWidth={1.75} />
-            Exit demo
-          </NavLink>
+          <button
+            onClick={() => { logout(); navigate("/login"); }}
+            className="w-full flex items-center gap-2.5 px-2 py-1.5 text-sm rounded text-sidebar-foreground hover:bg-sidebar-accent"
+          >
+            <LogOut className="w-4 h-4" strokeWidth={1.75} />
+            Sign out
+          </button>
           <div className="mt-3 flex items-center gap-2 px-2 text-xs text-muted-foreground">
             <span className="w-1.5 h-1.5 rounded-full bg-status-ok animate-pulse-dot" />
             All systems nominal

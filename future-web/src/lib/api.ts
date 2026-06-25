@@ -91,6 +91,11 @@ export interface TraceDetail {
 
 const API_BASE = "/api";
 
+function authHeaders(): HeadersInit {
+  const token = localStorage.getItem("pulse_token");
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 function computeDepth(
   spanId: string,
   parentMap: Map<string, string>,
@@ -168,7 +173,7 @@ function formatTimestamp(iso: string): string {
 // ── Traces ──────────────────────────────────────────────────────────────
 
 export async function fetchTraces(): Promise<Trace[]> {
-  const res = await fetch(`${API_BASE}/traces?limit=50`);
+  const res = await fetch(`${API_BASE}/traces?limit=50`, { headers: authHeaders() });
   if (!res.ok) return [];
   const data: { items: APITrace[] } = await res.json();
   if (!data.items) return [];
@@ -187,8 +192,8 @@ export async function fetchTraceDetail(
   traceId: string
 ): Promise<TraceDetail | null> {
   const [traceRes, logsRes] = await Promise.all([
-    fetch(`${API_BASE}/traces/${traceId}`),
-    fetch(`${API_BASE}/logs?trace_id=${traceId}&limit=100`),
+    fetch(`${API_BASE}/traces/${traceId}`, { headers: authHeaders() }),
+    fetch(`${API_BASE}/logs?trace_id=${traceId}&limit=100`, { headers: authHeaders() }),
   ]);
   if (!traceRes.ok) return null;
 
@@ -241,7 +246,7 @@ export async function fetchLogs(params?: {
   if (params?.search) q.set("search", params.search);
   q.set("limit", String(params?.limit ?? 100));
 
-  const res = await fetch(`${API_BASE}/logs?${q}`);
+  const res = await fetch(`${API_BASE}/logs?${q}`, { headers: authHeaders() });
   if (!res.ok) return [];
   const data: { items: APILogEntry[] } = await res.json();
   if (!data.items) return [];
@@ -260,7 +265,7 @@ export async function fetchLogs(params?: {
 // ── Metrics ─────────────────────────────────────────────────────────────
 
 export async function fetchMetrics(): Promise<Metric[]> {
-  const res = await fetch(`${API_BASE}/metrics`);
+  const res = await fetch(`${API_BASE}/metrics`, { headers: authHeaders() });
   if (!res.ok) return [];
   const data: { items: APIMetricMeta[] } = await res.json();
   if (!data.items) return [];
@@ -280,7 +285,8 @@ export async function fetchMetricSeries(
   interval = 30
 ): Promise<{ t: number; value: number }[]> {
   const res = await fetch(
-    `${API_BASE}/metrics/${encodeURIComponent(name)}/series?minutes=${minutes}&interval=${interval}`
+    `${API_BASE}/metrics/${encodeURIComponent(name)}/series?minutes=${minutes}&interval=${interval}`,
+    { headers: authHeaders() }
   );
   if (!res.ok) return [];
   const data: { points: APIMetricSeriesPoint[] } = await res.json();
@@ -301,7 +307,7 @@ export interface DashboardData {
 }
 
 export async function fetchDashboardSummary(): Promise<DashboardData> {
-  const res = await fetch(`${API_BASE}/dashboard/summary`);
+  const res = await fetch(`${API_BASE}/dashboard/summary`, { headers: authHeaders() });
   if (!res.ok) return { requestRate: 0, p99Latency: 0, errorRate: 0, traceCount: 0 };
   const data: APIDashboardSummary = await res.json();
   return {

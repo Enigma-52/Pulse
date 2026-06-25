@@ -21,7 +21,7 @@ export default function Landing() {
             <a href="#changelog" className="hover:text-foreground">Changelog</a>
           </nav>
           <div className="ml-auto flex items-center gap-2">
-            <a href="#" className="text-sm text-muted-foreground hover:text-foreground px-3 py-1.5">Sign in</a>
+            <Link to="/login" className="text-sm text-muted-foreground hover:text-foreground px-3 py-1.5">Sign in</Link>
             <Link to="/app" className="text-sm bg-primary text-primary-foreground px-3 py-1.5 rounded font-medium hover:bg-primary/90 inline-flex items-center gap-1.5">
               Open dashboard <ArrowRight className="w-3.5 h-3.5" />
             </Link>
