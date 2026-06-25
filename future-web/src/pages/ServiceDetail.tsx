@@ -1,17 +1,34 @@
-import { useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { ResponsiveContainer, AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts";
-import { services, edges, traces, logs, genSeries } from "@/lib/mockData";
+import { services, edges, genSeries } from "@/lib/mockData";
+import type { Trace, Log } from "@/lib/mockData";
 import { spanColorFor } from "@/components/Flamegraph";
+import TimeRangeSelector, { type TimeRange, rangeToStartEnd, rangeToLabel, SHORT_RANGES } from "@/components/TimeRangeSelector";
+import { fetchTraces, fetchLogs } from "@/lib/api";
 
 export default function ServiceDetail() {
   const { id } = useParams();
+  const [range, setRange] = useState<TimeRange>("15m");
+  const [recentTraces, setRecentTraces] = useState<Trace[]>([]);
+  const [recentLogs, setRecentLogs] = useState<Log[]>([]);
+
   const svc = useMemo(() => {
     return services.find(s => s.id === id)
       ?? services.find(s => s.name.includes(id ?? ""))
       ?? services[0];
   }, [id]);
+
+  const loadData = useCallback((r: TimeRange) => {
+    const { start, end } = rangeToStartEnd(r);
+    fetchTraces({ service: svc.name, start, end, limit: 10 }).then(setRecentTraces);
+    fetchLogs({ service: svc.name, start, end, limit: 10 }).then(setRecentLogs);
+  }, [svc.name]);
+
+  useEffect(() => {
+    loadData(range);
+  }, [range, loadData]);
 
   const upstream = edges.filter(e => e.to === svc.id);
   const downstream = edges.filter(e => e.from === svc.id);
@@ -25,9 +42,6 @@ export default function ServiceDetail() {
   }));
   const errorSeries = genSeries(60, svc.errorRate * 5, svc.errorRate * 6, 11).map(d => ({ t: d.t, value: Math.max(0, d.value) }));
 
-  const recentTraces = traces.filter(t => t.service === svc.name);
-  const recentLogs = logs.filter(l => l.service === svc.name);
-
   const status = svc.errorRate > 1 ? "DEGRADED" : svc.errorRate > 0.5 ? "WARN" : "HEALTHY";
   const statusColor = svc.errorRate > 1 ? "border-status-error/40 text-status-error" :
                       svc.errorRate > 0.5 ? "border-status-warn/40 text-status-warn" :
@@ -35,9 +49,12 @@ export default function ServiceDetail() {
 
   return (
     <div className="p-6 space-y-6">
-      <Link to="/app/traces" className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground">
-        <ArrowLeft className="w-3 h-3" /> Back to traces
-      </Link>
+      <div className="flex items-center justify-between">
+        <Link to="/app/traces" className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground">
+          <ArrowLeft className="w-3 h-3" /> Back to traces
+        </Link>
+        <TimeRangeSelector value={range} onChange={setRange} ranges={SHORT_RANGES} />
+      </div>
 
       <div className="flex items-start justify-between gap-4">
         <div>
@@ -50,7 +67,8 @@ export default function ServiceDetail() {
             <span>{svc.language}</span><span>·</span>
             <span>v{svc.version}</span><span>·</span>
             <span>{svc.instances} instances</span><span>·</span>
-            <span>owner: {svc.owner}</span>
+            <span>owner: {svc.owner}</span><span>·</span>
+            <span>{rangeToLabel(range)}</span>
           </div>
         </div>
       </div>
@@ -282,7 +300,7 @@ export default function ServiceDetail() {
           <dl className="text-xs font-mono space-y-1.5">
             {[
               ["service.name", svc.name],
-              ["service.version", svc.version ?? "—"],
+              ["service.version", svc.version ?? "\u2014"],
               ["telemetry.sdk", "opentelemetry"],
               ["deployment.env", "production"],
               ["cloud.region", "us-east-1"],

@@ -87,11 +87,64 @@ func (h *Handler) HandleMetricSeries(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) HandleDashboardSummary(w http.ResponseWriter, r *http.Request) {
 	ctx := context.Background()
 
-	summary, err := h.Store.GetDashboardSummary(ctx)
+	minutes := 15
+	if v := r.URL.Query().Get("minutes"); v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil || n <= 0 {
+			writeJSONError(w, http.StatusBadRequest, "invalid minutes parameter")
+			return
+		}
+		minutes = n
+	}
+
+	summary, err := h.Store.GetDashboardSummary(ctx, minutes)
 	if err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "failed to query dashboard summary")
 		return
 	}
 
 	writeJSON(w, http.StatusOK, summary)
+}
+
+func (h *Handler) HandleMetricsQuery(w http.ResponseWriter, r *http.Request) {
+	ctx := context.Background()
+	q := r.URL.Query()
+
+	name := q.Get("name")
+	service := q.Get("service")
+	metricType := q.Get("type")
+
+	minutes := 15
+	if v := q.Get("minutes"); v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil || n <= 0 {
+			writeJSONError(w, http.StatusBadRequest, "invalid minutes parameter")
+			return
+		}
+		minutes = n
+	}
+
+	interval := 30
+	if v := q.Get("interval"); v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil || n <= 0 {
+			writeJSONError(w, http.StatusBadRequest, "invalid interval parameter")
+			return
+		}
+		interval = n
+	}
+
+	series, err := h.Store.QueryMetrics(ctx, model.MetricQuery{
+		Name:     name,
+		Service:  service,
+		Type:     metricType,
+		Minutes:  minutes,
+		Interval: interval,
+	})
+	if err != nil {
+		writeJSONError(w, http.StatusInternalServerError, "failed to query metrics")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, model.MetricQueryResponse{Series: series})
 }
