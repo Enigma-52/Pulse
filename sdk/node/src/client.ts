@@ -10,11 +10,17 @@ export interface FlushError {
   attempt: number;
 }
 
+export interface ResourceAttributes {
+  [key: string]: string | number | boolean;
+}
+
 export interface PulseClientConfig {
   ingestUrl: string;
   apiKey: string;
   serviceName: string;
   environment: string;
+  serviceVersion?: string;
+  resource?: ResourceAttributes;
   flushIntervalMs?: number;
   batchSize?: number;
   maxQueueSize?: number;
@@ -35,7 +41,7 @@ export interface TelemetryEnvelope {
 }
 
 export class PulseClient {
-  private readonly config: Required<Omit<PulseClientConfig, "onFlushError">> & { onFlushError?: (err: FlushError) => void };
+  private readonly config: Required<Omit<PulseClientConfig, "onFlushError" | "resource">> & { onFlushError?: (err: FlushError) => void; resource: ResourceAttributes };
   private readonly spanBuffer: Span[] = [];
   private readonly logBuffer: LogEvent[] = [];
   private readonly metricBuffer: MetricPoint[] = [];
@@ -51,6 +57,8 @@ export class PulseClient {
       retryBaseMs = 200,
       retryMaxMs = 5000,
       shutdownTimeoutMs = 10000,
+      serviceVersion = "",
+      resource = {},
       onFlushError,
       ...rest
     } = config;
@@ -64,10 +72,28 @@ export class PulseClient {
       retryBaseMs,
       retryMaxMs,
       shutdownTimeoutMs,
+      serviceVersion,
+      resource: {
+        "service.name": rest.serviceName,
+        "service.version": serviceVersion,
+        "deployment.environment": rest.environment,
+        "telemetry.sdk.name": "pulse-node",
+        "telemetry.sdk.version": "0.1.0",
+        "process.runtime.name": "node",
+        "process.runtime.version": process.version,
+        "process.pid": process.pid,
+        "host.arch": process.arch,
+        "os.type": process.platform,
+        ...resource,
+      },
       onFlushError
     };
 
     this.startFlushTimer();
+  }
+
+  getResource(): ResourceAttributes {
+    return { ...this.config.resource };
   }
 
   startSpan(name: string, options: StartSpanOptions = {}): SpanHandle {
@@ -83,7 +109,12 @@ export class PulseClient {
       kind: options.kind,
       startTime: Date.now(),
       status: "ok",
-      attributes: options.attributes ? { ...options.attributes } : {},
+      attributes: {
+        "service.name": this.config.serviceName,
+        "service.version": this.config.serviceVersion,
+        "deployment.environment": this.config.environment,
+        ...(options.attributes ?? {}),
+      },
       events: []
     };
 
@@ -147,11 +178,17 @@ export class PulseClient {
     context?: { traceId?: string; spanId?: string }
   ): void {
     const activeCtx = getActiveContext();
+    const enrichedFields: LogFields = {
+      "service.name": this.config.serviceName,
+      "service.version": this.config.serviceVersion,
+      "deployment.environment": this.config.environment,
+      ...fields,
+    };
     const event: LogEvent = {
       timestamp: Date.now(),
       level,
       message,
-      fields,
+      fields: enrichedFields,
       traceId: context?.traceId ?? activeCtx?.traceId,
       spanId: context?.spanId ?? activeCtx?.spanId
     };

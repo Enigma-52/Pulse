@@ -1,16 +1,53 @@
+import { useState, useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
-import { logs } from "@/lib/mockData";
+import { fetchLogs } from "@/lib/api";
+import type { Log } from "@/lib/mockData";
+import { logs as mockLogs } from "@/lib/mockData";
+
+const levelColors: Record<string, string> = {
+  error: "text-status-error border-status-error/40",
+  warn: "text-status-warn border-status-warn/40",
+  info: "text-status-info border-status-info/40",
+  debug: "text-muted-foreground border-border",
+};
 
 export default function LogDetail() {
   const { id } = useParams();
-  const log = logs.find(l => l.id === id) ?? logs[0];
+  const [log, setLog] = useState<Log | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const levelColor =
-    log.level === "error" ? "text-status-error border-status-error/40" :
-    log.level === "warn" ? "text-status-warn border-status-warn/40" :
-    log.level === "info" ? "text-status-info border-status-info/40" :
-    "text-muted-foreground border-border";
+  useEffect(() => {
+    fetchLogs({ limit: 200 }).then((logs) => {
+      const found = logs.find(l => l.id === id);
+      setLog(found ?? mockLogs.find(l => l.id === id) ?? mockLogs[0]);
+      setLoading(false);
+    }).catch(() => {
+      setLog(mockLogs.find(l => l.id === id) ?? mockLogs[0]);
+      setLoading(false);
+    });
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div className="p-6">
+        <div className="text-sm text-muted-foreground">Loading log...</div>
+      </div>
+    );
+  }
+
+  if (!log) {
+    return (
+      <div className="p-6">
+        <Link to="/app/logs" className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground">
+          <ArrowLeft className="w-3 h-3" /> Back to logs
+        </Link>
+        <div className="text-sm text-muted-foreground mt-4">Log not found</div>
+      </div>
+    );
+  }
+
+  const levelColor = levelColors[log.level] ?? "text-muted-foreground border-border";
 
   return (
     <div className="p-6 space-y-6 max-w-4xl">
@@ -30,17 +67,19 @@ export default function LogDetail() {
         <h1 className="text-lg font-mono">{log.message}</h1>
       </div>
 
-      <div className="panel p-5">
-        <div className="data-label mb-3">Attributes</div>
-        <dl className="text-xs font-mono space-y-1.5">
-          {Object.entries(log.attributes).map(([k, v]) => (
-            <div key={k} className="flex">
-              <dt className="text-muted-foreground w-44">{k}</dt>
-              <dd>{String(v)}</dd>
-            </div>
-          ))}
-        </dl>
-      </div>
+      {Object.keys(log.attributes).length > 0 && (
+        <div className="panel p-5">
+          <div className="data-label mb-3">Attributes</div>
+          <dl className="text-xs font-mono space-y-1.5">
+            {Object.entries(log.attributes).map(([k, v]) => (
+              <div key={k} className="flex">
+                <dt className="text-muted-foreground w-44">{k}</dt>
+                <dd>{String(v)}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      )}
 
       {log.trace_id && (
         <div className="panel p-5">
@@ -51,6 +90,11 @@ export default function LogDetail() {
           >
             {log.trace_id} →
           </Link>
+          {log.span_id && (
+            <div className="mt-2 text-xs font-mono text-muted-foreground">
+              span: {log.span_id}
+            </div>
+          )}
         </div>
       )}
 
@@ -63,6 +107,7 @@ export default function LogDetail() {
   service: log.service,
   message: log.message,
   trace_id: log.trace_id,
+  span_id: log.span_id,
   attributes: log.attributes,
 }, null, 2)}
         </pre>
