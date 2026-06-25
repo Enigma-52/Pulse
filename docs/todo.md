@@ -75,15 +75,6 @@ Pulse has fixed pages. SigNoz lets users build custom dashboards.
 - [ ] Dashboard save, share, import/export
 - [ ] Pre-built dashboards (host metrics, Kubernetes, database)
 
-#### Query Builder UI
-SigNoz has a visual query builder. Pulse has basic text inputs.
-- [ ] Visual query builder for metrics (aggregation, group by, filter)
-- [ ] Visual query builder for logs (field filters, aggregation)
-- [ ] Visual query builder for traces (attribute filters, aggregation)
-- [ ] Formula-based derived metrics (e.g. rate, ratio between two metrics)
-- [ ] Saved queries / views
-- [ ] Query history
-
 #### Infrastructure Monitoring
 Pulse monitors applications only. SigNoz also monitors infrastructure.
 - [ ] Host metrics collection (CPU, memory, disk, network)
@@ -108,6 +99,52 @@ SigNoz has trace analytics beyond listing.
 - [ ] Slow trace identification / top-N slowest
 - [ ] Cross-service latency breakdown visualization
 
+#### Database Monitoring
+SigNoz monitors database performance directly. Pulse has no database-specific observability.
+Supported databases in SigNoz: PostgreSQL, MySQL, MongoDB, Redis, ClickHouse.
+- [ ] Database span detection and categorization (identify db calls from trace attributes)
+- [ ] Database query latency tracking and slow query highlighting
+- [ ] Query throughput and error rate dashboards
+- [ ] Connection count monitoring
+- [ ] Slow query list with linked traces
+- [ ] Per-database breakdown (latency, throughput, errors)
+- [ ] SDK helpers for annotating database spans (db.system, db.statement, db.name)
+
+#### Querying and Analytics
+SigNoz has a powerful flexible query engine. Pulse has basic text search and fixed metric queries.
+- [ ] Visual query builder with aggregation, group-by, filters
+- [ ] PromQL support for metric queries
+- [ ] ClickHouse SQL pass-through for advanced users
+- [ ] Formula-based derived metrics (rate, ratio, arithmetic between queries)
+- [ ] Time comparisons (compare current window to previous period)
+- [ ] Multi-query panels (overlay multiple series)
+- [ ] Ad hoc analysis mode (explore without saving)
+- [ ] High-cardinality querying (efficient filtering on high-unique-value fields)
+- [ ] Saved queries and query history
+
+#### Correlated Observability
+SigNoz's strongest capability — seamless navigation between all signals. Pulse has basic trace-log linking only.
+- [ ] Trace → Logs (view logs emitted during a trace, already partial)
+- [ ] Trace → Metrics (jump from a slow trace to related metric charts)
+- [ ] Exception → Trace (click from exception to originating trace)
+- [ ] Log → Trace (click from log entry to parent trace, already partial)
+- [ ] Service → Traces (view all traces for a service, already partial)
+- [ ] Endpoint → Metrics (view latency/error metrics for a specific route)
+- [ ] Metric → Trace exemplars (click a metric data point to see example traces)
+- [ ] Unified cross-signal search (single search bar across traces, logs, metrics)
+
+#### LLM / AI Observability
+SigNoz has dedicated AI/LLM monitoring. Pulse has no AI-specific features.
+- [ ] LLM request tracing (instrument calls to OpenAI, Anthropic, etc.)
+- [ ] Prompt and response tracking with content capture
+- [ ] Token usage monitoring (input/output/total tokens per request)
+- [ ] LLM call latency monitoring
+- [ ] Cost tracking (estimate cost per request based on model + token count)
+- [ ] AI workflow tracing (chain of LLM calls, tool use, retrieval steps)
+- [ ] AI error monitoring (rate limits, timeouts, content filter blocks)
+- [ ] Model performance insights (latency/cost/error comparison across models)
+- [ ] SDK helpers for instrumenting LLM calls (auto-wrap popular SDKs)
+
 ### P2 — Nice to Have (polish and completeness)
 
 #### Log Management Enhancements
@@ -127,20 +164,12 @@ SigNoz has trace analytics beyond listing.
 - [ ] Metric-to-trace exemplar linking
 
 #### APM Enhancements
-- [ ] Database query monitoring (slow queries, query plans)
 - [ ] External API call monitoring (outbound HTTP latency/errors)
 - [ ] Deployment comparison (before/after release markers)
 - [ ] Release markers on charts
 - [ ] Performance regression detection (baseline comparison)
 - [ ] Apdex score calculation from real data
 - [ ] Historical trend analysis
-
-#### Correlation
-SigNoz deeply links all three signals. Pulse has basic trace-log linking.
-- [ ] Trace-to-metric correlation (click from slow trace to related metric spike)
-- [ ] Metric-to-trace exemplars (click from metric chart to example traces)
-- [ ] Log-to-metric correlation
-- [ ] Unified search across traces, logs, metrics
 
 #### Multi-SDK Support
 Pulse has Node SDK only.
