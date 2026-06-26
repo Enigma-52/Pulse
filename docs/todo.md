@@ -5,8 +5,10 @@ Updated: 2026-06-25
 ## What Pulse Has Today
 
 ### Backend
-- Ingestion service (OTLP/HTTP at /v1/traces, /v1/logs, /v1/metrics) with Kafka pipeline
-- Worker service consuming from Kafka, writing to ClickHouse (traces, logs, metrics tables)
+- Single `pulse` binary on port 4321: OTLP ingest + in-process pipeline + ClickHouse writer + query API
+- OTLP/HTTP endpoints: /v1/traces, /v1/logs, /v1/metrics (protobuf + JSON)
+- In-process buffered channel replaces Kafka/Redpanda (backpressure via 429)
+- ClickHouse storage with full OTLP fidelity (resource attrs, scope, links)
 - Query API with endpoints: traces, trace detail, logs, metrics, metric series, metrics query, services list, service overview, dashboard summary
 - JWT auth with setup/login flow
 - Time-range filtering across all query endpoints
