@@ -1,12 +1,10 @@
-version: "3.8"
-
 services:
   clickhouse:
-    image: clickhouse/clickhouse-server:24.3
+    image: clickhouse/clickhouse-server:23.8-alpine
     environment:
       CLICKHOUSE_USER: default
       CLICKHOUSE_PASSWORD: pulse
-      CLICKHOUSE_DEFAULT_MAX_MEMORY_USAGE: "536870912"
+      CLICKHOUSE_DEFAULT_MAX_MEMORY_USAGE: "268435456"
     ports:
       - "8123:8123"
       - "9000:9000"
@@ -21,11 +19,6 @@ services:
       start_period: 60s
     networks:
       - pulse-net
-    deploy:
-      resources:
-        limits:
-          memory: 768m
-
   pulse:
     build:
       context: ../pulse
@@ -49,10 +42,6 @@ services:
       start_period: 10s
     networks:
       - pulse-net
-    deploy:
-      resources:
-        limits:
-          memory: 256m
 
   ui:
     build:
@@ -67,10 +56,6 @@ services:
         condition: service_healthy
     networks:
       - pulse-net
-    deploy:
-      resources:
-        limits:
-          memory: 64m
 
 networks:
   pulse-net:
