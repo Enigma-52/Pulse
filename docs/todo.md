@@ -99,12 +99,12 @@ SigNoz has trace analytics beyond listing.
 #### Database Monitoring
 SigNoz monitors database performance directly. Pulse has no database-specific observability.
 Supported databases in SigNoz: PostgreSQL, MySQL, MongoDB, Redis, ClickHouse.
-- [ ] Database span detection and categorization (identify db calls from trace attributes)
-- [ ] Database query latency tracking and slow query highlighting
-- [ ] Query throughput and error rate dashboards
+- [x] Database span detection and categorization (identify db calls from trace attributes)
+- [x] Database query latency tracking and slow query highlighting
+- [x] Query throughput and error rate dashboards
 - [ ] Connection count monitoring
-- [ ] Slow query list with linked traces
-- [ ] Per-database breakdown (latency, throughput, errors)
+- [x] Slow query list with linked traces
+- [x] Per-database breakdown (latency, throughput, errors)
 - [ ] SDK helpers for annotating database spans (db.system, db.statement, db.name)
 
 #### Querying and Analytics

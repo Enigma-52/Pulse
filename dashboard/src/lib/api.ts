@@ -367,6 +367,74 @@ export async function fetchServicesList(minutes = 15): Promise<ServiceSummary[]>
   return data.items || [];
 }
 
+// ── Databases ───────────────────────────────────────────────────────────
+
+export interface DatabaseSummary {
+  system: string;
+  query_count: number;
+  error_count: number;
+  error_rate: number;
+  avg_duration_ms: number;
+  p50_duration_ms: number;
+  p95_duration_ms: number;
+  p99_duration_ms: number;
+  last_seen: string;
+}
+
+export interface DatabaseOperation {
+  trace_id: string;
+  span_id: string;
+  service: string;
+  db_system: string;
+  db_name: string;
+  db_statement: string;
+  duration_ms: number;
+  status: string;
+  timestamp: string;
+}
+
+export interface DatabaseThroughputPoint {
+  timestamp: string;
+  count: number;
+  errors: number;
+  avg_ms: number;
+}
+
+export interface DatabaseOverviewData {
+  overview: {
+    system: string;
+    query_count: number;
+    error_count: number;
+    error_rate: number;
+    avg_duration_ms: number;
+    p50_duration_ms: number;
+    p95_duration_ms: number;
+    p99_duration_ms: number;
+    database_names: string[];
+  };
+  throughput: DatabaseThroughputPoint[];
+}
+
+export async function fetchDatabasesList(minutes = 15): Promise<DatabaseSummary[]> {
+  const res = await fetch(`${API_BASE}/databases?minutes=${minutes}`, { headers: authHeaders() });
+  if (!res.ok) return [];
+  const data: { items: DatabaseSummary[] } = await res.json();
+  return data.items || [];
+}
+
+export async function fetchDatabaseOverview(system: string, minutes = 15): Promise<DatabaseOverviewData | null> {
+  const res = await fetch(`${API_BASE}/databases/${encodeURIComponent(system)}/overview?minutes=${minutes}`, { headers: authHeaders() });
+  if (!res.ok) return null;
+  return await res.json();
+}
+
+export async function fetchDatabaseQueries(system: string, minutes = 15, limit = 50): Promise<DatabaseOperation[]> {
+  const res = await fetch(`${API_BASE}/databases/${encodeURIComponent(system)}/queries?minutes=${minutes}&limit=${limit}`, { headers: authHeaders() });
+  if (!res.ok) return [];
+  const data: { items: DatabaseOperation[] } = await res.json();
+  return data.items || [];
+}
+
 // ── Dashboard ───────────────────────────────────────────────────────────
 
 export interface DashboardData {
