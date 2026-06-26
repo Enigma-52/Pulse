@@ -4,7 +4,7 @@
 
 The core Pulse data flow is:
 
-App (SDK) → Ingestion Server → Kafka → Background Worker / Stream Processor → ClickHouse → API Layer → Web UI
+App (SDK) → Ingestion Server → Redpanda → Background Worker / Stream Processor → ClickHouse → API Layer → Web UI
 
 At each stage, Pulse transforms and enriches telemetry so that it remains useful for both real-time debugging and historical analysis.
 
@@ -62,14 +62,14 @@ Responsibilities:
 - Enrich events with:
   - `server_received_at`.
   - `project_id`.
-- Push events onto Kafka topics.
+- Push events onto Redpanda topics.
 
 Operational considerations:
 
 - Stateless and horizontally scalable.
 - Strict input validation and fail-fast behavior to protect downstream systems.
 
-### Kafka layer
+### Redpanda layer
 
 Used for:
 
@@ -87,7 +87,7 @@ Topics:
 
 Responsibilities:
 
-- Consume messages from Kafka.
+- Consume messages from Redpanda.
 - Parse and validate messages.
 - Transform events into ClickHouse table schemas.
 - Write in bulk to ClickHouse.
@@ -143,5 +143,4 @@ Why ClickHouse:
   - Exploring traces.
   - Inspecting spans and related logs/metrics.
 
-For a deeper product-level overview of how this architecture supports observability workflows, see [`overview.md`](overview.md). For feature-centric documentation and the MVP roadmap, see [`features.md`](features.md) and [`mvp-scope.md`](mvp-scope.md).
 

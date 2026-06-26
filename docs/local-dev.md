@@ -2,24 +2,23 @@
 
 This guide shows how to run the core Pulse infrastructure and services locally using Docker and Go/Node processes.
 
-### 1. Start Kafka and ClickHouse with Docker
+### 1. Start Redpanda and ClickHouse with Docker
 
 From the repo root:
 
 ```bash
-cd infra
-docker compose up -d
+docker compose -f deploy/docker-compose.yml up -d redpanda clickhouse
 ```
 
 This starts:
 
-- `kafka` – Kafka broker (with auto topic creation enabled for dev).
+- `redpanda` – Kafka-compatible broker (auto topic creation enabled for dev).
 - `clickhouse` – ClickHouse server with a local volume.
 
 Service endpoints:
 
-- Kafka broker from other containers: `kafka:29092`.
-- Kafka broker from the host: `localhost:9092`.
+- Redpanda broker from other containers: `redpanda:29092`.
+- Redpanda broker from the host: `localhost:9092`.
 - ClickHouse HTTP: `http://localhost:8123`.
 - ClickHouse native: `localhost:9000`.
 
@@ -47,7 +46,7 @@ cd services/worker
 go run ./cmd/worker
 ```
 
-The worker consumes Kafka topics and writes to ClickHouse.
+The worker consumes Redpanda topics and writes to ClickHouse.
 
 ### 4. Run the query API (Go)
 
@@ -100,4 +99,4 @@ Relevant environment variables:
 
 With these pieces running, you have a full local loop:
 
-SDK (`@pulse/node`) → demo backend → ingestion (Go) → Kafka/ClickHouse → query API (Go) → dashboard UI (`future-web`).
+SDK (`@pulse/node`) → demo backend → ingestion (Go) → Redpanda/ClickHouse → query API (Go) → dashboard UI (`future-web`).

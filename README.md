@@ -28,7 +28,7 @@ Pulse includes both backend and frontend components.
 - Ingestion service (accepts telemetry from apps/SDKs)
 - Worker service (processes telemetry data)
 - Query API service (serves data to the UI)
-- Kafka + Zookeeper (stream pipeline)
+- Redpanda (stream pipeline)
 - ClickHouse (observability data storage)
 
 ### Frontend apps
@@ -68,10 +68,6 @@ npm run dev
 
 ## Documentation
 
-- Latest status: `docs/current-status.md`
 - Project-wide TODO: `docs/todo.md`
-- Platform overview: `docs/overview.md`
-- Features: `docs/features.md`
 - Architecture: `docs/architecture.md`
 - Local development: `docs/local-dev.md`
-- Install inventory: `docs/install-includes.md`
