@@ -36,7 +36,7 @@ Pulse includes both backend and frontend components.
 1. `frontend/`
 Public-facing site (landing/docs entry points)
 
-2. `future-web/`
+2. `dashboard/`
 Product dashboard used by Pulse users after deployment
 
 ## Quick start (one-command deploy)
@@ -61,7 +61,7 @@ npm install
 npm run dev
 
 # Product dashboard app
-cd ../future-web
+cd ../dashboard
 npm install
 npm run dev
 ```

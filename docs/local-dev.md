@@ -60,10 +60,10 @@ The query API listens on `http://localhost:8082` and exposes:
 - `GET /healthz` – health check.
 - Query endpoints for traces, logs, and metrics.
 
-### 5. Run the product dashboard frontend (`future-web`)
+### 5. Run the product dashboard frontend (`dashboard`)
 
 ```bash
-cd future-web
+cd dashboard
 npm install
 npm run dev
 ```
@@ -80,23 +80,6 @@ npm run dev
 
 The public app runs on `http://localhost:5174`.
 
-### 7. Run the demo Node backend (optional)
-
-From the repo root:
-
-```bash
-cd demo/backend-node
-npm install
-npm run dev
-```
-
-The backend listens on `http://localhost:4000` and emits spans/logs to the ingestion server using `@pulse/node`.
-
-Relevant environment variables:
-
-- `PULSE_INGEST_URL` – defaults to `http://localhost:8081/v1/ingest`.
-- `PULSE_API_KEY` – defaults to `dev-api-key`.
-
 With these pieces running, you have a full local loop:
 
-SDK (`@pulse/node`) → demo backend → ingestion (Go) → Redpanda/ClickHouse → query API (Go) → dashboard UI (`future-web`).
+SDK (`@pulse/node`) → your app → ingestion (Go) → Redpanda/ClickHouse → query API (Go) → dashboard UI (`dashboard/`).
