@@ -207,7 +207,7 @@ Pulse has Node SDK only.
 - [ ] Add DLQ topic and poison-message handling strategy
 - [ ] Add worker retry/backoff policy with observability
 - [ ] Add internal service metrics and structured logs
-- [ ] Add readiness checks for kafka/clickhouse dependencies
+- [ ] Add readiness checks for redpanda/clickhouse dependencies
 
 ### P2 - Developer experience
 - [ ] Refresh docs to match current runtime wiring
