@@ -1,0 +1,10 @@
+<clickhouse>
+    <!-- Cap total server memory to 512MB; ClickHouse will use up to this for caches/queries -->
+    <max_server_memory_usage>536870912</max_server_memory_usage>
+    <!-- Allow each query to use at most 256MB -->
+    <max_memory_usage>268435456</max_memory_usage>
+    <!-- Reduce mark cache from default 5GB to 128MB -->
+    <mark_cache_size>134217728</mark_cache_size>
+    <!-- Reduce uncompressed cache (disabled by default but explicit is safer) -->
+    <uncompressed_cache_size>67108864</uncompressed_cache_size>
+</clickhouse>

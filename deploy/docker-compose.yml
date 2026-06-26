@@ -1,54 +1,46 @@
 version: "3.8"
 
 services:
-  zookeeper:
-    image: confluentinc/cp-zookeeper:7.5.0
-    environment:
-      ZOOKEEPER_CLIENT_PORT: 2181
-      ZOOKEEPER_TICK_TIME: 2000
+  # Redpanda replaces Zookeeper + Kafka: Kafka-compatible, C++ (no JVM), ~256MB vs ~1GB+
+  redpanda:
+    image: redpandadata/redpanda:v24.2.4
+    command:
+      - redpanda
+      - start
+      - --kafka-addr internal://0.0.0.0:29092,external://0.0.0.0:9092
+      - --advertise-kafka-addr internal://redpanda:29092,external://localhost:9092
+      - --mode dev-container
+      - --smp 1
+      - --memory 256M
+      - --default-log-level=warn
+    ports:
+      - "9092:9092"
     healthcheck:
-      test: ["CMD", "nc", "-z", "localhost", "2181"]
+      test: ["CMD-SHELL", "rpk cluster health | grep -E 'Healthy:.+true' || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 10
-      start_period: 10s
+      start_period: 20s
     networks:
       - pulse-net
-
-  kafka:
-    image: confluentinc/cp-kafka:7.5.0
-    depends_on:
-      zookeeper:
-        condition: service_healthy
-    environment:
-      KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://kafka:9092
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
-      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
-      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
-      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
-    healthcheck:
-      test: ["CMD", "kafka-topics", "--bootstrap-server", "localhost:9092", "--list"]
-      interval: 10s
-      timeout: 10s
-      retries: 10
-      start_period: 30s
-    networks:
-      - pulse-net
+    deploy:
+      resources:
+        limits:
+          memory: 320m
 
   clickhouse:
     image: clickhouse/clickhouse-server:24.3
     environment:
       CLICKHOUSE_USER: default
       CLICKHOUSE_PASSWORD: pulse
+      # Cap server-side memory; still plenty for typical observability workloads
+      CLICKHOUSE_DEFAULT_MAX_MEMORY_USAGE: "536870912"
     ports:
       - "8123:8123"
       - "9000:9000"
     volumes:
       - clickhouse_data:/var/lib/clickhouse
+      - ./clickhouse/config.xml:/etc/clickhouse-server/config.d/memory.xml:ro
     healthcheck:
       test: ["CMD", "clickhouse-client", "--query", "SELECT 1"]
       interval: 10s
@@ -57,6 +49,10 @@ services:
       start_period: 60s
     networks:
       - pulse-net
+    deploy:
+      resources:
+        limits:
+          memory: 768m
 
   ingestion:
     build:
@@ -65,19 +61,23 @@ services:
     ports:
       - "8081:8081"
     environment:
-      PULSE_KAFKA_BROKERS: kafka:29092
+      PULSE_KAFKA_BROKERS: redpanda:29092
     depends_on:
-      kafka:
+      redpanda:
         condition: service_healthy
     networks:
       - pulse-net
+    deploy:
+      resources:
+        limits:
+          memory: 128m
 
   worker:
     build:
       context: ../services/worker
       dockerfile: Dockerfile
     environment:
-      PULSE_KAFKA_BROKERS: kafka:29092
+      PULSE_KAFKA_BROKERS: redpanda:29092
       PULSE_TRACES_TOPIC: traces_raw
       PULSE_WORKER_GROUP: pulse-worker
       PULSE_CLICKHOUSE_ADDR: clickhouse:9000
@@ -85,12 +85,16 @@ services:
       PULSE_CLICKHOUSE_USER: default
       PULSE_CLICKHOUSE_PASSWORD: pulse
     depends_on:
-      kafka:
+      redpanda:
         condition: service_healthy
       clickhouse:
         condition: service_healthy
     networks:
       - pulse-net
+    deploy:
+      resources:
+        limits:
+          memory: 128m
 
   query-api:
     build:
@@ -114,6 +118,10 @@ services:
       start_period: 10s
     networks:
       - pulse-net
+    deploy:
+      resources:
+        limits:
+          memory: 128m
 
   ui:
     build:
@@ -128,6 +136,10 @@ services:
         condition: service_healthy
     networks:
       - pulse-net
+    deploy:
+      resources:
+        limits:
+          memory: 64m
 
 networks:
   pulse-net:
