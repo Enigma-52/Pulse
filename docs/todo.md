@@ -11,7 +11,7 @@ Updated: 2026-06-25
 - JWT auth with setup/login flow
 - Time-range filtering across all query endpoints
 
-### Frontend (future-web)
+### Frontend (dashboard)
 - Dashboard with live stats, request volume chart, recent traces
 - Traces page with service graph, duration histogram, service/status filters
 - Trace detail with flamegraph, waterfall, service breakdown, linked logs

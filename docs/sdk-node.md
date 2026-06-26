@@ -4,14 +4,6 @@ This guide shows how to add the Pulse Node SDK to a service, emit basic traces a
 
 ### Installation
 
-If you are working inside the Pulse repo:
-
-```bash
-npm install
-```
-
-This installs the `@pulse/node` workspace package for the demo backend. To use `@pulse/node` from another project, publish the package or link it locally and then:
-
 ```bash
 npm install @pulse/node
 ```
@@ -26,7 +18,7 @@ import { createClient } from "@pulse/node";
 const pulseClient = createClient({
   ingestUrl: process.env.PULSE_INGEST_URL ?? "http://localhost:8081/v1/engest",
   apiKey: process.env.PULSE_API_KEY ?? "dev-api-key",
-  serviceName: "demo-backend-node",
+  serviceName: "my-service",
   environment: process.env.NODE_ENV ?? "development"
 });
 ```
@@ -53,7 +45,7 @@ const app = express();
 const pulseClient = createClient({
   ingestUrl: "http://localhost:8081/v1/ingest",
   apiKey: "dev-api-key",
-  serviceName: "demo-backend-node",
+  serviceName: "my-service",
   environment: "development"
 });
 
