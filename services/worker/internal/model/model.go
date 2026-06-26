@@ -1,48 +1,55 @@
 package model
 
-type SpanEvent struct {
-	Time int64                  `json:"time"`
-	Name string                 `json:"name"`
-	Attrs map[string]interface{} `json:"attrs,omitempty"`
-}
-
+// Span holds trace span data extracted from OTLP, ready for ClickHouse insertion.
 type Span struct {
-	TraceID      string                 `json:"traceId"`
-	SpanID       string                 `json:"spanId"`
-	ParentSpanID string                 `json:"parentSpanId"`
-	Name         string                 `json:"name"`
-	Kind         string                 `json:"kind"`
-	StartTime    int64                  `json:"startTime"`
-	EndTime      int64                  `json:"endTime"`
-	DurationMs   int64                  `json:"durationMs"`
-	Status       string                 `json:"status"`
-	Error        string                 `json:"error"`
-	Attributes   map[string]interface{} `json:"attributes"`
-	Events       []SpanEvent            `json:"events"`
+	TraceID                string
+	SpanID                 string
+	ParentSpanID           string
+	Service                string
+	Environment            string
+	Route                  string
+	Name                   string
+	Kind                   string
+	DurationMs             int64
+	Status                 string
+	StatusMessage          string
+	StartTimeMs            int64
+	EndTimeMs              int64
+	AttributesJSON         string
+	EventsJSON             string
+	LinksJSON              string
+	ResourceAttributesJSON string
+	ScopeName              string
+	ScopeVersion           string
 }
 
+// LogEntry holds log data extracted from OTLP.
 type LogEntry struct {
-	Timestamp int64                  `json:"timestamp"`
-	Level     string                 `json:"level"`
-	Message   string                 `json:"message"`
-	Fields    map[string]interface{} `json:"fields,omitempty"`
-	TraceID   string                 `json:"traceId,omitempty"`
-	SpanID    string                 `json:"spanId,omitempty"`
+	TimestampMs            int64
+	Level                  string
+	SeverityNumber         int32
+	Body                   string
+	Service                string
+	Environment            string
+	TraceID                string
+	SpanID                 string
+	AttributesJSON         string
+	ResourceAttributesJSON string
+	ScopeName              string
+	ScopeVersion           string
 }
 
+// MetricPoint holds a single metric data point extracted from OTLP.
 type MetricPoint struct {
-	Name       string                 `json:"name"`
-	Type       string                 `json:"type"`
-	Value      float64                `json:"value"`
-	Unit       string                 `json:"unit"`
-	Timestamp  int64                  `json:"timestamp"`
-	Attributes map[string]interface{} `json:"attributes,omitempty"`
-}
-
-type Envelope struct {
-	ServiceName string        `json:"serviceName"`
-	Environment string        `json:"environment"`
-	Spans       []Span        `json:"spans"`
-	Logs        []LogEntry    `json:"logs"`
-	Metrics     []MetricPoint `json:"metrics"`
+	Name                   string
+	Type                   string
+	Value                  float64
+	Unit                   string
+	TimestampMs            int64
+	Service                string
+	Environment            string
+	AttributesJSON         string
+	ResourceAttributesJSON string
+	ScopeName              string
+	ScopeVersion           string
 }

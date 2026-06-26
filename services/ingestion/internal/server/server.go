@@ -10,7 +10,9 @@ import (
 func New(handler *ingestion.Handler) http.Handler {
 	r := mux.NewRouter()
 	r.HandleFunc("/healthz", handleHealth).Methods(http.MethodGet)
-	r.HandleFunc("/v1/ingest", handler.HandleIngest).Methods(http.MethodPost)
+	r.HandleFunc("/v1/traces", handler.HandleTraces).Methods(http.MethodPost)
+	r.HandleFunc("/v1/logs", handler.HandleLogs).Methods(http.MethodPost)
+	r.HandleFunc("/v1/metrics", handler.HandleMetrics).Methods(http.MethodPost)
 	return r
 }
 
