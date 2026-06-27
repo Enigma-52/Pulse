@@ -161,6 +161,66 @@ type MetricQueryResponse struct {
 	Series []MetricQuerySeries `json:"series"`
 }
 
+// Database monitoring models
+
+type DatabaseSummary struct {
+	System       string  `json:"system"`
+	QueryCount   uint64  `json:"query_count"`
+	ErrorCount   uint64  `json:"error_count"`
+	ErrorRate    float64 `json:"error_rate"`
+	AvgDurationMs float64 `json:"avg_duration_ms"`
+	P50DurationMs float64 `json:"p50_duration_ms"`
+	P95DurationMs float64 `json:"p95_duration_ms"`
+	P99DurationMs float64 `json:"p99_duration_ms"`
+	LastSeen     string  `json:"last_seen"`
+}
+
+type DatabasesListResponse struct {
+	Items []DatabaseSummary `json:"items"`
+}
+
+type DatabaseOverview struct {
+	System         string  `json:"system"`
+	QueryCount     uint64  `json:"query_count"`
+	ErrorCount     uint64  `json:"error_count"`
+	ErrorRate      float64 `json:"error_rate"`
+	AvgDurationMs  float64 `json:"avg_duration_ms"`
+	P50DurationMs  float64 `json:"p50_duration_ms"`
+	P95DurationMs  float64 `json:"p95_duration_ms"`
+	P99DurationMs  float64 `json:"p99_duration_ms"`
+	DatabaseNames  []string `json:"database_names"`
+}
+
+type DatabaseOperation struct {
+	TraceID     string  `json:"trace_id"`
+	SpanID      string  `json:"span_id"`
+	Service     string  `json:"service"`
+	DbSystem    string  `json:"db_system"`
+	DbName      string  `json:"db_name"`
+	DbStatement string  `json:"db_statement"`
+	DurationMs  int64   `json:"duration_ms"`
+	Status      string  `json:"status"`
+	Timestamp   time.Time `json:"timestamp"`
+}
+
+type DatabaseQueriesResponse struct {
+	Items  []DatabaseOperation `json:"items"`
+	Limit  int                 `json:"limit"`
+	Offset int                 `json:"offset"`
+}
+
+type DatabaseThroughputPoint struct {
+	Timestamp time.Time `json:"timestamp"`
+	Count     uint64    `json:"count"`
+	Errors    uint64    `json:"errors"`
+	AvgMs     float64   `json:"avg_ms"`
+}
+
+type DatabaseOverviewResponse struct {
+	Overview   DatabaseOverview          `json:"overview"`
+	Throughput []DatabaseThroughputPoint `json:"throughput"`
+}
+
 type TraceFilters struct {
 	Service       string
 	Route         string

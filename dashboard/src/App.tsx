@@ -19,6 +19,8 @@ import Metrics from "./pages/Metrics";
 import MetricDetail from "./pages/MetricDetail";
 import Services from "./pages/Services";
 import ServiceDetail from "./pages/ServiceDetail";
+import Databases from "./pages/Databases";
+import DatabaseDetail from "./pages/DatabaseDetail";
 
 const queryClient = new QueryClient();
 
@@ -48,6 +50,8 @@ const App = () => (
               <Route path="logs/:id" element={<LogDetail />} />
               <Route path="services" element={<Services />} />
               <Route path="services/:id" element={<ServiceDetail />} />
+              <Route path="databases" element={<Databases />} />
+              <Route path="databases/:system" element={<DatabaseDetail />} />
               <Route path="metrics" element={<Metrics />} />
               <Route path="metrics/:id" element={<MetricDetail />} />
             </Route>
