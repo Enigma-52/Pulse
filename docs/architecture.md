@@ -2,11 +2,9 @@
 
 ### High-level data flow
 
-The core Pulse data flow is:
+App (OTel SDK) → Pulse (OTLP/HTTP, port 4321) → in-process pipeline → ClickHouse → Pulse query API → Web UI
 
-App (OTel SDK) → Ingestion Server (OTLP/HTTP) → Redpanda → Background Worker → ClickHouse → API Layer → Web UI
-
-At each stage, Pulse transforms and enriches telemetry so that it remains useful for both real-time debugging and historical analysis.
+Pulse is a single Go binary that handles ingestion, processing, and querying. The only external dependency is ClickHouse.
 
 ### Instrumentation (any language via OpenTelemetry)
 
@@ -17,114 +15,66 @@ Pulse accepts standard OTLP/HTTP telemetry. No custom SDK is needed — use any 
 - Go: `go.opentelemetry.io/otel` + `go.opentelemetry.io/otel/exporters/otlp/otlptracehttp`
 - Java, Ruby, .NET, etc.: any OTel SDK with OTLP HTTP exporter
 
-Configure the exporter URL to point at `http://<pulse-host>:8081/v1/traces` (and `/v1/logs`, `/v1/metrics`).
-Set the `x-pulse-api-key` header for authentication.
+Configure the exporter URL to point at `http://<pulse-host>:4321/v1/traces` (and `/v1/logs`, `/v1/metrics`).
 
-### API key and project model
+### Single binary internals
 
-API key requirements:
+```
+pulse/
+  cmd/pulse/main.go       # starts everything
+  internal/
+    ingest/               # OTLP HTTP receiver (protobuf + JSON)
+    writer/               # ClickHouse writer (parses OTLP proto, inserts)
+    query/                # query API (handlers, store, model)
+    pipeline/             # in-process channel connecting ingest → writer
+    config/               # unified configuration
+    server/               # unified HTTP router
+```
 
-- Per-project API keys.
-- Server verifies:
-  - Project ID.
-  - API key validity.
-  - Rate limits per key.
-  - Key rotation.
+**Pipeline**: The `pipeline` package replaces Kafka/Redpanda with a buffered Go channel:
 
-Core database tables:
+```go
+events := make(chan Batch, 10000)
+```
 
-- `projects`
-- `api_keys`
-- `services`
+- Ingest handler pushes OTLP protobuf batches onto the channel
+- Writer goroutine drains the channel and writes to ClickHouse
+- If the channel is full, ingest returns HTTP 429 (backpressure)
 
-### Ingestion server
+### Durability note
 
-Responsibilities:
+In-process channel means buffered events are lost on crash. Acceptable for v1 — add a WAL later if users raise it.
 
-- Accept OTLP/HTTP telemetry (protobuf and JSON) from any OpenTelemetry SDK.
-- Validate request and event schemas strictly.
-- Enrich events with:
-  - `server_received_at`.
-  - `project_id`.
-- Push events onto Redpanda topics.
+### Storage — ClickHouse
 
-Operational considerations:
+ClickHouse tables store all telemetry with full OTLP fidelity:
 
-- Stateless and horizontally scalable.
-- Strict input validation and fail-fast behavior to protect downstream systems.
+- `traces` — spans with resource attributes, scope info, links, events
+- `logs` — log records with severity, attributes, resource attributes
+- `metrics` — gauge, sum, histogram, summary data points
 
-### Redpanda layer
-
-Used for:
-
-- Decoupling ingestion from storage.
-- Handling backpressure and traffic spikes gracefully.
-- Powering stream-based anomaly detection in later phases.
-
-Topics:
-
-- `traces`
-- `metrics`
-- `logs`
-
-### Background worker / stream processor
-
-Responsibilities:
-
-- Consume messages from Redpanda.
-- Parse and validate messages.
-- Transform events into ClickHouse table schemas.
-- Write in bulk to ClickHouse.
-- Handle retries and dead-letter queues for poison messages.
-
-Optional enhancements:
-
-- Pre-aggregation of metrics.
-- Metrics rollups (for example, 1m and 5m buckets) to accelerate aggregate queries.
-
-### Storage – ClickHouse
-
-ClickHouse table design:
-
-- `traces`
-  - `trace_id`
-  - `span_id`
-  - `parent_span_id`
-  - `service`
-  - `route`
-  - `duration_ms`
-  - `status`
-  - `error`
-  - `tags` (JSON)
-  - `timestamp`
-
-- `metrics`
-  - `service`
-  - `metric_name`
-  - `value`
-  - `tags`
-  - `timestamp`
-
-- `logs`
-  - `service`
-  - `level`
-  - `message`
-  - `tags`
-  - `timestamp`
+Each table includes `resource_attributes_json`, `scope_name`, `scope_version` for full OTLP context.
 
 Why ClickHouse:
 
-- Columnar storage.
-- Fast group-by and aggregations.
-- Cost-effective storage for large time-series datasets.
-- Well-suited to high-cardinality telemetry workloads.
+- Columnar storage with fast group-by and aggregations
+- Cost-effective for large time-series datasets
+- Well-suited to high-cardinality telemetry workloads
 
-### API layer and web UI
+### Query API and web UI
 
-- The API layer exposes query endpoints over traces, metrics, and logs, translating high-level filters and aggregations into ClickHouse SQL.
-- The web UI is the primary interface for:
-  - Building and running queries.
-  - Exploring traces.
-  - Inspecting spans and related logs/metrics.
+- The query API (served on the same port) exposes endpoints for traces, logs, metrics, services, and dashboard summaries
+- JWT auth with setup/login flow
+- The dashboard UI is a separate React SPA that talks to the query API
 
+### Deployment
 
+Two containers: `pulse` + `clickhouse`. That's the entire stack.
+
+```yaml
+services:
+  pulse:
+    ports: ["4321:4321"]
+  clickhouse:
+    ports: ["9000:9000"]
+```

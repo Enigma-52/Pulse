@@ -1,39 +1,11 @@
 version: "3.8"
 
 services:
-  # Redpanda replaces Zookeeper + Kafka: Kafka-compatible, C++ (no JVM), ~256MB vs ~1GB+
-  redpanda:
-    image: redpandadata/redpanda:v24.2.4
-    command:
-      - redpanda
-      - start
-      - --kafka-addr internal://0.0.0.0:29092,external://0.0.0.0:9092
-      - --advertise-kafka-addr internal://redpanda:29092,external://localhost:9092
-      - --mode dev-container
-      - --smp 1
-      - --memory 256M
-      - --default-log-level=warn
-    ports:
-      - "9092:9092"
-    healthcheck:
-      test: ["CMD-SHELL", "rpk cluster health | grep -E 'Healthy:.+true' || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-      start_period: 20s
-    networks:
-      - pulse-net
-    deploy:
-      resources:
-        limits:
-          memory: 320m
-
   clickhouse:
     image: clickhouse/clickhouse-server:24.3
     environment:
       CLICKHOUSE_USER: default
       CLICKHOUSE_PASSWORD: pulse
-      # Cap server-side memory; still plenty for typical observability workloads
       CLICKHOUSE_DEFAULT_MAX_MEMORY_USAGE: "536870912"
     ports:
       - "8123:8123"
@@ -54,55 +26,14 @@ services:
         limits:
           memory: 768m
 
-  ingestion:
+  pulse:
     build:
-      context: ../services/ingestion
+      context: ../pulse
       dockerfile: Dockerfile
     ports:
-      - "8081:8081"
+      - "4321:4321"
     environment:
-      PULSE_KAFKA_BROKERS: redpanda:29092
-    depends_on:
-      redpanda:
-        condition: service_healthy
-    networks:
-      - pulse-net
-    deploy:
-      resources:
-        limits:
-          memory: 128m
-
-  worker:
-    build:
-      context: ../services/worker
-      dockerfile: Dockerfile
-    environment:
-      PULSE_KAFKA_BROKERS: redpanda:29092
-      PULSE_KAFKA_TOPIC: otlp_raw
-      PULSE_WORKER_GROUP: pulse-worker
-      PULSE_CLICKHOUSE_ADDR: clickhouse:9000
-      PULSE_CLICKHOUSE_DB: default
-      PULSE_CLICKHOUSE_USER: default
-      PULSE_CLICKHOUSE_PASSWORD: pulse
-    depends_on:
-      redpanda:
-        condition: service_healthy
-      clickhouse:
-        condition: service_healthy
-    networks:
-      - pulse-net
-    deploy:
-      resources:
-        limits:
-          memory: 128m
-
-  query-api:
-    build:
-      context: ../services/query-api
-      dockerfile: Dockerfile
-    ports:
-      - "8082:8082"
-    environment:
+      PULSE_ADDR: ":4321"
       PULSE_CLICKHOUSE_ADDR: clickhouse:9000
       PULSE_CLICKHOUSE_DB: default
       PULSE_CLICKHOUSE_USER: default
@@ -111,7 +42,7 @@ services:
       clickhouse:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:8082/healthz"]
+      test: ["CMD", "wget", "-qO-", "http://localhost:4321/healthz"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -121,7 +52,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 128m
+          memory: 256m
 
   ui:
     build:
@@ -132,7 +63,7 @@ services:
     volumes:
       - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
-      query-api:
+      pulse:
         condition: service_healthy
     networks:
       - pulse-net
