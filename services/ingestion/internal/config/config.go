@@ -11,7 +11,7 @@ type Config struct {
 func Load() Config {
 	return Config{
 		KafkaBrokers: getEnv("PULSE_KAFKA_BROKERS", "localhost:9092"),
-		KafkaTopic:   getEnv("PULSE_KAFKA_TOPIC", "traces_raw"),
+		KafkaTopic:   getEnv("PULSE_KAFKA_TOPIC", "otlp_raw"),
 		ServerAddr:   getEnv("PULSE_SERVER_ADDR", ":8081"),
 	}
 }

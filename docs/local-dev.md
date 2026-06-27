@@ -37,7 +37,7 @@ cd services/ingestion
 go run ./cmd/ingestion
 ```
 
-The ingestion server listens on `http://localhost:8081/v1/ingest` and accepts batched telemetry from SDKs.
+The ingestion server listens on `http://localhost:8081` and accepts OTLP/HTTP at `/v1/traces`, `/v1/logs`, and `/v1/metrics`. Any OpenTelemetry SDK can send data here.
 
 ### 3. Run the worker (Go)
 
@@ -82,4 +82,4 @@ The public app runs on `http://localhost:5174`.
 
 With these pieces running, you have a full local loop:
 
-SDK (`@pulse/node`) → your app → ingestion (Go) → Redpanda/ClickHouse → query API (Go) → dashboard UI (`dashboard/`).
+OTel SDK (any language) → your app → ingestion (Go, OTLP/HTTP) → Redpanda → worker → ClickHouse → query API (Go) → dashboard UI (`dashboard/`).

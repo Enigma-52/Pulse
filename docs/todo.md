@@ -5,7 +5,7 @@ Updated: 2026-06-25
 ## What Pulse Has Today
 
 ### Backend
-- Ingestion service (POST /v1/ingest) with Kafka pipeline
+- Ingestion service (OTLP/HTTP at /v1/traces, /v1/logs, /v1/metrics) with Kafka pipeline
 - Worker service consuming from Kafka, writing to ClickHouse (traces, logs, metrics tables)
 - Query API with endpoints: traces, trace detail, logs, metrics, metric series, metrics query, services list, service overview, dashboard summary
 - JWT auth with setup/login flow
@@ -23,13 +23,9 @@ Updated: 2026-06-25
 - Time range selector on all pages (5m/15m/1h/6h/24h/7d)
 - Auto-refresh toggle on dashboard, traces, logs, services
 
-### SDK (Node)
-- Span creation (startSpan, withSpan) with context propagation
-- Log buffering with auto-enrichment (service context fields)
-- Metric recording (counter, gauge, histogram)
-- Express middleware with auto-instrumented HTTP metrics
-- Resource attributes (service, runtime, host, OS)
-- Retry with backoff, graceful shutdown
+### Instrumentation
+- OTLP/HTTP ingestion (protobuf + JSON) — works with any OpenTelemetry SDK (Node, Python, Go, Java, etc.)
+- No custom SDK needed — standard OTel exporters point at Pulse
 
 ---
 
@@ -85,10 +81,9 @@ Pulse monitors applications only. SigNoz also monitors infrastructure.
 - [ ] Host map / topology view
 
 #### OpenTelemetry Collector Compatibility
-SigNoz accepts data via the OTel Collector protocol. Pulse uses a custom envelope.
+- [x] OTLP/HTTP receiver endpoint on ingestion service
+- [x] Accept standard OTel resource attributes
 - [ ] OTLP/gRPC receiver endpoint on ingestion service
-- [ ] OTLP/HTTP receiver endpoint on ingestion service
-- [ ] Accept standard OTel resource attributes
 - [ ] Support OTel Collector as a data forwarder
 - [ ] Semantic convention mapping for attributes
 
@@ -171,14 +166,10 @@ SigNoz has dedicated AI/LLM monitoring. Pulse has no AI-specific features.
 - [ ] Apdex score calculation from real data
 - [ ] Historical trend analysis
 
-#### Multi-SDK Support
-Pulse has Node SDK only.
-- [ ] Python SDK
-- [ ] Go SDK
-- [ ] Java SDK
-- [ ] Ruby SDK
+#### Multi-Language Support
+Pulse accepts OTLP/HTTP — all languages with an OTel SDK work out of the box.
+- [x] Accept OTel SDK data via OTLP endpoints (covers all languages)
 - [ ] Browser/frontend SDK (RUM)
-- [ ] Alternatively: accept OTel SDK data via OTLP endpoints (covers all languages)
 
 #### Deployment and Operations
 - [ ] Helm chart for Kubernetes deployment

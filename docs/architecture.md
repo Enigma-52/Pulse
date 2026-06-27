@@ -4,37 +4,21 @@
 
 The core Pulse data flow is:
 
-App (SDK) → Ingestion Server → Redpanda → Background Worker / Stream Processor → ClickHouse → API Layer → Web UI
+App (OTel SDK) → Ingestion Server (OTLP/HTTP) → Redpanda → Background Worker → ClickHouse → API Layer → Web UI
 
 At each stage, Pulse transforms and enriches telemetry so that it remains useful for both real-time debugging and historical analysis.
 
-### SDKs (Node / Python / Go)
+### Instrumentation (any language via OpenTelemetry)
 
-SDK responsibilities:
+Pulse accepts standard OTLP/HTTP telemetry. No custom SDK is needed — use any OpenTelemetry SDK:
 
-- Capture:
-  - Traces (spans, durations, parent-child relationships).
-  - Metrics (counters, histograms).
-  - Logs (structured JSON).
-- Attach context:
-  - Service name.
-  - Environment.
-  - Version.
-  - Tags.
-- Transport:
-  - Batch and send asynchronously.
-  - Retry with backoff.
-  - Authenticate via API key header.
+- Node.js: `@opentelemetry/sdk-node` + `@opentelemetry/exporter-trace-otlp-http`
+- Python: `opentelemetry-sdk` + `opentelemetry-exporter-otlp-proto-http`
+- Go: `go.opentelemetry.io/otel` + `go.opentelemetry.io/otel/exporters/otlp/otlptracehttp`
+- Java, Ruby, .NET, etc.: any OTel SDK with OTLP HTTP exporter
 
-Export format:
-
-- Use an OpenTelemetry-compatible schema internally, even if not full OTLP, to keep interoperability options open.
-
-Deliverables:
-
-- `@pulse/node`
-- `pulse-python`
-- `pulse-go`
+Configure the exporter URL to point at `http://<pulse-host>:8081/v1/traces` (and `/v1/logs`, `/v1/metrics`).
+Set the `x-pulse-api-key` header for authentication.
 
 ### API key and project model
 
@@ -57,7 +41,7 @@ Core database tables:
 
 Responsibilities:
 
-- Accept batched telemetry payloads from SDKs.
+- Accept OTLP/HTTP telemetry (protobuf and JSON) from any OpenTelemetry SDK.
 - Validate request and event schemas strictly.
 - Enrich events with:
   - `server_received_at`.

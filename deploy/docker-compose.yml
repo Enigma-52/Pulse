@@ -78,7 +78,7 @@ services:
       dockerfile: Dockerfile
     environment:
       PULSE_KAFKA_BROKERS: redpanda:29092
-      PULSE_TRACES_TOPIC: traces_raw
+      PULSE_KAFKA_TOPIC: otlp_raw
       PULSE_WORKER_GROUP: pulse-worker
       PULSE_CLICKHOUSE_ADDR: clickhouse:9000
       PULSE_CLICKHOUSE_DB: default

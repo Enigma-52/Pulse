@@ -30,7 +30,7 @@ func Load() Config {
 		},
 		Kafka: KafkaConfig{
 			Brokers: getEnv("PULSE_KAFKA_BROKERS", "localhost:9092"),
-			Topic:   getEnv("PULSE_TRACES_TOPIC", "traces_raw"),
+			Topic:   getEnv("PULSE_KAFKA_TOPIC", "otlp_raw"),
 			GroupID: getEnv("PULSE_WORKER_GROUP", "pulse-worker"),
 		},
 	}

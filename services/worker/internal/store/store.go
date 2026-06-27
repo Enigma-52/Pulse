@@ -2,7 +2,6 @@ package store
 
 import (
 	"context"
-	"encoding/json"
 	"time"
 
 	clickhouse "github.com/ClickHouse/clickhouse-go/v2"
@@ -31,7 +30,7 @@ func Connect(cfg config.ClickHouseConfig) (*Store, error) {
 }
 
 func (s *Store) EnsureTables(ctx context.Context) error {
-	const ddl = `
+	const tracesDDL = `
 CREATE TABLE IF NOT EXISTS traces (
 	trace_id String,
 	span_id String,
@@ -43,22 +42,31 @@ CREATE TABLE IF NOT EXISTS traces (
 	kind String DEFAULT '',
 	duration_ms Int64,
 	status String,
-	error String,
+	status_message String DEFAULT '',
+	error String DEFAULT '',
 	start_time DateTime64(3),
 	end_time DateTime64(3),
 	attributes_json String,
-	events_json String DEFAULT '[]'
+	events_json String DEFAULT '[]',
+	links_json String DEFAULT '[]',
+	resource_attributes_json String DEFAULT '{}',
+	scope_name String DEFAULT '',
+	scope_version String DEFAULT ''
 ) ENGINE = MergeTree
 ORDER BY (service, start_time)
 `
-	if err := s.conn.Exec(ctx, ddl); err != nil {
+	if err := s.conn.Exec(ctx, tracesDDL); err != nil {
 		return err
 	}
 
-	// Add columns if table already existed without them
 	migrations := []string{
 		"ALTER TABLE traces ADD COLUMN IF NOT EXISTS kind String DEFAULT ''",
 		"ALTER TABLE traces ADD COLUMN IF NOT EXISTS events_json String DEFAULT '[]'",
+		"ALTER TABLE traces ADD COLUMN IF NOT EXISTS links_json String DEFAULT '[]'",
+		"ALTER TABLE traces ADD COLUMN IF NOT EXISTS resource_attributes_json String DEFAULT '{}'",
+		"ALTER TABLE traces ADD COLUMN IF NOT EXISTS scope_name String DEFAULT ''",
+		"ALTER TABLE traces ADD COLUMN IF NOT EXISTS scope_version String DEFAULT ''",
+		"ALTER TABLE traces ADD COLUMN IF NOT EXISTS status_message String DEFAULT ''",
 	}
 	for _, m := range migrations {
 		_ = s.conn.Exec(ctx, m)
@@ -68,18 +76,36 @@ ORDER BY (service, start_time)
 CREATE TABLE IF NOT EXISTS logs (
 	timestamp DateTime64(3),
 	level String,
+	severity_number Int32 DEFAULT 0,
 	message String,
 	service String,
 	environment String,
 	trace_id String DEFAULT '',
 	span_id String DEFAULT '',
-	fields_json String DEFAULT '{}'
+	attributes_json String DEFAULT '{}',
+	resource_attributes_json String DEFAULT '{}',
+	scope_name String DEFAULT '',
+	scope_version String DEFAULT ''
 ) ENGINE = MergeTree
 ORDER BY (service, timestamp)
 `
 	if err := s.conn.Exec(ctx, logsDDL); err != nil {
 		return err
 	}
+
+	logsMigrations := []string{
+		"ALTER TABLE logs ADD COLUMN IF NOT EXISTS severity_number Int32 DEFAULT 0",
+		"ALTER TABLE logs ADD COLUMN IF NOT EXISTS attributes_json String DEFAULT '{}'",
+		"ALTER TABLE logs ADD COLUMN IF NOT EXISTS resource_attributes_json String DEFAULT '{}'",
+		"ALTER TABLE logs ADD COLUMN IF NOT EXISTS scope_name String DEFAULT ''",
+		"ALTER TABLE logs ADD COLUMN IF NOT EXISTS scope_version String DEFAULT ''",
+	}
+	for _, m := range logsMigrations {
+		_ = s.conn.Exec(ctx, m)
+	}
+
+	// Rename fields_json → attributes_json if old column exists
+	_ = s.conn.Exec(ctx, "ALTER TABLE logs RENAME COLUMN IF EXISTS fields_json TO attributes_json")
 
 	const metricsDDL = `
 CREATE TABLE IF NOT EXISTS metrics (
@@ -90,7 +116,10 @@ CREATE TABLE IF NOT EXISTS metrics (
 	timestamp DateTime64(3),
 	service String,
 	environment String,
-	attributes_json String DEFAULT '{}'
+	attributes_json String DEFAULT '{}',
+	resource_attributes_json String DEFAULT '{}',
+	scope_name String DEFAULT '',
+	scope_version String DEFAULT ''
 ) ENGINE = MergeTree
 ORDER BY (service, name, timestamp)
 `
@@ -98,62 +127,48 @@ ORDER BY (service, name, timestamp)
 		return err
 	}
 
+	metricsMigrations := []string{
+		"ALTER TABLE metrics ADD COLUMN IF NOT EXISTS resource_attributes_json String DEFAULT '{}'",
+		"ALTER TABLE metrics ADD COLUMN IF NOT EXISTS scope_name String DEFAULT ''",
+		"ALTER TABLE metrics ADD COLUMN IF NOT EXISTS scope_version String DEFAULT ''",
+	}
+	for _, m := range metricsMigrations {
+		_ = s.conn.Exec(ctx, m)
+	}
+
 	return nil
 }
 
-func (s *Store) InsertSpans(ctx context.Context, env model.Envelope) error {
-	if len(env.Spans) == 0 {
+func (s *Store) InsertSpans(ctx context.Context, spans []model.Span) error {
+	if len(spans) == 0 {
 		return nil
 	}
 
 	batch, err := s.conn.PrepareBatch(ctx, `
 INSERT INTO traces (
 	trace_id, span_id, parent_span_id, service, environment, route, name, kind,
-	duration_ms, status, error, start_time, end_time, attributes_json, events_json
+	duration_ms, status, status_message, error, start_time, end_time,
+	attributes_json, events_json, links_json,
+	resource_attributes_json, scope_name, scope_version
 ) VALUES
 `)
 	if err != nil {
 		return err
 	}
 
-	for _, span := range env.Spans {
-		start := time.UnixMilli(span.StartTime)
-		end := time.UnixMilli(span.EndTime)
-
-		route := ""
-		if v, ok := span.Attributes["http.path"].(string); ok {
-			route = v
-		}
-		if route == "" {
-			if v, ok := span.Attributes["http.route"].(string); ok {
-				route = v
-			}
-		}
-
-		kind := span.Kind
-		if kind == "" {
-			kind = "internal"
-		}
-
-		attrsJSON, err := json.Marshal(span.Attributes)
-		if err != nil {
-			return err
-		}
-
-		eventsJSON := "[]"
-		if len(span.Events) > 0 {
-			b, err := json.Marshal(span.Events)
-			if err != nil {
-				return err
-			}
-			eventsJSON = string(b)
+	for _, sp := range spans {
+		errStr := ""
+		if sp.Status == "ERROR" {
+			errStr = sp.StatusMessage
 		}
 
 		if err := batch.Append(
-			span.TraceID, span.SpanID, span.ParentSpanID,
-			env.ServiceName, env.Environment, route, span.Name, kind,
-			span.DurationMs, span.Status, span.Error,
-			start, end, string(attrsJSON), eventsJSON,
+			sp.TraceID, sp.SpanID, sp.ParentSpanID,
+			sp.Service, sp.Environment, sp.Route, sp.Name, sp.Kind,
+			sp.DurationMs, sp.Status, sp.StatusMessage, errStr,
+			time.UnixMilli(sp.StartTimeMs), time.UnixMilli(sp.EndTimeMs),
+			sp.AttributesJSON, sp.EventsJSON, sp.LinksJSON,
+			sp.ResourceAttributesJSON, sp.ScopeName, sp.ScopeVersion,
 		); err != nil {
 			return err
 		}
@@ -162,36 +177,28 @@ INSERT INTO traces (
 	return batch.Send()
 }
 
-func (s *Store) InsertLogs(ctx context.Context, env model.Envelope) error {
-	if len(env.Logs) == 0 {
+func (s *Store) InsertLogs(ctx context.Context, logs []model.LogEntry) error {
+	if len(logs) == 0 {
 		return nil
 	}
 
 	batch, err := s.conn.PrepareBatch(ctx, `
 INSERT INTO logs (
-	timestamp, level, message, service, environment, trace_id, span_id, fields_json
+	timestamp, level, severity_number, message, service, environment,
+	trace_id, span_id, attributes_json,
+	resource_attributes_json, scope_name, scope_version
 ) VALUES
 `)
 	if err != nil {
 		return err
 	}
 
-	for _, l := range env.Logs {
-		ts := time.UnixMilli(l.Timestamp)
-
-		fieldsJSON := "{}"
-		if len(l.Fields) > 0 {
-			b, err := json.Marshal(l.Fields)
-			if err != nil {
-				return err
-			}
-			fieldsJSON = string(b)
-		}
-
+	for _, l := range logs {
 		if err := batch.Append(
-			ts, l.Level, l.Message,
-			env.ServiceName, env.Environment,
-			l.TraceID, l.SpanID, fieldsJSON,
+			time.UnixMilli(l.TimestampMs), l.Level, l.SeverityNumber, l.Body,
+			l.Service, l.Environment,
+			l.TraceID, l.SpanID, l.AttributesJSON,
+			l.ResourceAttributesJSON, l.ScopeName, l.ScopeVersion,
 		); err != nil {
 			return err
 		}
@@ -200,35 +207,28 @@ INSERT INTO logs (
 	return batch.Send()
 }
 
-func (s *Store) InsertMetrics(ctx context.Context, env model.Envelope) error {
-	if len(env.Metrics) == 0 {
+func (s *Store) InsertMetrics(ctx context.Context, points []model.MetricPoint) error {
+	if len(points) == 0 {
 		return nil
 	}
 
 	batch, err := s.conn.PrepareBatch(ctx, `
 INSERT INTO metrics (
-	name, type, value, unit, timestamp, service, environment, attributes_json
+	name, type, value, unit, timestamp, service, environment,
+	attributes_json, resource_attributes_json, scope_name, scope_version
 ) VALUES
 `)
 	if err != nil {
 		return err
 	}
 
-	for _, m := range env.Metrics {
-		ts := time.UnixMilli(m.Timestamp)
-
-		attrsJSON := "{}"
-		if len(m.Attributes) > 0 {
-			b, err := json.Marshal(m.Attributes)
-			if err != nil {
-				return err
-			}
-			attrsJSON = string(b)
-		}
-
+	for _, m := range points {
 		if err := batch.Append(
-			m.Name, m.Type, m.Value, m.Unit, ts,
-			env.ServiceName, env.Environment, attrsJSON,
+			m.Name, m.Type, m.Value, m.Unit,
+			time.UnixMilli(m.TimestampMs),
+			m.Service, m.Environment,
+			m.AttributesJSON, m.ResourceAttributesJSON,
+			m.ScopeName, m.ScopeVersion,
 		); err != nil {
 			return err
 		}

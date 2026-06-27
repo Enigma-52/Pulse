@@ -25,7 +25,7 @@ Pulse includes both backend and frontend components.
 
 ### Backend platform
 
-- Ingestion service (accepts telemetry from apps/SDKs)
+- Ingestion service (accepts OTLP/HTTP telemetry from any OpenTelemetry SDK)
 - Worker service (processes telemetry data)
 - Query API service (serves data to the UI)
 - Redpanda (stream pipeline)
@@ -49,7 +49,7 @@ cd deploy
 After install:
 
 - Product UI: `http://localhost:3301`
-- Ingestion API: `http://localhost:8081/v1/ingest`
+- Ingestion API: `http://localhost:8081/v1/traces` (also `/v1/logs`, `/v1/metrics`)
 - Query API: `http://localhost:8082`
 
 ## Run frontend apps locally

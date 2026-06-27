@@ -29,7 +29,7 @@ func main() {
 
 	proc := processor.New(s)
 
-	log.Println("Pulse worker starting (Kafka -> ClickHouse traces)")
+	log.Println("Pulse worker starting (Kafka OTLP -> ClickHouse)")
 
 	for {
 		msg, err := reader.ReadMessage(ctx)
@@ -39,8 +39,16 @@ func main() {
 			continue
 		}
 
-		if err := proc.Process(ctx, msg.Value); err != nil {
-			log.Printf("failed to process message: %v", err)
+		signal := "traces"
+		for _, h := range msg.Headers {
+			if h.Key == "signal" {
+				signal = string(h.Value)
+				break
+			}
+		}
+
+		if err := proc.Process(ctx, signal, msg.Value); err != nil {
+			log.Printf("failed to process %s message: %v", signal, err)
 		}
 	}
 }
