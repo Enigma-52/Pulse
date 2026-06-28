@@ -5,13 +5,15 @@ Updated: 2026-06-25
 ## What Pulse Has Today
 
 ### Backend
-- Ingestion service (POST /v1/ingest) with Kafka pipeline
-- Worker service consuming from Kafka, writing to ClickHouse (traces, logs, metrics tables)
+- Single `pulse` binary on port 4321: OTLP ingest + in-process pipeline + ClickHouse writer + query API
+- OTLP/HTTP endpoints: /v1/traces, /v1/logs, /v1/metrics (protobuf + JSON)
+- In-process buffered channel replaces Kafka/Redpanda (backpressure via 429)
+- ClickHouse storage with full OTLP fidelity (resource attrs, scope, links)
 - Query API with endpoints: traces, trace detail, logs, metrics, metric series, metrics query, services list, service overview, dashboard summary
 - JWT auth with setup/login flow
 - Time-range filtering across all query endpoints
 
-### Frontend (future-web)
+### Frontend (dashboard)
 - Dashboard with live stats, request volume chart, recent traces
 - Traces page with service graph, duration histogram, service/status filters
 - Trace detail with flamegraph, waterfall, service breakdown, linked logs
@@ -23,13 +25,9 @@ Updated: 2026-06-25
 - Time range selector on all pages (5m/15m/1h/6h/24h/7d)
 - Auto-refresh toggle on dashboard, traces, logs, services
 
-### SDK (Node)
-- Span creation (startSpan, withSpan) with context propagation
-- Log buffering with auto-enrichment (service context fields)
-- Metric recording (counter, gauge, histogram)
-- Express middleware with auto-instrumented HTTP metrics
-- Resource attributes (service, runtime, host, OS)
-- Retry with backoff, graceful shutdown
+### Instrumentation
+- OTLP/HTTP ingestion (protobuf + JSON) — works with any OpenTelemetry SDK (Node, Python, Go, Java, etc.)
+- No custom SDK needed — standard OTel exporters point at Pulse
 
 ---
 
@@ -85,10 +83,9 @@ Pulse monitors applications only. SigNoz also monitors infrastructure.
 - [ ] Host map / topology view
 
 #### OpenTelemetry Collector Compatibility
-SigNoz accepts data via the OTel Collector protocol. Pulse uses a custom envelope.
+- [x] OTLP/HTTP receiver endpoint on ingestion service
+- [x] Accept standard OTel resource attributes
 - [ ] OTLP/gRPC receiver endpoint on ingestion service
-- [ ] OTLP/HTTP receiver endpoint on ingestion service
-- [ ] Accept standard OTel resource attributes
 - [ ] Support OTel Collector as a data forwarder
 - [ ] Semantic convention mapping for attributes
 
@@ -102,12 +99,12 @@ SigNoz has trace analytics beyond listing.
 #### Database Monitoring
 SigNoz monitors database performance directly. Pulse has no database-specific observability.
 Supported databases in SigNoz: PostgreSQL, MySQL, MongoDB, Redis, ClickHouse.
-- [ ] Database span detection and categorization (identify db calls from trace attributes)
-- [ ] Database query latency tracking and slow query highlighting
-- [ ] Query throughput and error rate dashboards
+- [x] Database span detection and categorization (identify db calls from trace attributes)
+- [x] Database query latency tracking and slow query highlighting
+- [x] Query throughput and error rate dashboards
 - [ ] Connection count monitoring
-- [ ] Slow query list with linked traces
-- [ ] Per-database breakdown (latency, throughput, errors)
+- [x] Slow query list with linked traces
+- [x] Per-database breakdown (latency, throughput, errors)
 - [ ] SDK helpers for annotating database spans (db.system, db.statement, db.name)
 
 #### Querying and Analytics
@@ -171,14 +168,10 @@ SigNoz has dedicated AI/LLM monitoring. Pulse has no AI-specific features.
 - [ ] Apdex score calculation from real data
 - [ ] Historical trend analysis
 
-#### Multi-SDK Support
-Pulse has Node SDK only.
-- [ ] Python SDK
-- [ ] Go SDK
-- [ ] Java SDK
-- [ ] Ruby SDK
+#### Multi-Language Support
+Pulse accepts OTLP/HTTP — all languages with an OTel SDK work out of the box.
+- [x] Accept OTel SDK data via OTLP endpoints (covers all languages)
 - [ ] Browser/frontend SDK (RUM)
-- [ ] Alternatively: accept OTel SDK data via OTLP endpoints (covers all languages)
 
 #### Deployment and Operations
 - [ ] Helm chart for Kubernetes deployment
@@ -207,7 +200,7 @@ Pulse has Node SDK only.
 - [ ] Add DLQ topic and poison-message handling strategy
 - [ ] Add worker retry/backoff policy with observability
 - [ ] Add internal service metrics and structured logs
-- [ ] Add readiness checks for kafka/clickhouse dependencies
+- [ ] Add readiness checks for redpanda/clickhouse dependencies
 
 ### P2 - Developer experience
 - [ ] Refresh docs to match current runtime wiring

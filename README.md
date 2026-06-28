@@ -21,23 +21,17 @@ It is built to be easy to run and quick to understand.
 
 ## What runs in Pulse
 
-Pulse includes both backend and frontend components.
+Two containers: `pulse` + `clickhouse`. That's it.
 
-### Backend platform
+### Backend
 
-- Ingestion service (accepts telemetry from apps/SDKs)
-- Worker service (processes telemetry data)
-- Query API service (serves data to the UI)
-- Kafka + Zookeeper (stream pipeline)
-- ClickHouse (observability data storage)
+- **`pulse`** — single Go binary handling OTLP ingestion, ClickHouse writing, and query API on port **4321**
+- **ClickHouse** — columnar storage for all telemetry data
 
 ### Frontend apps
 
-1. `frontend/`
-Public-facing site (landing/docs entry points)
-
-2. `future-web/`
-Product dashboard used by Pulse users after deployment
+1. `frontend/` — public-facing site (landing/docs entry points)
+2. `dashboard/` — product dashboard used by Pulse users after deployment
 
 ## Quick start (one-command deploy)
 
@@ -49,8 +43,25 @@ cd deploy
 After install:
 
 - Product UI: `http://localhost:3301`
-- Ingestion API: `http://localhost:8081/v1/ingest`
-- Query API: `http://localhost:8082`
+- Pulse API: `http://localhost:4321` (OTLP ingest + query API)
+
+### Send telemetry from any language
+
+Point any OpenTelemetry SDK at `http://localhost:4321/v1/traces` (also `/v1/logs`, `/v1/metrics`).
+
+Example (Node.js):
+
+```ts
+import { NodeSDK } from "@opentelemetry/sdk-node";
+import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http";
+
+const sdk = new NodeSDK({
+  traceExporter: new OTLPTraceExporter({
+    url: "http://localhost:4321/v1/traces",
+  }),
+});
+sdk.start();
+```
 
 ## Run frontend apps locally
 
@@ -61,17 +72,13 @@ npm install
 npm run dev
 
 # Product dashboard app
-cd ../future-web
+cd ../dashboard
 npm install
 npm run dev
 ```
 
 ## Documentation
 
-- Latest status: `docs/current-status.md`
 - Project-wide TODO: `docs/todo.md`
-- Platform overview: `docs/overview.md`
-- Features: `docs/features.md`
 - Architecture: `docs/architecture.md`
 - Local development: `docs/local-dev.md`
-- Install inventory: `docs/install-includes.md`
