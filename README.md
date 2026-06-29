@@ -1,84 +1,63 @@
+<div align="center">
+
 # Pulse
 
+### See everything. Fix anything. Ship faster.
 
-██████╗ ██╗   ██╗██╗     ███████╗███████╗
-██╔══██╗██║   ██║██║     ██╔════╝██╔════╝
-██████╔╝██║   ██║██║     ███████╗█████╗
-██╔═══╝ ██║   ██║██║     ╚════██║██╔══╝
-██║     ╚██████╔╝███████╗███████║███████╗
-╚═╝      ╚═════╝ ╚══════╝╚══════╝╚══════╝
+Open-source observability platform for traces, logs, metrics, and database monitoring.
 
+Two containers. One binary. Zero complexity.
 
-Pulse is an open-source observability platform for traces, metrics, and logs.
-It is built to be easy to run and quick to understand.
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](#license)
 
-## What Pulse gives you
+</div>
 
-- A single dashboard to inspect service health and request flow
-- Trace, log, and metric visibility in one place
-- A deploy flow that brings up the full stack in one command
-- A clean local setup for product and backend development
+---
 
-## What runs in Pulse
+## Why Pulse?
 
-Two containers: `pulse` + `clickhouse`. That's it.
+Most observability tools are either expensive SaaS or painfully complex to self-host. Pulse gives you production-grade observability with a single Go binary and a ClickHouse database. No agents, no collectors, no YAML pipelines — just point your app at Pulse and see everything.
 
-### Backend
+## What You Get
 
-- **`pulse`** — single Go binary handling OTLP ingestion, ClickHouse writing, and query API on port **4321**
-- **ClickHouse** — columnar storage for all telemetry data
+- **Distributed Tracing** — flamegraph, waterfall view, service breakdown, span attributes
+- **Log Management** — stream and grouped views, level filters, search, trace correlation
+- **Metrics** — time-series charts, per-service breakdown, queryable explorer
+- **Database Monitoring** — auto-detects PostgreSQL, MySQL, MongoDB, Redis queries from traces with slow query tracking
+- **Service Overview** — all instrumented services with latency percentiles, error rates, request counts
+- **Works With Any Language** — accepts standard OpenTelemetry data from Node.js, Python, Go, Java, .NET, and more
 
-### Frontend apps
+## Get Started
 
-1. `frontend/` — public-facing site (landing/docs entry points)
-2. `dashboard/` — product dashboard used by Pulse users after deployment
+Run from the `deploy/` directory:
 
-## Quick start (one-command deploy)
-
-```bash
-cd deploy
-./install.sh
+```
+docker compose up -d
 ```
 
-After install:
+Then open **localhost:3301** for the dashboard. Point any OpenTelemetry SDK at **localhost:4321** to start sending data.
 
-- Product UI: `http://localhost:3301`
-- Pulse API: `http://localhost:4321` (OTLP ingest + query API)
+| | URL |
+|---|---|
+| Dashboard | localhost:3301 |
+| OTLP Ingest | localhost:4321 |
 
-### Send telemetry from any language
+## How It Works
 
-Point any OpenTelemetry SDK at `http://localhost:4321/v1/traces` (also `/v1/logs`, `/v1/metrics`).
+Your app sends traces, logs, and metrics to Pulse over OTLP/HTTP. Pulse stores everything in ClickHouse and serves it through a query API. The dashboard gives you a single place to see service health, dig into traces, search logs, and monitor database queries.
 
-Example (Node.js):
-
-```ts
-import { NodeSDK } from "@opentelemetry/sdk-node";
-import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http";
-
-const sdk = new NodeSDK({
-  traceExporter: new OTLPTraceExporter({
-    url: "http://localhost:4321/v1/traces",
-  }),
-});
-sdk.start();
+```
+Your App  →  Pulse (:4321)  →  ClickHouse  →  Dashboard (:3301)
 ```
 
-## Run frontend apps locally
-
-```bash
-# Public app
-cd frontend
-npm install
-npm run dev
-
-# Product dashboard app
-cd ../dashboard
-npm install
-npm run dev
-```
+That's the whole stack.
 
 ## Documentation
 
-- Project-wide TODO: `docs/todo.md`
-- Architecture: `docs/architecture.md`
-- Local development: `docs/local-dev.md`
+- [Architecture](docs/architecture.md)
+- [Local Development](docs/local-dev.md)
+- [Roadmap](docs/todo.md)
+
+## License
+
+MIT
