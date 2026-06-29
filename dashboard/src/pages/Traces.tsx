@@ -6,6 +6,7 @@ import AutoRefreshPicker from "@/components/AutoRefreshPicker";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import type { Trace } from "@/lib/mockData";
 import { fetchTraces } from "@/lib/api";
+import { chart as chartColors } from "@/lib/colors";
 
 function buildDurationBuckets(traces: Trace[]) {
   if (traces.length === 0) return [];
@@ -24,7 +25,6 @@ function buildDurationBuckets(traces: Trace[]) {
     }
   }
 
-  // Trim trailing empty buckets
   while (buckets.length > 0 && buckets[buckets.length - 1].count === 0) {
     buckets.pop();
   }
@@ -68,12 +68,15 @@ export default function Traces() {
     return sorted[Math.floor(sorted.length * 0.5)]?.duration ?? 0;
   }, [traces]);
 
+  const errorCount = traces.filter(t => t.status === "error").length;
+
   return (
     <div className="p-6 space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-medium tracking-tight">Traces</h1>
-          <p className="text-sm text-muted-foreground mt-1">Service dependency graph and recent spans · {rangeToLabel(range)}</p>
+          <p className="text-sm text-muted-foreground mt-1">Distributed traces · {rangeToLabel(range)}</p>
         </div>
         <div className="flex items-center gap-3">
           <AutoRefreshPicker value={refresh.interval} onChange={refresh.setInterval} isActive={refresh.isActive} />
@@ -81,6 +84,7 @@ export default function Traces() {
         </div>
       </div>
 
+      {/* Filters */}
       <div className="flex gap-2">
         <input
           value={serviceFilter}
@@ -98,31 +102,49 @@ export default function Traces() {
           <option value="ok">OK</option>
           <option value="error">Error</option>
         </select>
-        <button onClick={handleFilter} className="h-8 px-3 text-xs font-medium rounded bg-secondary border border-border hover:border-ring">Filter</button>
+        <button onClick={handleFilter} className="h-8 px-3 text-xs font-medium rounded bg-secondary border border-border hover:border-ring transition-colors">Filter</button>
       </div>
 
+      {/* Summary stats */}
+      <div className="grid grid-cols-3 gap-3">
+        <div className="panel p-4 relative overflow-hidden">
+          <div className="absolute bottom-0 left-0 right-0 h-[2px]" style={{ background: chartColors.primary }} />
+          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Total traces</div>
+          <div className="text-2xl font-mono font-medium mt-1">{traces.length}</div>
+        </div>
+        <div className="panel p-4 relative overflow-hidden">
+          <div className="absolute bottom-0 left-0 right-0 h-[2px]" style={{ background: chartColors.secondary }} />
+          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">p50 duration</div>
+          <div className="text-2xl font-mono font-medium mt-1">{p50}<span className="text-xs text-muted-foreground ml-1">ms</span></div>
+        </div>
+        <div className="panel p-4 relative overflow-hidden">
+          <div className="absolute bottom-0 left-0 right-0 h-[2px]" style={{ background: errorCount > 0 ? "#EF5350" : chartColors.primary }} />
+          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Errors</div>
+          <div className={`text-2xl font-mono font-medium mt-1 ${errorCount > 0 ? "text-status-error" : ""}`}>{errorCount}</div>
+        </div>
+      </div>
+
+      {/* Duration Distribution */}
       {durationBuckets.length > 0 && (
         <div className="panel p-5">
           <div className="flex items-center justify-between mb-3">
-            <div>
-              <div className="data-label">Duration distribution</div>
-              <div className="text-sm mt-1 text-muted-foreground">{traces.length} traces · p50 = {p50}ms</div>
-            </div>
+            <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Duration distribution</div>
+            <div className="text-[10px] font-mono text-muted-foreground">{traces.length} traces · p50 = {p50}ms</div>
           </div>
-          <div className="h-32">
+          <div className="h-28">
             <ResponsiveContainer>
               <BarChart data={durationBuckets}>
                 <CartesianGrid stroke="hsl(var(--border))" strokeDasharray="2 4" vertical={false} />
                 <XAxis dataKey="label" stroke="hsl(var(--muted-foreground))" fontSize={9} tickLine={false} axisLine={false} interval="preserveStartEnd" />
                 <YAxis stroke="hsl(var(--muted-foreground))" fontSize={9} tickLine={false} axisLine={false} width={28} />
                 <Tooltip
-                  contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 4, fontSize: 11 }}
+                  contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 6, fontSize: 11, fontFamily: "JetBrains Mono, monospace" }}
                   formatter={(value: number) => [`${value} traces`, "Count"]}
                   labelFormatter={(label: string) => `${label}ms`}
                 />
                 <Bar dataKey="count" radius={[2, 2, 0, 0]}>
                   {durationBuckets.map((_, i) => (
-                    <Cell key={i} fill="hsl(var(--chart-1))" fillOpacity={0.7} />
+                    <Cell key={i} fill={chartColors.primary} fillOpacity={0.7} />
                   ))}
                 </Bar>
               </BarChart>
@@ -131,41 +153,40 @@ export default function Traces() {
         </div>
       )}
 
+      {/* Trace Table */}
       <div className="panel">
-        <div className="px-5 py-4 border-b border-border">
-          <div className="data-label">Trace stream</div>
+        <div className="px-5 py-3 border-b border-border">
+          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Trace list</div>
         </div>
-        <table className="w-full text-sm">
+        <table className="w-full text-xs">
           <thead>
             <tr className="text-left text-muted-foreground border-b border-border">
-              <th className="px-5 py-2.5 font-medium text-[11px] uppercase tracking-wider">Time</th>
-              <th className="px-5 py-2.5 font-medium text-[11px] uppercase tracking-wider">Trace ID</th>
-              <th className="px-5 py-2.5 font-medium text-[11px] uppercase tracking-wider">Operation</th>
-              <th className="px-5 py-2.5 font-medium text-[11px] uppercase tracking-wider">Service</th>
-              <th className="px-5 py-2.5 font-medium text-[11px] uppercase tracking-wider text-right">Duration</th>
-              <th className="px-5 py-2.5 font-medium text-[11px] uppercase tracking-wider text-right">Spans</th>
-              <th className="px-5 py-2.5 font-medium text-[11px] uppercase tracking-wider">Status</th>
+              <th className="px-5 py-2 font-medium text-[10px] uppercase tracking-wider">Time</th>
+              <th className="px-5 py-2 font-medium text-[10px] uppercase tracking-wider">Trace ID</th>
+              <th className="px-5 py-2 font-medium text-[10px] uppercase tracking-wider">Operation</th>
+              <th className="px-5 py-2 font-medium text-[10px] uppercase tracking-wider">Service</th>
+              <th className="px-5 py-2 font-medium text-[10px] uppercase tracking-wider text-right">Duration</th>
+              <th className="px-5 py-2 font-medium text-[10px] uppercase tracking-wider">Status</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={7} className="px-5 py-10 text-center text-sm text-muted-foreground">Loading traces...</td>
+                <td colSpan={6} className="px-5 py-10 text-center text-sm text-muted-foreground">Loading traces...</td>
               </tr>
             ) : traces.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-5 py-10 text-center text-sm text-muted-foreground">No traces found</td>
+                <td colSpan={6} className="px-5 py-10 text-center text-sm text-muted-foreground">No traces found</td>
               </tr>
             ) : traces.map(t => (
-              <tr key={t.id} className="border-b border-border last:border-0 hover:bg-secondary/40">
-                <td className="px-5 py-2.5 font-mono text-xs text-muted-foreground">{t.timestamp}</td>
-                <td className="px-5 py-2.5 font-mono text-xs">
-                  <Link to={`/app/traces/${t.id}`} className="hover:underline">{t.id}</Link>
+              <tr key={t.id} className="border-b border-border last:border-0 hover:bg-secondary/40 transition-colors">
+                <td className="px-5 py-2.5 font-mono text-muted-foreground">{t.timestamp}</td>
+                <td className="px-5 py-2.5 font-mono">
+                  <Link to={`/app/traces/${t.id}`} className="hover:text-foreground text-muted-foreground transition-colors">{t.id.slice(0, 12)}</Link>
                 </td>
-                <td className="px-5 py-2.5 font-mono text-xs">{t.name}</td>
+                <td className="px-5 py-2.5 font-mono">{t.name}</td>
                 <td className="px-5 py-2.5 text-muted-foreground">{t.service}</td>
-                <td className="px-5 py-2.5 font-mono text-xs text-right">{t.duration}ms</td>
-                <td className="px-5 py-2.5 font-mono text-xs text-right text-muted-foreground">{t.spans}</td>
+                <td className="px-5 py-2.5 font-mono text-right">{t.duration}ms</td>
                 <td className="px-5 py-2.5">
                   <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded border ${
                     t.status === "ok" ? "border-status-ok/40 text-status-ok" : "border-status-error/40 text-status-error"

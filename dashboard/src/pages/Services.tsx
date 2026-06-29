@@ -4,6 +4,7 @@ import { fetchServicesList, type ServiceSummary } from "@/lib/api";
 import TimeRangeSelector, { type TimeRange, rangeToMinutes, rangeToLabel, SHORT_RANGES } from "@/components/TimeRangeSelector";
 import AutoRefreshPicker from "@/components/AutoRefreshPicker";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
+import { serviceColor, status as statusColors } from "@/lib/colors";
 
 export default function Services() {
   const [services, setServices] = useState<ServiceSummary[]>([]);
@@ -22,8 +23,15 @@ export default function Services() {
 
   const refresh = useAutoRefresh(load);
 
+  function healthStatus(errRate: number): { label: string; color: string; cls: string } {
+    if (errRate > 5) return { label: "CRITICAL", color: statusColors.error, cls: "border-status-error/40 text-status-error" };
+    if (errRate > 1) return { label: "DEGRADED", color: statusColors.warn, cls: "border-status-warn/40 text-status-warn" };
+    return { label: "HEALTHY", color: statusColors.ok, cls: "border-status-ok/40 text-status-ok" };
+  }
+
   return (
     <div className="p-6 space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-medium tracking-tight">Services</h1>
@@ -35,54 +43,67 @@ export default function Services() {
         </div>
       </div>
 
-      <div className="panel">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="text-left text-muted-foreground border-b border-border">
-              <th className="px-5 py-2.5 font-medium text-[11px] uppercase tracking-wider">Service</th>
-              <th className="px-5 py-2.5 font-medium text-[11px] uppercase tracking-wider text-right">Requests</th>
-              <th className="px-5 py-2.5 font-medium text-[11px] uppercase tracking-wider text-right">Error rate</th>
-              <th className="px-5 py-2.5 font-medium text-[11px] uppercase tracking-wider text-right">p50</th>
-              <th className="px-5 py-2.5 font-medium text-[11px] uppercase tracking-wider text-right">p95</th>
-              <th className="px-5 py-2.5 font-medium text-[11px] uppercase tracking-wider text-right">p99</th>
-              <th className="px-5 py-2.5 font-medium text-[11px] uppercase tracking-wider text-right">Avg</th>
-              <th className="px-5 py-2.5 font-medium text-[11px] uppercase tracking-wider text-right">Last seen</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr>
-                <td colSpan={8} className="px-5 py-10 text-center text-sm text-muted-foreground">Loading services...</td>
-              </tr>
-            ) : services.length === 0 ? (
-              <tr>
-                <td colSpan={8} className="px-5 py-10 text-center text-sm text-muted-foreground">No services found. Send some telemetry data first.</td>
-              </tr>
-            ) : (
-              services.map((s) => {
-                const errClass = s.error_rate > 5 ? "text-status-error" : s.error_rate > 1 ? "text-status-warn" : "text-muted-foreground";
-                const lastSeen = s.last_seen ? new Date(s.last_seen).toLocaleTimeString("en-US", { hour12: false, hour: "2-digit", minute: "2-digit", second: "2-digit" }) : "-";
-                return (
-                  <tr key={s.service} className="border-b border-border last:border-0 hover:bg-secondary/40">
-                    <td className="px-5 py-3">
-                      <Link to={`/app/services/${s.service}`} className="font-mono text-xs hover:underline">
-                        {s.service}
-                      </Link>
-                    </td>
-                    <td className="px-5 py-3 font-mono text-xs text-right">{s.trace_count.toLocaleString()}</td>
-                    <td className={`px-5 py-3 font-mono text-xs text-right ${errClass}`}>{s.error_rate.toFixed(2)}%</td>
-                    <td className="px-5 py-3 font-mono text-xs text-right text-muted-foreground">{s.p50_duration_ms.toFixed(0)}ms</td>
-                    <td className="px-5 py-3 font-mono text-xs text-right text-muted-foreground">{s.p95_duration_ms.toFixed(0)}ms</td>
-                    <td className="px-5 py-3 font-mono text-xs text-right">{s.p99_duration_ms.toFixed(0)}ms</td>
-                    <td className="px-5 py-3 font-mono text-xs text-right text-muted-foreground">{s.avg_duration_ms.toFixed(0)}ms</td>
-                    <td className="px-5 py-3 font-mono text-xs text-right text-muted-foreground">{lastSeen}</td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
-      </div>
+      {loading ? (
+        <div className="text-sm text-muted-foreground">Loading services...</div>
+      ) : services.length === 0 ? (
+        <div className="panel p-8 text-center text-sm text-muted-foreground">No services found. Send telemetry data to get started.</div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+          {services.map((s) => {
+            const health = healthStatus(s.error_rate);
+            const svcColor = serviceColor(s.service);
+            const lastSeen = s.last_seen
+              ? new Date(s.last_seen).toLocaleTimeString("en-US", { hour12: false, hour: "2-digit", minute: "2-digit", second: "2-digit" })
+              : "-";
+
+            return (
+              <Link
+                key={s.service}
+                to={`/app/services/${s.service}`}
+                className="panel p-4 hover:border-ring/40 transition-colors relative overflow-hidden group"
+              >
+                <div className="absolute top-0 left-0 bottom-0 w-[3px]" style={{ background: svcColor }} />
+
+                {/* Service name + health badge */}
+                <div className="flex items-center justify-between mb-3 pl-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="font-mono text-sm font-medium truncate">{s.service}</span>
+                  </div>
+                  <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded border flex-shrink-0 ${health.cls}`}>
+                    {health.label}
+                  </span>
+                </div>
+
+                {/* Stats grid */}
+                <div className="grid grid-cols-3 gap-3 pl-2">
+                  <div>
+                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Requests</div>
+                    <div className="font-mono text-sm mt-0.5">{s.trace_count.toLocaleString()}</div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Error rate</div>
+                    <div className={`font-mono text-sm mt-0.5 ${s.error_rate > 1 ? "text-status-error" : ""}`}>{s.error_rate.toFixed(2)}%</div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground">p99</div>
+                    <div className="font-mono text-sm mt-0.5">{s.p99_duration_ms.toFixed(0)}ms</div>
+                  </div>
+                </div>
+
+                {/* Secondary stats */}
+                <div className="flex items-center gap-4 mt-3 pl-2 text-[10px] font-mono text-muted-foreground">
+                  <span>p50 {s.p50_duration_ms.toFixed(0)}ms</span>
+                  <span>·</span>
+                  <span>p95 {s.p95_duration_ms.toFixed(0)}ms</span>
+                  <span>·</span>
+                  <span>avg {s.avg_duration_ms.toFixed(0)}ms</span>
+                  <span className="ml-auto">last seen {lastSeen}</span>
+                </div>
+              </Link>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
