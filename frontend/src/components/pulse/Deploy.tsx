@@ -9,16 +9,16 @@ const Deploy = () => (
           Self-hosted in <span className="italic">one command</span>. Yours, forever.
         </h2>
         <p className="mt-6 text-muted-foreground text-lg max-w-md">
-          A bundled Docker Compose stack — ingestion, processing, storage, API and UI.
-          Run it on a laptop. Run it on a fleet. Run it anywhere your data is allowed to live.
+          Two Docker containers — Pulse and ClickHouse. That's the entire stack.
+          Run it on a laptop, a VM, or Kubernetes. Your data never leaves your infrastructure.
         </p>
 
         <ul className="mt-10 space-y-4 text-sm">
           {[
-            "MIT-licensed core. No telemetry phone-home.",
-            "Deploys to a single VM, k8s, or your laptop in dev.",
-            "ClickHouse, Kafka, API and UI — bundled, versioned, hardened.",
-            "Project-scoped API keys. Built-in rate limits and DLQ.",
+            "MIT licensed. No telemetry phone-home.",
+            "Single binary — no agents, collectors, or sidecars.",
+            "Works with any OpenTelemetry SDK out of the box.",
+            "Port 4321 for all signals — traces, logs, and metrics.",
           ].map((t) => (
             <li key={t} className="flex gap-3 text-muted-foreground">
               <span className="text-primary font-mono">✓</span>
@@ -36,23 +36,22 @@ const Deploy = () => (
               <span className="h-2.5 w-2.5 rounded-full bg-muted" />
               <span className="h-2.5 w-2.5 rounded-full bg-muted" />
             </div>
-            <span className="font-mono text-[11px] text-muted-foreground">docker-compose.yml · pulse-stack</span>
+            <span className="font-mono text-[11px] text-muted-foreground">terminal</span>
           </div>
           <pre className="p-6 font-mono text-[13px] leading-relaxed overflow-x-auto">
-<span className="text-muted-foreground"># 1. Clone</span>{"\n"}
-<span className="text-foreground">$ git clone github.com/pulse-dev/pulse</span>{"\n"}
-<span className="text-foreground">$ cd pulse {"&&"} ./bin/up</span>{"\n\n"}
-<span className="text-muted-foreground"># 2. Watch the stack come alive</span>{"\n"}
-<span className="text-signal-metric">✓</span> clickhouse        <span className="text-muted-foreground">ready in 8.4s</span>{"\n"}
-<span className="text-signal-metric">✓</span> kafka             <span className="text-muted-foreground">ready in 12.1s</span>{"\n"}
-<span className="text-signal-metric">✓</span> ingestion-api     <span className="text-muted-foreground">listening :4317</span>{"\n"}
-<span className="text-signal-metric">✓</span> worker-pipeline   <span className="text-muted-foreground">consuming spans</span>{"\n"}
-<span className="text-signal-metric">✓</span> dashboard         <span className="text-muted-foreground">http://localhost:3000</span>{"\n\n"}
-<span className="text-muted-foreground"># 3. Send your first trace</span>{"\n"}
-<span className="text-foreground">{"> "}</span><span className="text-primary">import {"{"} Pulse {"}"} from "@pulse/node";</span>{"\n"}
-<span className="text-foreground">{"> "}</span><span className="text-primary">Pulse.init({"{"} apiKey, service: "checkout" {"}"});</span>{"\n"}
-<span className="text-foreground">{"> "}</span><span className="text-primary">Pulse.span("charge", async () ={">"} charge(order));</span>{"\n\n"}
-<span className="text-muted-foreground"># Trace landed in 312ms.</span><span className="inline-block w-2 h-4 bg-primary align-middle ml-1 animate-blink" />
+<span className="text-muted-foreground"># Clone and deploy</span>{"\n"}
+<span className="text-foreground">$ git clone github.com/Enigma-52/Pulse</span>{"\n"}
+<span className="text-foreground">$ cd Pulse/deploy {"&&"} docker compose up -d</span>{"\n\n"}
+<span className="text-signal-metric">✓</span> clickhouse        <span className="text-muted-foreground">ready</span>{"\n"}
+<span className="text-signal-metric">✓</span> pulse             <span className="text-muted-foreground">listening :4321</span>{"\n"}
+<span className="text-signal-metric">✓</span> dashboard         <span className="text-muted-foreground">http://localhost:3301</span>{"\n\n"}
+<span className="text-muted-foreground"># Instrument your app (Node.js example)</span>{"\n"}
+<span className="text-foreground">{"> "}</span><span className="text-primary">{"import { NodeSDK } from '@opentelemetry/sdk-node';"}</span>{"\n"}
+<span className="text-foreground">{"> "}</span><span className="text-primary">{"import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';"}</span>{"\n\n"}
+<span className="text-foreground">{"> "}</span><span className="text-primary">{"new NodeSDK({ traceExporter: new OTLPTraceExporter({"}</span>{"\n"}
+<span className="text-foreground">{"    "}</span><span className="text-primary">{"url: 'http://localhost:4321/v1/traces'"}</span>{"\n"}
+<span className="text-foreground">{"> "}</span><span className="text-primary">{"}) }).start();"}</span>{"\n\n"}
+<span className="text-muted-foreground"># Traces flowing.</span><span className="inline-block w-2 h-4 bg-primary align-middle ml-1 animate-blink" />
           </pre>
         </div>
       </div>

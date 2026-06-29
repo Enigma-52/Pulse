@@ -1,7 +1,7 @@
 const stats = [
-  { k: "47s", l: "First trace, from zero" },
-  { k: "1B+", l: "Spans / day per node" },
-  { k: "<80ms", l: "Median query latency" },
+  { k: "2", l: "Containers to run the full stack" },
+  { k: "4321", l: "One port for all telemetry" },
+  { k: "0", l: "Agents or collectors needed" },
   { k: "100%", l: "Open source, self-hosted" },
 ];
 

@@ -1,7 +1,7 @@
 const items = [
-  "p95 482ms", "checkout-svc", "trace 7f2a…91", "throughput 12.4k/s", "error rate 0.04%",
-  "kafka lag 0", "clickhouse OK", "spans/min 218k", "logs ingested 4.1M", "anomaly cleared",
-  "deploy v2.18.3", "region us-east-1", "saturation 31%",
+  "OTLP native", "single binary", "port 4321", "traces", "logs", "metrics",
+  "database monitoring", "ClickHouse", "flamegraph", "service map",
+  "slow queries", "open source", "self-hosted", "MIT licensed",
 ];
 
 const Marquee = () => (

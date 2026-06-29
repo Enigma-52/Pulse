@@ -1,87 +1,66 @@
 const features = [
   {
     n: "01",
-    t: "Unified Telemetry",
-    d: "Traces, logs and metrics live in one shared model. Pivot from a service-level trend down to a single failing request without leaving context.",
-    tags: ["traces", "logs", "metrics", "tags"],
+    t: "Distributed Tracing",
+    d: "End-to-end request tracing across services. Flamegraph, waterfall view, span attributes, and service breakdown. Filter by route, duration, or status.",
+    tags: ["flamegraph", "spans", "waterfall"],
     accent: "trace",
   },
   {
     n: "02",
-    t: "Request Flow Tracing",
-    d: "End-to-end spans across services. Find bottlenecks in a hierarchy, search by route, duration, status — drill into the failing edge.",
-    tags: ["spans", "p95", "errors"],
-    accent: "trace",
+    t: "Log Management",
+    d: "Structured log ingestion with full-text search. Stream and grouped views, level filters, and automatic trace-log correlation.",
+    tags: ["search", "levels", "trace-link"],
+    accent: "log",
   },
   {
     n: "03",
-    t: "Query & Analytics",
-    d: "Filter, aggregate, and explore observability data backed by ClickHouse. p95, error rate, throughput — answered in milliseconds.",
-    tags: ["clickhouse", "p95", "rps"],
+    t: "Metrics Explorer",
+    d: "Time-series charts, queryable metric explorer, and per-service breakdown. Track counters, gauges, and histograms from any OTel SDK.",
+    tags: ["time-series", "gauges", "counters"],
     accent: "metric",
   },
   {
     n: "04",
-    t: "Logs & Metrics",
-    d: "Structured ingestion, fast search, and time-range analysis. Combined trace/log/metric context for incident triage.",
-    tags: ["structured", "search"],
-    accent: "log",
+    t: "Database Monitoring",
+    d: "Auto-detects database calls from trace attributes. Tracks query latency, throughput, and errors for PostgreSQL, MySQL, MongoDB, Redis, and more.",
+    tags: ["postgresql", "slow-queries", "throughput"],
+    accent: "metric",
   },
   {
     n: "05",
-    t: "Streaming Pipeline",
-    d: "SDK → Ingestion API → Kafka → Workers → ClickHouse. Decoupled by design. Replayable, observable, hardened against backpressure.",
-    tags: ["kafka", "workers", "batch"],
-    accent: "metric",
-  },
-  {
-    n: "06",
-    t: "ClickHouse Storage",
-    d: "Time-series and high-cardinality workloads done right. Bulk writes, analytical reads, schema evolution for traces, metrics, logs.",
-    tags: ["columnar", "ttl"],
-    accent: "metric",
-  },
-  {
-    n: "07",
-    t: "Operator Dashboard",
-    d: "Service-centric, incident-first surfaces. Trace exploration, query workflows, and observability built around time-to-answer.",
-    tags: ["ui", "service-view"],
+    t: "Service Map",
+    d: "All instrumented services at a glance. Latency percentiles (p50/p95/p99), error rates, request counts, and last-seen timestamps.",
+    tags: ["p99", "error-rate", "services"],
     accent: "trace",
   },
   {
+    n: "06",
+    t: "OTLP Native",
+    d: "Accepts OTLP/HTTP with protobuf and JSON. No custom SDK needed — point any standard OpenTelemetry exporter at Pulse and go.",
+    tags: ["otlp", "protobuf", "json"],
+    accent: "log",
+  },
+  {
+    n: "07",
+    t: "Single Binary",
+    d: "One Go process handles OTLP ingestion, in-process pipeline, ClickHouse writing, and the query API. All on port 4321.",
+    tags: ["go", "port-4321", "pipeline"],
+    accent: "metric",
+  },
+  {
     n: "08",
-    t: "One-Command Deploy",
-    d: "Bundled Docker Compose: ingestion, processing, storage, API, UI. Local-first dev loop. From clone to first span in under a minute.",
-    tags: ["docker", "self-hosted"],
+    t: "ClickHouse Storage",
+    d: "Columnar storage built for observability workloads. Full OTLP fidelity — resource attributes, scope, links, events all preserved.",
+    tags: ["columnar", "full-fidelity"],
     accent: "metric",
   },
   {
     n: "09",
-    t: "Frictionless SDKs",
-    d: "Node SDK with spans, logs, batching and middleware tracing. Multi-language coverage on the way, with a consistent telemetry envelope.",
-    tags: ["node", "go", "python"],
-    accent: "log",
-  },
-  {
-    n: "10",
-    t: "Reliable by Default",
-    d: "Project-scoped API keys, validation, rate limits, retries and dead-letter queues. Operational metrics for the platform itself.",
-    tags: ["dlq", "rate-limits"],
-    accent: "error",
-  },
-  {
-    n: "11",
-    t: "Alerts & Anomalies",
-    d: "Baseline detection on latency and error spikes. Threshold rules, notification channels, and AI-assisted summarisation.",
-    tags: ["alerts", "ai-summary"],
-    accent: "error",
-  },
-  {
-    n: "12",
-    t: "Open Ecosystem",
-    d: "OTLP-compatible direction, ChatOps for Slack and Discord, embeddable status surfaces, and a roadmap toward synthetics and cost.",
-    tags: ["otlp", "slack", "embed"],
-    accent: "log",
+    t: "One-Command Deploy",
+    d: "Two containers: Pulse and ClickHouse. Docker Compose up and you're running. From clone to first trace in under a minute.",
+    tags: ["docker", "self-hosted"],
+    accent: "trace",
   },
 ];
 
@@ -98,18 +77,18 @@ const Features = () => (
       <div className="grid lg:grid-cols-12 gap-10 mb-20">
         <div className="lg:col-span-4">
           <div className="font-mono text-[11px] uppercase tracking-[0.2em] text-primary flex items-center gap-3">
-            <span className="h-px w-8 bg-primary" /> Killer features
+            <span className="h-px w-8 bg-primary" /> What you get
           </div>
         </div>
         <div className="lg:col-span-8">
           <h2 className="font-display text-5xl lg:text-7xl leading-[1.0] tracking-tight text-balance">
-            Twelve surfaces.
+            Everything you need.
             <br />
-            <span className="italic text-muted-foreground">One operational truth.</span>
+            <span className="italic text-muted-foreground">Nothing you don't.</span>
           </h2>
           <p className="mt-6 text-lg text-muted-foreground max-w-2xl">
-            Everything an on-call engineer needs at 03:00 — without the tab graveyard,
-            the licensing math, or the vendor lock-in.
+            Traces, logs, metrics, and database monitoring in one platform — without the operational
+            overhead, the licensing math, or the vendor lock-in.
           </p>
         </div>
       </div>
