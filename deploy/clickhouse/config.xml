@@ -1,10 +1,6 @@
 <clickhouse>
-    <!-- Cap total server memory to 256MB -->
-    <max_server_memory_usage>268435456</max_server_memory_usage>
-    <!-- Reduce mark cache from default 5GB to 64MB -->
-    <mark_cache_size>67108864</mark_cache_size>
-    <!-- Reduce uncompressed cache -->
-    <uncompressed_cache_size>33554432</uncompressed_cache_size>
-    <!-- Skip strict setting checks for cross-version compat -->
+    <max_server_memory_usage_ratio>0.8</max_server_memory_usage_ratio>
+    <mark_cache_size>134217728</mark_cache_size>
+    <uncompressed_cache_size>67108864</uncompressed_cache_size>
     <skip_check_for_incorrect_settings>1</skip_check_for_incorrect_settings>
 </clickhouse>

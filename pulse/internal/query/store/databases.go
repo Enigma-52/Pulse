@@ -15,7 +15,7 @@ func (s *Store) GetDatabasesList(ctx context.Context, minutes int) ([]model.Data
 SELECT
 	JSONExtractString(attributes_json, 'db.system') AS db_system,
 	count() AS query_count,
-	countIf(status = 'error' OR error != '') AS error_count,
+	countIf(lower(status) = 'error' OR error != '') AS error_count,
 	if(query_count = 0, 0, (error_count / query_count) * 100.0) AS error_rate,
 	avg(duration_ms) AS avg_duration_ms,
 	quantile(0.5)(duration_ms) AS p50_duration_ms,
@@ -57,7 +57,7 @@ func (s *Store) GetDatabaseOverview(ctx context.Context, system string, minutes 
 SELECT
 	JSONExtractString(attributes_json, 'db.system') AS db_system,
 	count() AS query_count,
-	countIf(status = 'error' OR error != '') AS error_count,
+	countIf(lower(status) = 'error' OR error != '') AS error_count,
 	if(query_count = 0, 0, (error_count / query_count) * 100.0) AS error_rate,
 	avg(duration_ms) AS avg_duration_ms,
 	quantile(0.5)(duration_ms) AS p50_duration_ms,
@@ -121,7 +121,7 @@ ORDER BY db_name
 SELECT
 	toStartOfInterval(start_time, INTERVAL ? SECOND) AS ts,
 	count() AS cnt,
-	countIf(status = 'error' OR error != '') AS errs,
+	countIf(lower(status) = 'error' OR error != '') AS errs,
 	avg(duration_ms) AS avg_ms
 FROM traces
 WHERE start_time >= now() - INTERVAL ? MINUTE

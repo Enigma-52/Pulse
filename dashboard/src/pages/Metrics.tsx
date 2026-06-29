@@ -3,7 +3,6 @@ import { Link } from "react-router-dom";
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 import { fetchMetrics, queryMetrics } from "@/lib/api";
 import type { Metric } from "@/lib/mockData";
-import { genSeries } from "@/lib/mockData";
 import TimeRangeSelector, { type TimeRange, rangeToMinutes, rangeToInterval, rangeToLabel, SHORT_RANGES } from "@/components/TimeRangeSelector";
 
 export default function Metrics() {
@@ -120,8 +119,7 @@ export default function Metrics() {
         <div className="text-sm text-muted-foreground">No metrics data</div>
       ) : (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        {metrics.map((m, i) => {
-          const series = genSeries(40, m.value, m.value * 0.3, i + 1);
+        {metrics.map((m) => {
           const positive = m.delta >= 0;
           return (
             <Link
@@ -141,19 +139,7 @@ export default function Metrics() {
                   {positive ? "+" : ""}{m.delta.toFixed(1)}%
                 </span>
               </div>
-              <div className="h-20 mt-3 -mx-1">
-                <ResponsiveContainer>
-                  <AreaChart data={series}>
-                    <defs>
-                      <linearGradient id={`m-${m.id}`} x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="hsl(var(--chart-1))" stopOpacity={0.25} />
-                        <stop offset="100%" stopColor="hsl(var(--chart-1))" stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
-                    <Area type="monotone" dataKey="value" stroke="hsl(var(--chart-1))" strokeWidth={1.25} fill={`url(#m-${m.id})`} />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
+              <div className="h-5 mt-3" />
               <div className="text-xs text-muted-foreground mt-2 truncate">{m.description}</div>
             </Link>
           );

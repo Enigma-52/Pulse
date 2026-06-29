@@ -204,9 +204,31 @@ func extractResourceInfo(res *resourcepb.Resource) (service, env string) {
 }
 
 func extractRoute(attrs map[string]interface{}) string {
-	for _, key := range []string{"http.route", "http.path", "url.path"} {
+	// Prefer explicit route first
+	for _, key := range []string{"http.route", "url.path", "http.path"} {
 		if v, ok := attrs[key].(string); ok && v != "" {
 			return v
+		}
+	}
+	// Fall back to http.target (strip query string)
+	if target, ok := attrs["http.target"].(string); ok && target != "" {
+		if idx := strings.IndexByte(target, '?'); idx != -1 {
+			target = target[:idx]
+		}
+		return target
+	}
+	// Fall back to url.full (parse path, strip query)
+	if urlFull, ok := attrs["http.url"].(string); ok && urlFull != "" {
+		// Extract path from full URL
+		if idx := strings.Index(urlFull, "://"); idx != -1 {
+			rest := urlFull[idx+3:]
+			if pathIdx := strings.IndexByte(rest, '/'); pathIdx != -1 {
+				path := rest[pathIdx:]
+				if qIdx := strings.IndexByte(path, '?'); qIdx != -1 {
+					path = path[:qIdx]
+				}
+				return path
+			}
 		}
 	}
 	return ""
@@ -314,15 +336,15 @@ func spanKindStr(k tracepb.Span_SpanKind) string {
 
 func spanStatus(s *tracepb.Status) (string, string) {
 	if s == nil {
-		return "UNSET", ""
+		return "ok", ""
 	}
 	switch s.Code {
 	case tracepb.Status_STATUS_CODE_OK:
-		return "OK", s.Message
+		return "ok", s.Message
 	case tracepb.Status_STATUS_CODE_ERROR:
-		return "ERROR", s.Message
+		return "error", s.Message
 	default:
-		return "UNSET", s.Message
+		return "ok", s.Message
 	}
 }
 

@@ -3,7 +3,6 @@ import { Link, useParams } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { fetchLogs } from "@/lib/api";
 import type { Log } from "@/lib/mockData";
-import { logs as mockLogs } from "@/lib/mockData";
 
 const levelColors: Record<string, string> = {
   error: "text-status-error border-status-error/40",
@@ -20,10 +19,10 @@ export default function LogDetail() {
   useEffect(() => {
     fetchLogs({ limit: 200 }).then((logs) => {
       const found = logs.find(l => l.id === id);
-      setLog(found ?? mockLogs.find(l => l.id === id) ?? mockLogs[0]);
+      setLog(found ?? null);
       setLoading(false);
     }).catch(() => {
-      setLog(mockLogs.find(l => l.id === id) ?? mockLogs[0]);
+      setLog(null);
       setLoading(false);
     });
   }, [id]);

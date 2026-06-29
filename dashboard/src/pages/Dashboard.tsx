@@ -2,7 +2,6 @@ import { useEffect, useState, useCallback } from "react";
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 import StatCard from "@/components/StatCard";
 import TimeRangeSelector, { type TimeRange, rangeToMinutes, rangeToLabel, rangeToStartEnd, rangeToInterval } from "@/components/TimeRangeSelector";
-import { genSeries } from "@/lib/mockData";
 import type { Trace } from "@/lib/mockData";
 import { fetchTraces, fetchDashboardSummary, fetchMetricSeries, type DashboardData } from "@/lib/api";
 import { Link } from "react-router-dom";
@@ -12,7 +11,7 @@ import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 export default function Dashboard() {
   const [summary, setSummary] = useState<DashboardData | null>(null);
   const [traces, setTraces] = useState<Trace[]>([]);
-  const [reqSeries, setReqSeries] = useState(genSeries(60, 0, 0, 7));
+  const [reqSeries, setReqSeries] = useState<{ t: number; value: number }[]>([]);
   const [range, setRange] = useState<TimeRange>("15m");
 
   const load = useCallback((r: TimeRange) => {
@@ -22,7 +21,7 @@ export default function Dashboard() {
 
     fetchDashboardSummary(minutes).then(setSummary);
     fetchTraces({ start, end, limit: 6 }).then(setTraces);
-    fetchMetricSeries("http.requests.total", minutes, interval).then((s) => {
+    fetchMetricSeries("http.server.duration", minutes, interval).then((s) => {
       if (s.length > 0) setReqSeries(s);
     });
   }, []);
@@ -32,10 +31,6 @@ export default function Dashboard() {
   }, [range, load]);
 
   const refresh = useAutoRefresh(() => load(range));
-
-  const handleRangeChange = (r: TimeRange) => {
-    setRange(r);
-  };
 
   const rate = summary?.requestRate ?? 0;
   const p99 = summary?.p99Latency ?? 0;
@@ -50,15 +45,15 @@ export default function Dashboard() {
         </div>
         <div className="flex items-center gap-3">
           <AutoRefreshPicker value={refresh.interval} onChange={refresh.setInterval} isActive={refresh.isActive} />
-          <TimeRangeSelector value={range} onChange={handleRangeChange} />
+          <TimeRangeSelector value={range} onChange={setRange} />
         </div>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <StatCard label="Requests" value={rate.toFixed(1)} unit="req/s" series={genSeries(60, rate || 1, rate * 0.3, 7)} />
-        <StatCard label="p99 latency" value={p99.toFixed(0)} unit="ms" series={genSeries(60, p99 || 1, p99 * 0.3, 3)} inverse />
-        <StatCard label="Error rate" value={errRate.toFixed(2)} unit="%" series={genSeries(60, errRate || 0.1, errRate * 0.5, 11)} inverse />
-        <StatCard label="Traces" value={String(summary?.traceCount ?? 0)} series={genSeries(60, summary?.traceCount ?? 1, (summary?.traceCount ?? 1) * 0.2, 5)} />
+        <StatCard label="Requests" value={rate.toFixed(1)} unit="req/s" />
+        <StatCard label="p99 latency" value={p99.toFixed(0)} unit="ms" inverse />
+        <StatCard label="Error rate" value={errRate.toFixed(2)} unit="%" inverse />
+        <StatCard label="Traces" value={String(summary?.traceCount ?? 0)} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
@@ -66,25 +61,29 @@ export default function Dashboard() {
           <div className="flex items-center justify-between mb-4">
             <div>
               <div className="data-label">Request volume</div>
-              <div className="text-sm mt-1">All services · req/s</div>
+              <div className="text-sm mt-1">http.server.duration metric series</div>
             </div>
           </div>
           <div className="h-64">
-            <ResponsiveContainer>
-              <AreaChart data={reqSeries}>
-                <defs>
-                  <linearGradient id="req" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="hsl(var(--chart-1))" stopOpacity={0.3} />
-                    <stop offset="100%" stopColor="hsl(var(--chart-1))" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid stroke="hsl(var(--border))" strokeDasharray="2 4" vertical={false} />
-                <XAxis dataKey="t" stroke="hsl(var(--muted-foreground))" fontSize={10} tickLine={false} axisLine={false} />
-                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={10} tickLine={false} axisLine={false} width={32} />
-                <Tooltip contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 4, fontSize: 11 }} />
-                <Area type="monotone" dataKey="value" stroke="hsl(var(--chart-1))" strokeWidth={1.5} fill="url(#req)" />
-              </AreaChart>
-            </ResponsiveContainer>
+            {reqSeries.length === 0 ? (
+              <div className="flex items-center justify-center h-full text-sm text-muted-foreground">No metric data yet</div>
+            ) : (
+              <ResponsiveContainer>
+                <AreaChart data={reqSeries}>
+                  <defs>
+                    <linearGradient id="req" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="hsl(var(--chart-1))" stopOpacity={0.3} />
+                      <stop offset="100%" stopColor="hsl(var(--chart-1))" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid stroke="hsl(var(--border))" strokeDasharray="2 4" vertical={false} />
+                  <XAxis dataKey="t" stroke="hsl(var(--muted-foreground))" fontSize={10} tickLine={false} axisLine={false} />
+                  <YAxis stroke="hsl(var(--muted-foreground))" fontSize={10} tickLine={false} axisLine={false} width={32} />
+                  <Tooltip contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 4, fontSize: 11 }} />
+                  <Area type="monotone" dataKey="value" stroke="hsl(var(--chart-1))" strokeWidth={1.5} fill="url(#req)" />
+                </AreaChart>
+              </ResponsiveContainer>
+            )}
           </div>
         </div>
 
@@ -126,7 +125,7 @@ export default function Dashboard() {
           </thead>
           <tbody>
             {traces.length === 0 ? (
-              <tr><td colSpan={5} className="px-5 py-8 text-center text-xs text-muted-foreground">No traces found. Generate some with the demo backend.</td></tr>
+              <tr><td colSpan={5} className="px-5 py-8 text-center text-xs text-muted-foreground">No traces found. Send telemetry data first.</td></tr>
             ) : (
               traces.map(t => (
                 <tr key={t.id} className="border-b border-border last:border-0 hover:bg-secondary/40">

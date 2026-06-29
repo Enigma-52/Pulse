@@ -4,7 +4,6 @@ import { ArrowLeft } from "lucide-react";
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 import { fetchMetrics, fetchMetricSeries } from "@/lib/api";
 import type { Metric } from "@/lib/mockData";
-import { genSeries } from "@/lib/mockData";
 import TimeRangeSelector, { type TimeRange, TIME_RANGES, rangeToMinutes, rangeToInterval } from "@/components/TimeRangeSelector";
 
 export default function MetricDetail() {
@@ -18,11 +17,7 @@ export default function MetricDetail() {
     const minutes = rangeToMinutes(r);
     const interval = rangeToInterval(r);
     fetchMetricSeries(m.name, minutes, interval).then((pts) => {
-      if (pts.length > 0) {
-        setSeries(pts);
-      } else {
-        setSeries(genSeries(120, m.value, m.value * 0.3, 13));
-      }
+      setSeries(pts);
     });
   }, []);
 
@@ -113,36 +108,22 @@ export default function MetricDetail() {
         </div>
       </div>
 
-      <div className="grid md:grid-cols-2 gap-3">
-        <div className="panel p-5">
-          <div className="data-label mb-3">Labels</div>
-          <dl className="text-xs font-mono space-y-1.5">
-            {[
-              ["env", "production"],
-              ["region", "us-east-1"],
-              ["cluster", "primary"],
-              ["instance", "node-04"],
-            ].map(([k, v]) => (
-              <div key={k} className="flex">
-                <dt className="text-muted-foreground w-32">{k}</dt>
-                <dd>{v}</dd>
-              </div>
-            ))}
-          </dl>
-        </div>
-        <div className="panel p-5">
-          <div className="data-label mb-3">Alerts</div>
-          <div className="text-xs space-y-2">
-            <div className="flex items-center justify-between font-mono">
-              <span>{metric.name} {">"} {Math.round(metric.value * 1.5)}</span>
-              <span className="text-status-ok">healthy</span>
-            </div>
-            <div className="flex items-center justify-between font-mono">
-              <span>rate({metric.name}) {">"} 20%</span>
-              <span className="text-status-warn">pending</span>
-            </div>
+      <div className="panel p-5">
+        <div className="data-label mb-3">Details</div>
+        <dl className="text-xs font-mono space-y-1.5">
+          <div className="flex">
+            <dt className="text-muted-foreground w-32">Name</dt>
+            <dd>{metric.name}</dd>
           </div>
-        </div>
+          <div className="flex">
+            <dt className="text-muted-foreground w-32">Type</dt>
+            <dd>{metric.type ?? "gauge"}</dd>
+          </div>
+          <div className="flex">
+            <dt className="text-muted-foreground w-32">Unit</dt>
+            <dd>{metric.unit}</dd>
+          </div>
+        </dl>
       </div>
     </div>
   );

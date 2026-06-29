@@ -92,7 +92,7 @@ func (s *Store) GetServiceOverview(ctx context.Context, service string, start *t
 SELECT
 	service,
 	count() AS trace_count,
-	countIf(status = 'error' OR error != '') AS error_count,
+	countIf(lower(status) = 'error' OR error != '') AS error_count,
 	if(trace_count = 0, 0, (error_count / trace_count) * 100.0) AS error_rate,
 	avg(duration_ms) AS avg_duration_ms,
 	quantile(0.95)(duration_ms) AS p95_duration_ms
@@ -237,7 +237,7 @@ func (s *Store) GetDashboardSummary(ctx context.Context, minutes int) (*model.Da
 SELECT
 	count() / %f as request_rate,
 	quantile(0.99)(duration_ms) as p99_latency,
-	countIf(status = 'error') * 100.0 / count() as error_rate,
+	countIf(lower(status) = 'error' OR error != '') * 100.0 / count() as error_rate,
 	count() as trace_count
 FROM traces
 WHERE parent_span_id = '' AND start_time >= now() - INTERVAL ? MINUTE
@@ -319,7 +319,7 @@ func (s *Store) GetServicesList(ctx context.Context, minutes int) ([]model.Servi
 	rows, err := s.conn.Query(ctx, `
 SELECT
 	service, count() AS trace_count,
-	countIf(status = 'error' OR error != '') AS error_count,
+	countIf(lower(status) = 'error' OR error != '') AS error_count,
 	if(trace_count = 0, 0, (error_count / trace_count) * 100.0) AS error_rate,
 	avg(duration_ms) AS avg_duration_ms,
 	quantile(0.5)(duration_ms) AS p50_duration_ms,
@@ -408,7 +408,7 @@ FROM traces WHERE 1=1
 		args = append(args, filters.Status)
 	}
 	if filters.ErrorOnly {
-		sb.WriteString(" AND (status = 'error' OR error != '')")
+		sb.WriteString(" AND (lower(status) = 'error' OR error != '')")
 	}
 	if filters.MinDurationMs > 0 {
 		sb.WriteString(" AND duration_ms >= ?")

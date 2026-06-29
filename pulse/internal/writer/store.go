@@ -158,8 +158,11 @@ INSERT INTO traces (
 
 	for _, sp := range spans {
 		errStr := ""
-		if sp.Status == "ERROR" {
+		if sp.Status == "error" {
 			errStr = sp.StatusMessage
+			if errStr == "" {
+				errStr = "error"
+			}
 		}
 
 		if err := batch.Append(
