@@ -39,6 +39,7 @@ interface APITraceDetail {
 interface APITrace {
   trace_id: string;
   service: string;
+  name: string;
   route: string;
   duration_ms: number;
   status: string;
@@ -170,6 +171,26 @@ function formatTimestamp(iso: string): string {
   });
 }
 
+function formatChartTime(iso: string): string {
+  const ts = new Date(iso);
+  return ts.toLocaleTimeString("en-US", {
+    hour12: false,
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function traceDisplayName(t: APITrace): string {
+  // Prefer "METHOD /route" format, fall back to span name
+  if (t.route && t.route !== "/") {
+    return t.name && t.name !== "GET" && t.name !== "POST" && t.name !== "PUT" && t.name !== "DELETE" && t.name !== "PATCH"
+      ? `${t.name} ${t.route}`
+      : t.route;
+  }
+  if (t.name) return t.name;
+  return t.route || "unknown";
+}
+
 // ── Traces ──────────────────────────────────────────────────────────────
 
 export async function fetchTraces(params?: {
@@ -192,7 +213,7 @@ export async function fetchTraces(params?: {
   if (!data.items) return [];
   return data.items.map((t) => ({
     id: t.trace_id,
-    name: t.route || "unknown",
+    name: traceDisplayName(t),
     service: t.service,
     duration: t.duration_ms,
     spans: 0,
@@ -300,7 +321,7 @@ export async function fetchMetricSeries(
   name: string,
   minutes = 15,
   interval = 30
-): Promise<{ t: number; value: number }[]> {
+): Promise<{ t: string; value: number }[]> {
   const res = await fetch(
     `${API_BASE}/metrics/${encodeURIComponent(name)}/series?minutes=${minutes}&interval=${interval}`,
     { headers: authHeaders() }
@@ -308,8 +329,8 @@ export async function fetchMetricSeries(
   if (!res.ok) return [];
   const data: { points: APIMetricSeriesPoint[] } = await res.json();
   if (!data.points) return [];
-  return data.points.map((p, i) => ({
-    t: i,
+  return data.points.map((p) => ({
+    t: formatChartTime(p.timestamp),
     value: p.value,
   }));
 }
@@ -321,7 +342,7 @@ export async function queryMetrics(params: {
   minutes?: number;
   interval?: number;
 }): Promise<{
-  series: { name: string; unit: string; points: { t: number; value: number }[] }[];
+  series: { name: string; unit: string; points: { t: string; value: number }[] }[];
 }> {
   const q = new URLSearchParams();
   if (params.name) q.set("name", params.name);
@@ -338,8 +359,8 @@ export async function queryMetrics(params: {
     series: data.series.map((s: { name: string; unit: string; points: { timestamp: string; value: number }[] }) => ({
       name: s.name,
       unit: s.unit,
-      points: (s.points || []).map((p: { timestamp: string; value: number }, i: number) => ({
-        t: i,
+      points: (s.points || []).map((p: { timestamp: string; value: number }) => ({
+        t: formatChartTime(p.timestamp),
         value: p.value,
       })),
     })),

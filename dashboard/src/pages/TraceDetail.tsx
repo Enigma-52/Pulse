@@ -6,7 +6,7 @@ import {
 } from "lucide-react";
 import type { Span, Log } from "@/lib/mockData";
 import { fetchTraceDetail, type TraceDetail as TraceDetailData } from "@/lib/api";
-import { spanColorFor, resetServiceColors, ERROR_COLOR, formatDuration, TimelineMinimap } from "@/components/Flamegraph";
+import { spanColorFor, buildServiceColorMap, ERROR_COLOR, formatDuration, TimelineMinimap } from "@/components/Flamegraph";
 
 /* ── Helpers ─────────────────────────────────────────────────── */
 
@@ -28,10 +28,10 @@ function CopyButton({ text }: { text: string }) {
 
 type DetailTab = "tags" | "events";
 
-function SpanDetailSidebar({ span, onClose }: { span: Span; onClose: () => void }) {
+function SpanDetailSidebar({ span, colorMap, onClose }: { span: Span; colorMap: Map<string, string>; onClose: () => void }) {
   const [tab, setTab] = useState<DetailTab>("tags");
   const [search, setSearch] = useState("");
-  const color = span.status === "error" ? ERROR_COLOR : spanColorFor(span.service);
+  const color = span.status === "error" ? ERROR_COLOR : (colorMap.get(span.service) ?? spanColorFor(span.service));
   const eventCount = span.events?.length ?? 0;
 
   const filteredAttrs = useMemo(() => {
@@ -67,7 +67,7 @@ function SpanDetailSidebar({ span, onClose }: { span: Span; onClose: () => void 
           <div>
             <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-0.5">Service</div>
             <div className="flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full" style={{ background: spanColorFor(span.service) }} />
+              <span className="w-1.5 h-1.5 rounded-full" style={{ background: colorMap.get(span.service) ?? spanColorFor(span.service) }} />
               <span className="font-mono text-xs">{span.service}</span>
             </div>
           </div>
@@ -220,6 +220,7 @@ function SpanRow({
   childCount,
   isCollapsed,
   isSelected,
+  colorMap,
   onToggle,
   onSelect,
 }: {
@@ -228,10 +229,11 @@ function SpanRow({
   childCount: number;
   isCollapsed: boolean;
   isSelected: boolean;
+  colorMap: Map<string, string>;
   onToggle: () => void;
   onSelect: () => void;
 }) {
-  const color = span.status === "error" ? ERROR_COLOR : spanColorFor(span.service);
+  const color = span.status === "error" ? ERROR_COLOR : (colorMap.get(span.service) ?? spanColorFor(span.service));
   const hasChildren = childCount > 0;
   const barLeft = total > 0 ? (span.start / total) * 100 : 0;
   const barWidth = total > 0 ? Math.max(0.3, (span.duration / total) * 100) : 0;
@@ -356,7 +358,6 @@ export default function TraceDetail() {
   const spanListRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    resetServiceColors();
     if (!id) return;
     setLoading(true);
     fetchTraceDetail(id)
@@ -371,6 +372,8 @@ export default function TraceDetail() {
   const spans: Span[] = traceData?.spans ?? [];
   const linkedLogs: Log[] = traceData?.logs ?? [];
   const total = traceData?.duration ?? 0;
+
+  const colorMap = useMemo(() => buildServiceColorMap(spans), [spans]);
 
   const childrenMap = useMemo(() => {
     const map = new Map<string | null, Span[]>();
@@ -510,7 +513,7 @@ export default function TraceDetail() {
 
       {/* ── Timeline Minimap ────────────────────────────────────── */}
       <div className="px-5 py-2 border-b border-border flex-shrink-0 bg-[hsl(var(--card))]">
-        <TimelineMinimap spans={spans} total={total} />
+        <TimelineMinimap spans={spans} total={total} colorMap={colorMap} />
       </div>
 
       {/* ── Toolbar ─────────────────────────────────────────────── */}
@@ -534,7 +537,7 @@ export default function TraceDetail() {
           <div className="flex items-center gap-2 flex-wrap">
             {serviceList.map(s => (
               <div key={s.service} className="flex items-center gap-1">
-                <span className="w-2 h-2 rounded-sm" style={{ background: spanColorFor(s.service) }} />
+                <span className="w-2 h-2 rounded-sm" style={{ background: colorMap.get(s.service) ?? spanColorFor(s.service) }} />
                 <span className="text-[10px] font-mono text-muted-foreground">{s.service}</span>
               </div>
             ))}
@@ -559,6 +562,7 @@ export default function TraceDetail() {
                   childCount={descendantCount(s.id)}
                   isCollapsed={collapsed.has(s.id)}
                   isSelected={selectedSpanId === s.id}
+                  colorMap={colorMap}
                   onToggle={() => toggle(s.id)}
                   onSelect={() => setSelectedSpanId(selectedSpanId === s.id ? null : s.id)}
                 />
@@ -595,6 +599,7 @@ export default function TraceDetail() {
           <div className="w-[40%] flex-shrink-0 overflow-hidden">
             <SpanDetailSidebar
               span={selectedSpan}
+              colorMap={colorMap}
               onClose={() => setSelectedSpanId(null)}
             />
           </div>

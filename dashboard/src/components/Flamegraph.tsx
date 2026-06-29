@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { Span } from "@/lib/mockData";
 
 // Service color palette — vibrant, distinct on dark backgrounds
@@ -16,23 +17,29 @@ const PALETTE = [
   "#FFCA28", // yellow
 ];
 
-const _map = new Map<string, string>();
-let _idx = 0;
-
-export function spanColorFor(service: string): string {
-  if (!_map.has(service)) {
-    _map.set(service, PALETTE[_idx % PALETTE.length]);
-    _idx++;
-  }
-  return _map.get(service)!;
-}
-
-export function resetServiceColors() {
-  _map.clear();
-  _idx = 0;
-}
-
 export const ERROR_COLOR = "#F44336";
+
+// Deterministic color from service name (hash-based, no global state)
+export function spanColorFor(service: string): string {
+  let hash = 0;
+  for (let i = 0; i < service.length; i++) {
+    hash = ((hash << 5) - hash + service.charCodeAt(i)) | 0;
+  }
+  return PALETTE[Math.abs(hash) % PALETTE.length];
+}
+
+// Build a color map from spans so same-depth services are visually separated
+export function buildServiceColorMap(spans: Span[]): Map<string, string> {
+  const map = new Map<string, string>();
+  let idx = 0;
+  for (const s of spans) {
+    if (!map.has(s.service)) {
+      map.set(s.service, PALETTE[idx % PALETTE.length]);
+      idx++;
+    }
+  }
+  return map;
+}
 
 export function formatDuration(ms: number): string {
   if (ms < 0.01) return "<0.01ms";
@@ -42,7 +49,7 @@ export function formatDuration(ms: number): string {
 }
 
 // Timeline minimap — overview of all spans grouped by service row
-export function TimelineMinimap({ spans, total }: { spans: Span[]; total: number }) {
+export function TimelineMinimap({ spans, total, colorMap }: { spans: Span[]; total: number; colorMap: Map<string, string> }) {
   if (spans.length === 0 || total === 0) return null;
 
   // Group spans by service, preserving first-seen order
@@ -66,7 +73,7 @@ export function TimelineMinimap({ spans, total }: { spans: Span[]; total: number
         {serviceOrder.map((svc, row) => {
           const rowSpans = serviceSpans.get(svc)!;
           const y = row * (rowH + gap);
-          const color = spanColorFor(svc);
+          const color = colorMap.get(svc) ?? PALETTE[0];
           return rowSpans.map((s, i) => {
             const x = (s.start / total) * 1000;
             const w = Math.max(2, (s.duration / total) * 1000);
@@ -87,7 +94,8 @@ export function TimelineMinimap({ spans, total }: { spans: Span[]; total: number
   );
 }
 
-// Default export kept for backwards compat but no longer used
+// Default export kept for backwards compat
 export default function Flamegraph({ spans, total }: { spans: Span[]; total: number }) {
-  return <TimelineMinimap spans={spans} total={total} />;
+  const colorMap = useMemo(() => buildServiceColorMap(spans), [spans]);
+  return <TimelineMinimap spans={spans} total={total} colorMap={colorMap} />;
 }

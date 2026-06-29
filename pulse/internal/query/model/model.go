@@ -10,6 +10,7 @@ const (
 type Trace struct {
 	TraceID    string    `json:"trace_id"`
 	Service    string    `json:"service"`
+	Name       string    `json:"name"`
 	Route      string    `json:"route"`
 	DurationMs int64     `json:"duration_ms"`
 	Status     string    `json:"status"`

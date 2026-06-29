@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Cell } from "recharts";
-import ServiceGraph from "@/components/ServiceGraph";
 import TimeRangeSelector, { type TimeRange, rangeToStartEnd, rangeToLabel, SHORT_RANGES } from "@/components/TimeRangeSelector";
 import AutoRefreshPicker from "@/components/AutoRefreshPicker";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
@@ -101,8 +100,6 @@ export default function Traces() {
         </select>
         <button onClick={handleFilter} className="h-8 px-3 text-xs font-medium rounded bg-secondary border border-border hover:border-ring">Filter</button>
       </div>
-
-      <ServiceGraph />
 
       {durationBuckets.length > 0 && (
         <div className="panel p-5">

@@ -10,7 +10,7 @@ export default function Metrics() {
   const [loading, setLoading] = useState(true);
   const [range, setRange] = useState<TimeRange>("15m");
   const [query, setQuery] = useState("");
-  const [queryResult, setQueryResult] = useState<{ name: string; unit: string; points: { t: number; value: number }[] }[] | null>(null);
+  const [queryResult, setQueryResult] = useState<{ name: string; unit: string; points: { t: string; value: number }[] }[] | null>(null);
   const [querying, setQuerying] = useState(false);
 
   useEffect(() => {

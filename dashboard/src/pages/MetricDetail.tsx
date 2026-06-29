@@ -9,7 +9,7 @@ import TimeRangeSelector, { type TimeRange, TIME_RANGES, rangeToMinutes, rangeTo
 export default function MetricDetail() {
   const { id } = useParams();
   const [metric, setMetric] = useState<Metric | null>(null);
-  const [series, setSeries] = useState<{ t: number; value: number }[]>([]);
+  const [series, setSeries] = useState<{ t: string; value: number }[]>([]);
   const [loading, setLoading] = useState(true);
   const [range, setRange] = useState<TimeRange>("1h");
 

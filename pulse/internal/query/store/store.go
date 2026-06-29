@@ -31,7 +31,7 @@ func (s *Store) GetTraces(ctx context.Context, filters model.TraceFilters) ([]mo
 	var traces []model.Trace
 	for rows.Next() {
 		var t model.Trace
-		if err := rows.Scan(&t.TraceID, &t.Service, &t.Route, &t.DurationMs, &t.Status, &t.Timestamp); err != nil {
+		if err := rows.Scan(&t.TraceID, &t.Service, &t.Name, &t.Route, &t.DurationMs, &t.Status, &t.Timestamp); err != nil {
 			return nil, err
 		}
 		traces = append(traces, t)
@@ -391,8 +391,8 @@ func buildTraceQuery(filters model.TraceFilters) (string, []any) {
 	args := make([]any, 0, 12)
 
 	sb.WriteString(`
-SELECT trace_id, service, route, duration_ms, status, start_time
-FROM traces WHERE 1=1
+SELECT trace_id, service, name, route, duration_ms, status, start_time
+FROM traces WHERE parent_span_id = ''
 `)
 
 	if filters.Service != "" {

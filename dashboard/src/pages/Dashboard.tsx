@@ -11,7 +11,7 @@ import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 export default function Dashboard() {
   const [summary, setSummary] = useState<DashboardData | null>(null);
   const [traces, setTraces] = useState<Trace[]>([]);
-  const [reqSeries, setReqSeries] = useState<{ t: number; value: number }[]>([]);
+  const [reqSeries, setReqSeries] = useState<{ t: string; value: number }[]>([]);
   const [range, setRange] = useState<TimeRange>("15m");
 
   const load = useCallback((r: TimeRange) => {
