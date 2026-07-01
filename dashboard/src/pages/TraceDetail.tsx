@@ -6,7 +6,7 @@ import {
 } from "lucide-react";
 import type { Span, Log } from "@/lib/mockData";
 import { fetchTraceDetail, type TraceDetail as TraceDetailData } from "@/lib/api";
-import { spanColorFor, buildServiceColorMap, ERROR_COLOR, formatDuration, TimelineMinimap } from "@/components/Flamegraph";
+import { buildSpanColorMapping, type ColorMapResult, ERROR_COLOR, formatDuration, TimelineMinimap } from "@/components/Flamegraph";
 
 /* ── Helpers ─────────────────────────────────────────────────── */
 
@@ -28,10 +28,10 @@ function CopyButton({ text }: { text: string }) {
 
 type DetailTab = "tags" | "events";
 
-function SpanDetailSidebar({ span, colorMap, onClose }: { span: Span; colorMap: Map<string, string>; onClose: () => void }) {
+function SpanDetailSidebar({ span, colorMapping, onClose }: { span: Span; colorMapping: ColorMapResult; onClose: () => void }) {
   const [tab, setTab] = useState<DetailTab>("tags");
   const [search, setSearch] = useState("");
-  const color = span.status === "error" ? ERROR_COLOR : (colorMap.get(span.service) ?? spanColorFor(span.service));
+  const color = span.status === "error" ? ERROR_COLOR : colorMapping.colorOf(span);
   const eventCount = span.events?.length ?? 0;
 
   const filteredAttrs = useMemo(() => {
@@ -67,7 +67,7 @@ function SpanDetailSidebar({ span, colorMap, onClose }: { span: Span; colorMap: 
           <div>
             <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-0.5">Service</div>
             <div className="flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full" style={{ background: colorMap.get(span.service) ?? spanColorFor(span.service) }} />
+              <span className="w-1.5 h-1.5 rounded-full" style={{ background: colorMapping.colorOf(span) }} />
               <span className="font-mono text-xs">{span.service}</span>
             </div>
           </div>
@@ -220,7 +220,7 @@ function SpanRow({
   childCount,
   isCollapsed,
   isSelected,
-  colorMap,
+  colorMapping,
   onToggle,
   onSelect,
 }: {
@@ -229,11 +229,11 @@ function SpanRow({
   childCount: number;
   isCollapsed: boolean;
   isSelected: boolean;
-  colorMap: Map<string, string>;
+  colorMapping: ColorMapResult;
   onToggle: () => void;
   onSelect: () => void;
 }) {
-  const color = span.status === "error" ? ERROR_COLOR : (colorMap.get(span.service) ?? spanColorFor(span.service));
+  const color = span.status === "error" ? ERROR_COLOR : colorMapping.colorOf(span);
   const hasChildren = childCount > 0;
   const barLeft = total > 0 ? (span.start / total) * 100 : 0;
   const barWidth = total > 0 ? Math.max(0.3, (span.duration / total) * 100) : 0;
@@ -241,15 +241,21 @@ function SpanRow({
   return (
     <div
       onClick={onSelect}
-      className={`flex items-center gap-0 cursor-pointer group transition-colors border-b border-border/50 ${
+      className={`flex items-center gap-0 cursor-pointer group transition-colors border-b border-border/40 relative ${
         isSelected
-          ? "bg-[hsl(var(--secondary)/0.8)]"
-          : "hover:bg-[hsl(var(--secondary)/0.4)]"
+          ? "bg-[hsl(var(--secondary)/0.7)]"
+          : "hover:bg-[hsl(var(--secondary)/0.3)]"
       }`}
-      style={{ minHeight: 40 }}
+      style={{ minHeight: 36 }}
     >
+      {/* Colored left indicator */}
+      <div
+        className="absolute top-0 left-0 bottom-0 w-[2px]"
+        style={{ background: color, opacity: isSelected ? 1 : 0.5 }}
+      />
+
       {/* Left: span info */}
-      <div className="w-[45%] flex-shrink-0 flex items-center min-w-0 px-2 py-1.5" style={{ paddingLeft: 8 + span.depth * 18 }}>
+      <div className="w-[45%] flex-shrink-0 flex items-center min-w-0 py-1.5" style={{ paddingLeft: 10 + span.depth * 16 }}>
         {/* Collapse toggle */}
         {hasChildren ? (
           <button
@@ -257,39 +263,41 @@ function SpanRow({
             className="flex items-center gap-0.5 text-muted-foreground hover:text-foreground flex-shrink-0 mr-1"
           >
             {isCollapsed ? (
-              <ChevronRight className="w-3.5 h-3.5" />
+              <ChevronRight className="w-3 h-3" />
             ) : (
-              <ChevronDown className="w-3.5 h-3.5" />
+              <ChevronDown className="w-3 h-3" />
             )}
             {isCollapsed && (
-              <span className="text-[10px] font-mono text-muted-foreground bg-secondary/80 px-1 rounded">
+              <span className="text-[9px] font-mono text-muted-foreground bg-secondary/80 px-1 rounded">
                 {childCount}
               </span>
             )}
           </button>
         ) : (
-          <span className="w-3.5 flex-shrink-0 mr-1" />
+          <span className="w-3 flex-shrink-0 mr-1" />
         )}
 
         {/* Error icon */}
         {span.status === "error" && (
-          <AlertTriangle className="w-3 h-3 text-status-error flex-shrink-0 mr-1.5" />
+          <AlertTriangle className="w-3 h-3 text-status-error flex-shrink-0 mr-1" />
         )}
 
         <div className="min-w-0 flex-1">
           {/* Operation name */}
-          <div className="font-mono text-xs font-medium truncate leading-tight">
-            {span.name}
-          </div>
-          {/* Service + timing */}
-          <div className="flex items-center gap-1.5 mt-0.5">
+          <div className="flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: color }} />
+            <span className="font-mono text-[11px] font-medium truncate leading-tight">
+              {span.name}
+            </span>
+          </div>
+          {/* Service + kind */}
+          <div className="flex items-center gap-1 mt-0.5 ml-[11px]">
             <span className="text-[10px] text-muted-foreground truncate">
               {span.service}
             </span>
-            <span className="text-[10px] text-muted-foreground/60">·</span>
-            <span className="text-[10px] text-muted-foreground/60 flex-shrink-0">
-              {span.start === 0 ? "start" : `${formatDuration(span.start)} after start`}
+            <span className="text-[10px] text-muted-foreground/50">·</span>
+            <span className="text-[10px] text-muted-foreground/50 flex-shrink-0">
+              {span.kind}
             </span>
           </div>
         </div>
@@ -297,14 +305,13 @@ function SpanRow({
 
       {/* Right: duration bar */}
       <div className="flex-1 flex items-center gap-2 pr-3 min-w-0">
-        <div className="relative h-[18px] flex-1 rounded-sm">
+        <div className="relative h-[16px] flex-1 rounded-sm bg-[hsl(var(--secondary)/0.15)]">
           <div
-            className="absolute h-full rounded-sm transition-opacity"
+            className="absolute h-full rounded-sm"
             style={{
               left: `${barLeft}%`,
               width: `${barWidth}%`,
-              background: color,
-              opacity: isSelected ? 1 : 0.8,
+              background: `linear-gradient(90deg, ${color}cc, ${color}88)`,
               minWidth: 3,
             }}
           />
@@ -312,14 +319,13 @@ function SpanRow({
           {span.events?.map((ev, i) => (
             <div
               key={i}
-              className="absolute top-0 w-[2px] h-full bg-foreground/60 rounded-full"
+              className="absolute top-0 w-[2px] h-full bg-foreground/50 rounded-full"
               style={{ left: `${total > 0 ? (ev.time / total) * 100 : 0}%` }}
               title={ev.name}
             />
           ))}
         </div>
-        <span className="text-[10px] font-mono text-muted-foreground w-16 text-right flex-shrink-0 flex items-center justify-end gap-0.5">
-          <Clock className="w-2.5 h-2.5 opacity-50" />
+        <span className="text-[10px] font-mono text-muted-foreground w-14 text-right flex-shrink-0">
           {formatDuration(span.duration)}
         </span>
       </div>
@@ -332,16 +338,18 @@ function SpanRow({
 function TimeRuler({ total }: { total: number }) {
   const ticks = [0, 0.25, 0.5, 0.75, 1];
   return (
-    <div className="flex items-center border-b border-border bg-[hsl(var(--secondary)/0.2)]" style={{ minHeight: 24 }}>
-      <div className="w-[45%] flex-shrink-0 px-3 text-[10px] font-mono text-muted-foreground">
-        Span
+    <div className="flex items-center border-b border-border bg-[hsl(var(--card))]" style={{ minHeight: 22 }}>
+      <div className="w-[45%] flex-shrink-0 px-3 text-[9px] font-mono uppercase tracking-wider text-muted-foreground/70">
+        Service &amp; Operation
       </div>
-      <div className="flex-1 flex justify-between pr-3">
-        {ticks.map(p => (
-          <span key={p} className="text-[9px] font-mono text-muted-foreground/60">
-            {formatDuration(total * p)}
-          </span>
-        ))}
+      <div className="flex-1 relative pr-3">
+        <div className="flex justify-between">
+          {ticks.map(p => (
+            <span key={p} className="text-[9px] font-mono text-muted-foreground/50">
+              {formatDuration(total * p)}
+            </span>
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -373,7 +381,7 @@ export default function TraceDetail() {
   const linkedLogs: Log[] = traceData?.logs ?? [];
   const total = traceData?.duration ?? 0;
 
-  const colorMap = useMemo(() => buildServiceColorMap(spans), [spans]);
+  const colorMapping = useMemo(() => buildSpanColorMapping(spans), [spans]);
 
   const childrenMap = useMemo(() => {
     const map = new Map<string | null, Span[]>();
@@ -513,7 +521,7 @@ export default function TraceDetail() {
 
       {/* ── Timeline Minimap ────────────────────────────────────── */}
       <div className="px-5 py-2 border-b border-border flex-shrink-0 bg-[hsl(var(--card))]">
-        <TimelineMinimap spans={spans} total={total} colorMap={colorMap} />
+        <TimelineMinimap spans={spans} total={total} colorMapping={colorMapping} />
       </div>
 
       {/* ── Toolbar ─────────────────────────────────────────────── */}
@@ -533,12 +541,12 @@ export default function TraceDetail() {
           </button>
         </div>
         <div className="flex items-center gap-3">
-          {/* Service legend */}
-          <div className="flex items-center gap-2 flex-wrap">
-            {serviceList.map(s => (
-              <div key={s.service} className="flex items-center gap-1">
-                <span className="w-2 h-2 rounded-sm" style={{ background: colorMap.get(s.service) ?? spanColorFor(s.service) }} />
-                <span className="text-[10px] font-mono text-muted-foreground">{s.service}</span>
+          {/* Legend */}
+          <div className="flex items-center gap-2.5 flex-wrap">
+            {colorMapping.legend.map(item => (
+              <div key={item.key} className="flex items-center gap-1">
+                <span className="w-2 h-2 rounded-sm" style={{ background: item.color }} />
+                <span className="text-[10px] font-mono text-muted-foreground">{item.label}</span>
               </div>
             ))}
           </div>
@@ -562,7 +570,7 @@ export default function TraceDetail() {
                   childCount={descendantCount(s.id)}
                   isCollapsed={collapsed.has(s.id)}
                   isSelected={selectedSpanId === s.id}
-                  colorMap={colorMap}
+                  colorMapping={colorMapping}
                   onToggle={() => toggle(s.id)}
                   onSelect={() => setSelectedSpanId(selectedSpanId === s.id ? null : s.id)}
                 />
@@ -599,7 +607,7 @@ export default function TraceDetail() {
           <div className="w-[40%] flex-shrink-0 overflow-hidden">
             <SpanDetailSidebar
               span={selectedSpan}
-              colorMap={colorMap}
+              colorMapping={colorMapping}
               onClose={() => setSelectedSpanId(null)}
             />
           </div>

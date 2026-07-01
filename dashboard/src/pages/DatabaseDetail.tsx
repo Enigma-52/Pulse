@@ -4,6 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import { ResponsiveContainer, AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ComposedChart, Line } from "recharts";
 import { fetchDatabaseOverview, fetchDatabaseQueries, type DatabaseOverviewData, type DatabaseOperation } from "@/lib/api";
 import TimeRangeSelector, { type TimeRange, rangeToMinutes, rangeToLabel, SHORT_RANGES } from "@/components/TimeRangeSelector";
+import { fmtMs } from "@/lib/colors";
 
 export default function DatabaseDetail() {
   const { system } = useParams();
@@ -88,10 +89,10 @@ export default function DatabaseDetail() {
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         {[
           ["Queries", ov.query_count.toLocaleString()],
-          ["Avg latency", `${ov.avg_duration_ms.toFixed(1)}ms`],
-          ["p50", `${ov.p50_duration_ms.toFixed(1)}ms`],
-          ["p95", `${ov.p95_duration_ms.toFixed(1)}ms`],
-          ["p99", `${ov.p99_duration_ms.toFixed(1)}ms`],
+          ["Avg latency", fmtMs(ov.avg_duration_ms)],
+          ["p50", fmtMs(ov.p50_duration_ms)],
+          ["p95", fmtMs(ov.p95_duration_ms)],
+          ["p99", fmtMs(ov.p99_duration_ms)],
         ].map(([k, v]) => (
           <div key={k} className="panel p-4">
             <div className="data-label">{k}</div>
@@ -170,9 +171,11 @@ export default function DatabaseDetail() {
                         {truncateStatement(q.db_statement || "(no statement)")}
                       </span>
                     </td>
-                    <td className="px-5 py-3 font-mono text-xs text-muted-foreground">{q.service}</td>
+                    <td className="px-5 py-3 font-mono text-xs text-muted-foreground">
+                      <Link to={`/app/services/${q.service}`} className="hover:text-foreground transition-colors">{q.service}</Link>
+                    </td>
                     <td className="px-5 py-3 font-mono text-xs text-muted-foreground">{q.db_name || "-"}</td>
-                    <td className={`px-5 py-3 font-mono text-xs text-right ${durationClass}`}>{q.duration_ms}ms</td>
+                    <td className={`px-5 py-3 font-mono text-xs text-right ${durationClass}`}>{fmtMs(q.duration_ms)}</td>
                     <td className="px-5 py-3 text-right">
                       <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded border ${
                         q.status === "error" ? "border-status-error/40 text-status-error" : "border-status-ok/40 text-status-ok"

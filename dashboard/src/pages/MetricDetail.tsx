@@ -6,6 +6,16 @@ import { fetchMetrics, fetchMetricSeries } from "@/lib/api";
 import type { Metric } from "@/lib/mockData";
 import TimeRangeSelector, { type TimeRange, TIME_RANGES, rangeToMinutes, rangeToInterval } from "@/components/TimeRangeSelector";
 
+function fmtMetricValue(value: number, unit: string): string {
+  if (unit === "ms") {
+    if (value < 1) return `${value.toFixed(2)}ms`;
+    return `${Math.round(value)}ms`;
+  }
+  if (value >= 1000) return value.toLocaleString(undefined, { maximumFractionDigits: 0 });
+  if (value >= 1) return value.toFixed(1);
+  return value.toFixed(3);
+}
+
 export default function MetricDetail() {
   const { id } = useParams();
   const [metric, setMetric] = useState<Metric | null>(null);
@@ -69,10 +79,10 @@ export default function MetricDetail() {
 
       <div className="grid grid-cols-4 gap-3">
         {[
-          ["Current", `${metric.value} ${metric.unit}`],
-          ["Avg (15m)", `${(metric.value * 0.92).toFixed(1)} ${metric.unit}`],
-          ["Max (15m)", `${(metric.value * 1.18).toFixed(1)} ${metric.unit}`],
-          ["\u0394", `${metric.delta >= 0 ? "+" : ""}${metric.delta}%`],
+          ["Current", `${fmtMetricValue(metric.value, metric.unit)} ${metric.unit === "ms" ? "" : metric.unit}`],
+          ["Avg (15m)", `${fmtMetricValue(metric.value * 0.92, metric.unit)} ${metric.unit === "ms" ? "" : metric.unit}`],
+          ["Max (15m)", `${fmtMetricValue(metric.value * 1.18, metric.unit)} ${metric.unit === "ms" ? "" : metric.unit}`],
+          ["\u0394", `${metric.delta >= 0 ? "+" : ""}${metric.delta.toFixed(1)}%`],
         ].map(([k, v]) => (
           <div key={k} className="panel p-4">
             <div className="data-label">{k}</div>

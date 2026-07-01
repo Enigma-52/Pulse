@@ -131,7 +131,7 @@ export default function Metrics() {
                 <div className="min-w-0">
                   <div className="font-mono text-xs text-muted-foreground truncate">{m.name}</div>
                   <div className="flex items-baseline gap-1.5 mt-2">
-                    <span className="text-2xl font-mono">{m.value.toLocaleString()}</span>
+                    <span className="text-2xl font-mono">{m.value >= 1 ? Math.round(m.value).toLocaleString() : m.value.toFixed(2)}</span>
                     <span className="text-xs text-muted-foreground font-mono">{m.unit}</span>
                   </div>
                 </div>

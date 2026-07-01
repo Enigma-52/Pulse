@@ -4,6 +4,7 @@ import { fetchDatabasesList, type DatabaseSummary } from "@/lib/api";
 import TimeRangeSelector, { type TimeRange, rangeToMinutes, rangeToLabel, SHORT_RANGES } from "@/components/TimeRangeSelector";
 import AutoRefreshPicker from "@/components/AutoRefreshPicker";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
+import { fmtMs } from "@/lib/colors";
 
 const DB_ICONS: Record<string, string> = {
   postgresql: "PG",
@@ -93,10 +94,10 @@ export default function Databases() {
                     </td>
                     <td className="px-5 py-3 font-mono text-xs text-right">{d.query_count.toLocaleString()}</td>
                     <td className={`px-5 py-3 font-mono text-xs text-right ${errClass}`}>{d.error_rate.toFixed(2)}%</td>
-                    <td className="px-5 py-3 font-mono text-xs text-right text-muted-foreground">{d.p50_duration_ms.toFixed(1)}ms</td>
-                    <td className="px-5 py-3 font-mono text-xs text-right text-muted-foreground">{d.p95_duration_ms.toFixed(1)}ms</td>
-                    <td className="px-5 py-3 font-mono text-xs text-right">{d.p99_duration_ms.toFixed(1)}ms</td>
-                    <td className="px-5 py-3 font-mono text-xs text-right text-muted-foreground">{d.avg_duration_ms.toFixed(1)}ms</td>
+                    <td className="px-5 py-3 font-mono text-xs text-right text-muted-foreground">{fmtMs(d.p50_duration_ms)}</td>
+                    <td className="px-5 py-3 font-mono text-xs text-right text-muted-foreground">{fmtMs(d.p95_duration_ms)}</td>
+                    <td className="px-5 py-3 font-mono text-xs text-right">{fmtMs(d.p99_duration_ms)}</td>
+                    <td className="px-5 py-3 font-mono text-xs text-right text-muted-foreground">{fmtMs(d.avg_duration_ms)}</td>
                     <td className="px-5 py-3 font-mono text-xs text-right text-muted-foreground">{lastSeen}</td>
                   </tr>
                 );

@@ -168,7 +168,7 @@ SELECT
 	trace_id, span_id, service,
 	JSONExtractString(attributes_json, 'db.system') AS db_system,
 	JSONExtractString(attributes_json, 'db.name') AS db_name,
-	JSONExtractString(attributes_json, 'db.statement') AS db_statement,
+	if(JSONExtractString(attributes_json, 'db.statement') != '', JSONExtractString(attributes_json, 'db.statement'), name) AS db_statement,
 	duration_ms, status, start_time
 FROM traces
 WHERE start_time >= now() - INTERVAL ? MINUTE

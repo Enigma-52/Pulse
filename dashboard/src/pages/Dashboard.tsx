@@ -162,7 +162,9 @@ export default function Dashboard() {
                     <Link to={`/app/traces/${t.id}`} className="hover:text-foreground transition-colors">{t.id.slice(0, 12)}</Link>
                   </td>
                   <td className="px-5 py-2.5 font-mono">{t.name}</td>
-                  <td className="px-5 py-2.5 text-muted-foreground">{t.service}</td>
+                  <td className="px-5 py-2.5 text-muted-foreground">
+                    <Link to={`/app/services/${t.service}`} className="hover:text-foreground transition-colors">{t.service}</Link>
+                  </td>
                   <td className="px-5 py-2.5 font-mono text-right">{t.duration}ms</td>
                   <td className="px-5 py-2.5">
                     <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded border ${

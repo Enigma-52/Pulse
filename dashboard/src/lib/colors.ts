@@ -114,6 +114,22 @@ export function logLevelStyle(level: string) {
   return logLevel[level as keyof typeof logLevel] ?? logLevel.debug;
 }
 
+// ── Formatting Helpers ───────────────────────────────────────────
+
+/** Format milliseconds for display: <1ms → 2 decimals, ≥1ms → integer */
+export function fmtMs(ms: number): string {
+  if (ms < 1) return `${ms.toFixed(2)}ms`;
+  return `${Math.round(ms)}ms`;
+}
+
+/** Format a rate/percentage for display */
+export function fmtPct(pct: number): string {
+  if (pct === 0) return "0%";
+  if (pct < 0.01) return "<0.01%";
+  if (pct < 1) return `${pct.toFixed(2)}%`;
+  return `${pct.toFixed(1)}%`;
+}
+
 // ── Typography ───────────────────────────────────────────────────
 // Font conventions (applied via Tailwind classes):
 //
