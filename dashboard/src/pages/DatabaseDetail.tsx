@@ -4,7 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import { ResponsiveContainer, AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ComposedChart, Line } from "recharts";
 import { fetchDatabaseOverview, fetchDatabaseQueries, type DatabaseOverviewData, type DatabaseOperation } from "@/lib/api";
 import TimeRangeSelector, { type TimeRange, rangeToMinutes, rangeToLabel, SHORT_RANGES } from "@/components/TimeRangeSelector";
-import { fmtMs } from "@/lib/colors";
+import { fmtMs, chart as chartColors, status as statusColors } from "@/lib/colors";
 
 export default function DatabaseDetail() {
   const { system } = useParams();
@@ -50,11 +50,11 @@ export default function DatabaseDetail() {
 
   const { overview: ov, throughput } = overview;
 
-  const chartData = throughput.map((p, i) => ({
-    t: i,
+  const chartData = throughput.map((p) => ({
+    t: new Date(p.timestamp).toLocaleTimeString("en-US", { hour12: false, hour: "2-digit", minute: "2-digit" }),
     queries: p.count,
     errors: p.errors,
-    avg_ms: Number(p.avg_ms.toFixed(1)),
+    avg_ms: Math.round(p.avg_ms),
   }));
 
   const truncateStatement = (stmt: string, max = 120) =>
@@ -111,8 +111,8 @@ export default function DatabaseDetail() {
                 <XAxis dataKey="t" stroke="hsl(var(--muted-foreground))" fontSize={10} tickLine={false} axisLine={false} />
                 <YAxis stroke="hsl(var(--muted-foreground))" fontSize={10} tickLine={false} axisLine={false} width={40} />
                 <Tooltip contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 4, fontSize: 11 }} />
-                <Bar dataKey="queries" fill="hsl(var(--chart-1) / 0.5)" name="Queries" />
-                <Bar dataKey="errors" fill="hsl(var(--status-error) / 0.7)" name="Errors" />
+                <Bar dataKey="queries" fill={chartColors.primary} fillOpacity={0.5} name="Queries" />
+                <Bar dataKey="errors" fill={statusColors.error} fillOpacity={0.7} name="Errors" />
               </ComposedChart>
             </ResponsiveContainer>
           </div>
@@ -125,15 +125,15 @@ export default function DatabaseDetail() {
               <AreaChart data={chartData}>
                 <defs>
                   <linearGradient id="dbLatGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="hsl(var(--chart-2))" stopOpacity={0.3} />
-                    <stop offset="100%" stopColor="hsl(var(--chart-2))" stopOpacity={0} />
+                    <stop offset="0%" stopColor={chartColors.secondary} stopOpacity={0.3} />
+                    <stop offset="100%" stopColor={chartColors.secondary} stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid stroke="hsl(var(--border))" strokeDasharray="2 4" vertical={false} />
                 <XAxis dataKey="t" stroke="hsl(var(--muted-foreground))" fontSize={10} tickLine={false} axisLine={false} />
                 <YAxis stroke="hsl(var(--muted-foreground))" fontSize={10} tickLine={false} axisLine={false} width={40} />
                 <Tooltip contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 4, fontSize: 11 }} />
-                <Area type="monotone" dataKey="avg_ms" stroke="hsl(var(--chart-2))" strokeWidth={1.25} fill="url(#dbLatGrad)" name="Avg latency" />
+                <Area type="monotone" dataKey="avg_ms" stroke={chartColors.secondary} strokeWidth={1.25} fill="url(#dbLatGrad)" name="Avg latency" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
