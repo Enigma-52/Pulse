@@ -226,7 +226,9 @@ export default function Logs() {
                         {l.level.toUpperCase()}
                       </span>
                     </div>
-                    <div className="col-span-2 text-muted-foreground truncate">{l.service}</div>
+                    <div className="col-span-2 text-muted-foreground truncate">
+                      <Link to={`/app/services/${l.service}`} onClick={e => e.stopPropagation()} className="hover:text-foreground transition-colors">{l.service}</Link>
+                    </div>
                     <div className="col-span-6 truncate">
                       {l.message}
                       {Object.entries(l.attributes).length > 0 && expandedId !== l.id && (
