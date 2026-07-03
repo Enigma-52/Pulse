@@ -41,7 +41,7 @@ func main() {
 	go w.Run(ctx)
 
 	// HTTP server: OTLP ingest + query API on a single port
-	ih := ingest.NewHandler(pipe)
+	ih := ingest.NewHandlerWithLimit(pipe, cfg.IngestRPS)
 	qh := queryhandler.New(qs)
 	srv := server.New(ih, qh)
 

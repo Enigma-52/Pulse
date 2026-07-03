@@ -13,9 +13,10 @@ type ClickHouseConfig struct {
 }
 
 type Config struct {
-	Addr       string // single listen address for OTLP + API
-	ClickHouse ClickHouseConfig
+	Addr        string // single listen address for OTLP + API
+	ClickHouse  ClickHouseConfig
 	PipelineCap int
+	IngestRPS   int // max ingest requests/sec, 0 = unlimited
 }
 
 func Load() Config {
@@ -28,6 +29,7 @@ func Load() Config {
 			Password: getEnv("PULSE_CLICKHOUSE_PASSWORD", ""),
 		},
 		PipelineCap: getEnvInt("PULSE_PIPELINE_CAP", 10000),
+		IngestRPS:   getEnvInt("PULSE_INGEST_RPS", 0),
 	}
 }
 

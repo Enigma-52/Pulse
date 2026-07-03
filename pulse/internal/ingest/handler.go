@@ -15,14 +15,33 @@ import (
 )
 
 type Handler struct {
-	pipe chan<- pipeline.Batch
+	pipe    chan<- pipeline.Batch
+	limiter *rateLimiter
 }
 
 func NewHandler(pipe chan<- pipeline.Batch) *Handler {
 	return &Handler{pipe: pipe}
 }
 
+// NewHandlerWithLimit creates a handler that rejects ingest requests above rps
+// requests per second. rps <= 0 disables limiting.
+func NewHandlerWithLimit(pipe chan<- pipeline.Batch, rps int) *Handler {
+	return &Handler{pipe: pipe, limiter: newRateLimiter(rps)}
+}
+
+func (h *Handler) throttled(w http.ResponseWriter) bool {
+	if h.limiter.allow() {
+		return false
+	}
+	w.Header().Set("Retry-After", "1")
+	http.Error(w, "rate limit exceeded", http.StatusTooManyRequests)
+	return true
+}
+
 func (h *Handler) HandleTraces(w http.ResponseWriter, r *http.Request) {
+	if h.throttled(w) {
+		return
+	}
 	data, err := readAndNormalize(r, &collectorTrace.ExportTraceServiceRequest{})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -37,6 +56,9 @@ func (h *Handler) HandleTraces(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) HandleLogs(w http.ResponseWriter, r *http.Request) {
+	if h.throttled(w) {
+		return
+	}
 	data, err := readAndNormalize(r, &collectorLogs.ExportLogsServiceRequest{})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -51,6 +73,9 @@ func (h *Handler) HandleLogs(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) HandleMetrics(w http.ResponseWriter, r *http.Request) {
+	if h.throttled(w) {
+		return
+	}
 	data, err := readAndNormalize(r, &collectorMetrics.ExportMetricsServiceRequest{})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
