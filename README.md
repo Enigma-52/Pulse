@@ -42,6 +42,8 @@ Then open **localhost:3301** for the dashboard. Point any OpenTelemetry SDK at *
 | Dashboard | localhost:3301 |
 | OTLP Ingest | localhost:4321 |
 
+For production, set a real auth secret before starting: `export PULSE_JWT_SECRET=$(openssl rand -hex 32)`. See [Architecture → Configuration](docs/architecture.md#configuration) for all environment variables and the `/healthz` / `/readyz` probes.
+
 ## How It Works
 
 Your app sends traces, logs, and metrics to Pulse over OTLP/HTTP. Pulse stores everything in ClickHouse and serves it through a query API. The dashboard gives you a single place to see service health, dig into traces, search logs, and monitor database queries.

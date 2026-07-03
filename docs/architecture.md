@@ -67,6 +67,28 @@ Why ClickHouse:
 - JWT auth with setup/login flow
 - The dashboard UI is a separate React SPA that talks to the query API
 
+### Configuration
+
+All configuration is via environment variables:
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `PULSE_ADDR` | `:4321` | Listen address (OTLP ingest + query API) |
+| `PULSE_CLICKHOUSE_ADDR` | `localhost:9000` | ClickHouse native endpoint |
+| `PULSE_CLICKHOUSE_DB` | `default` | ClickHouse database |
+| `PULSE_CLICKHOUSE_USER` | `default` | ClickHouse user |
+| `PULSE_CLICKHOUSE_PASSWORD` | (empty) | ClickHouse password |
+| `PULSE_JWT_SECRET` | insecure built-in | Secret for dashboard auth tokens — always set in production |
+| `PULSE_PIPELINE_CAP` | `10000` | In-process pipeline buffer capacity |
+| `PULSE_INGEST_RPS` | `0` (unlimited) | Max OTLP ingest requests/sec (token bucket, 429 when exceeded) |
+
+### Health and readiness
+
+- `GET /healthz` — liveness: the process is up (never touches ClickHouse)
+- `GET /readyz` — readiness: pings ClickHouse; returns 503 until the database is reachable
+
+Point orchestrator liveness probes at `/healthz` and readiness probes at `/readyz`.
+
 ### Deployment
 
 Two containers: `pulse` + `clickhouse`. That's the entire stack.
