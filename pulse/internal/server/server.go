@@ -13,6 +13,7 @@ func New(ih *ingest.Handler, qh *handler.Handler) http.Handler {
 
 	// Health
 	r.HandleFunc("/healthz", qh.HandleHealth).Methods(http.MethodGet)
+	r.HandleFunc("/readyz", qh.HandleReady).Methods(http.MethodGet)
 
 	// OTLP ingest
 	r.HandleFunc("/v1/traces", ih.HandleTraces).Methods(http.MethodPost)

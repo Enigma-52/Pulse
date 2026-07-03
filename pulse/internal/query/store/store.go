@@ -19,6 +19,10 @@ func New(conn driver.Conn) *Store {
 	return &Store{conn: conn}
 }
 
+func (s *Store) Ping(ctx context.Context) error {
+	return s.conn.Ping(ctx)
+}
+
 func (s *Store) GetTraces(ctx context.Context, filters model.TraceFilters) ([]model.Trace, error) {
 	query, args := buildTraceQuery(filters)
 
