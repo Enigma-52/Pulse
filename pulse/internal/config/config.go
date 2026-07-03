@@ -1,6 +1,9 @@
 package config
 
-import "os"
+import (
+	"os"
+	"strconv"
+)
 
 type ClickHouseConfig struct {
 	Addr     string
@@ -24,8 +27,17 @@ func Load() Config {
 			User:     getEnv("PULSE_CLICKHOUSE_USER", "default"),
 			Password: getEnv("PULSE_CLICKHOUSE_PASSWORD", ""),
 		},
-		PipelineCap: 10000,
+		PipelineCap: getEnvInt("PULSE_PIPELINE_CAP", 10000),
 	}
+}
+
+func getEnvInt(key string, def int) int {
+	if v := os.Getenv(key); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			return n
+		}
+	}
+	return def
 }
 
 func getEnv(key, def string) string {

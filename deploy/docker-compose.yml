@@ -31,6 +31,8 @@ services:
       PULSE_CLICKHOUSE_DB: default
       PULSE_CLICKHOUSE_USER: default
       PULSE_CLICKHOUSE_PASSWORD: pulse
+      # Override in production: export PULSE_JWT_SECRET before docker compose up
+      PULSE_JWT_SECRET: ${PULSE_JWT_SECRET:-change-me-in-production}
     depends_on:
       clickhouse:
         condition: service_healthy
