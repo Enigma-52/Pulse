@@ -136,6 +136,68 @@ ORDER BY (service, name, timestamp)
 		_ = s.conn.Exec(ctx, m)
 	}
 
+	// Alerting tables: tiny row counts, versioned rows via ReplacingMergeTree,
+	// soft deletes via the deleted flag. Reads must use FINAL.
+	const alertRulesDDL = `
+CREATE TABLE IF NOT EXISTS pulse_alert_rules (
+	id String,
+	name String,
+	signal String,
+	metric_name String DEFAULT '',
+	service String DEFAULT '',
+	group_by_service UInt8 DEFAULT 0,
+	aggregation String,
+	operator String,
+	threshold Float64,
+	window_minutes UInt32,
+	channel_ids Array(String) DEFAULT [],
+	enabled UInt8 DEFAULT 1,
+	deleted UInt8 DEFAULT 0,
+	created_at DateTime64(3),
+	updated_at DateTime64(3)
+) ENGINE = ReplacingMergeTree(updated_at)
+ORDER BY (id)
+`
+	if err := s.conn.Exec(ctx, alertRulesDDL); err != nil {
+		return err
+	}
+
+	const alertsDDL = `
+CREATE TABLE IF NOT EXISTS pulse_alerts (
+	id String,
+	rule_id String,
+	rule_name String,
+	service String DEFAULT '',
+	status String,
+	value Float64,
+	threshold Float64,
+	message String DEFAULT '',
+	fired_at DateTime64(3),
+	resolved_at DateTime64(3) DEFAULT toDateTime64(0, 3),
+	updated_at DateTime64(3)
+) ENGINE = ReplacingMergeTree(updated_at)
+ORDER BY (id)
+`
+	if err := s.conn.Exec(ctx, alertsDDL); err != nil {
+		return err
+	}
+
+	const channelsDDL = `
+CREATE TABLE IF NOT EXISTS pulse_notification_channels (
+	id String,
+	name String,
+	type String,
+	config_json String DEFAULT '{}',
+	deleted UInt8 DEFAULT 0,
+	created_at DateTime64(3),
+	updated_at DateTime64(3)
+) ENGINE = ReplacingMergeTree(updated_at)
+ORDER BY (id)
+`
+	if err := s.conn.Exec(ctx, channelsDDL); err != nil {
+		return err
+	}
+
 	return nil
 }
 

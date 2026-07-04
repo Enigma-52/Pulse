@@ -222,6 +222,72 @@ type DatabaseOverviewResponse struct {
 	Throughput []DatabaseThroughputPoint `json:"throughput"`
 }
 
+// Alerting models
+
+type AlertRule struct {
+	ID             string    `json:"id"`
+	Name           string    `json:"name"`
+	Signal         string    `json:"signal"`      // traces | logs | metrics
+	MetricName     string    `json:"metric_name"` // metrics signal only
+	Service        string    `json:"service"`     // optional filter, empty = all
+	GroupByService bool      `json:"group_by_service"`
+	Aggregation    string    `json:"aggregation"` // count | avg | p95 | p99 | error_rate | error_count | value_avg | value_max
+	Operator       string    `json:"operator"`    // gt | gte | lt | lte
+	Threshold      float64   `json:"threshold"`
+	WindowMinutes  uint32    `json:"window_minutes"`
+	ChannelIDs     []string  `json:"channel_ids"`
+	Enabled        bool      `json:"enabled"`
+	CreatedAt      time.Time `json:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at"`
+}
+
+type Alert struct {
+	ID         string    `json:"id"`
+	RuleID     string    `json:"rule_id"`
+	RuleName   string    `json:"rule_name"`
+	Service    string    `json:"service"`
+	Status     string    `json:"status"` // firing | resolved
+	Value      float64   `json:"value"`
+	Threshold  float64   `json:"threshold"`
+	Message    string    `json:"message"`
+	FiredAt    time.Time `json:"fired_at"`
+	ResolvedAt time.Time `json:"resolved_at"`
+}
+
+type NotificationChannel struct {
+	ID         string    `json:"id"`
+	Name       string    `json:"name"`
+	Type       string    `json:"type"` // webhook | slack | email
+	ConfigJSON string    `json:"config_json"`
+	CreatedAt  time.Time `json:"created_at"`
+	UpdatedAt  time.Time `json:"updated_at"`
+}
+
+type AlertRulesResponse struct {
+	Items []AlertRule `json:"items"`
+}
+
+type AlertsResponse struct {
+	Items  []Alert `json:"items"`
+	Limit  int     `json:"limit"`
+	Offset int     `json:"offset"`
+}
+
+type ChannelsResponse struct {
+	Items []NotificationChannel `json:"items"`
+}
+
+type AlertFilters struct {
+	Status   string
+	RuleID   string
+	Start    time.Time
+	End      time.Time
+	HasStart bool
+	HasEnd   bool
+	Limit    int
+	Offset   int
+}
+
 type TraceFilters struct {
 	Service       string
 	Route         string
