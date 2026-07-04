@@ -40,6 +40,11 @@ func New(ih *ingest.Handler, qh *handler.Handler) http.Handler {
 	protected.HandleFunc("/databases/{system}/overview", qh.HandleDatabaseOverview).Methods(http.MethodGet, http.MethodOptions)
 	protected.HandleFunc("/databases/{system}/queries", qh.HandleDatabaseQueries).Methods(http.MethodGet, http.MethodOptions)
 	protected.HandleFunc("/dashboard/summary", qh.HandleDashboardSummary).Methods(http.MethodGet, http.MethodOptions)
+	protected.HandleFunc("/alerts/rules", qh.HandleAlertRulesList).Methods(http.MethodGet, http.MethodOptions)
+	protected.HandleFunc("/alerts/rules", qh.HandleAlertRuleCreate).Methods(http.MethodPost)
+	protected.HandleFunc("/alerts/rules/{id}", qh.HandleAlertRuleGet).Methods(http.MethodGet, http.MethodOptions)
+	protected.HandleFunc("/alerts/rules/{id}", qh.HandleAlertRuleUpdate).Methods(http.MethodPut)
+	protected.HandleFunc("/alerts/rules/{id}", qh.HandleAlertRuleDelete).Methods(http.MethodDelete)
 
 	r.Use(corsMiddleware)
 	return r
@@ -48,7 +53,7 @@ func New(ih *ingest.Handler, qh *handler.Handler) http.Handler {
 func corsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 		if r.Method == http.MethodOptions {
 			w.WriteHeader(http.StatusNoContent)
