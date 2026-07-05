@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"time"
 
@@ -113,6 +114,97 @@ func boolToUint8(b bool) uint8 {
 		return 1
 	}
 	return 0
+}
+
+// --- Rule evaluation ---
+
+type RuleResult struct {
+	Service string
+	Value   float64
+}
+
+// EvaluateRule runs the rule's aggregation over its trailing window.
+// Returns one result, or one per service when GroupByService is set.
+func (s *Store) EvaluateRule(ctx context.Context, r model.AlertRule) ([]RuleResult, error) {
+	agg, table, timeCol := "", "", ""
+	args := []any{}
+
+	switch r.Signal {
+	case "traces":
+		table, timeCol = "traces", "start_time"
+		switch r.Aggregation {
+		case "count":
+			agg = "toFloat64(count())"
+		case "avg":
+			agg = "avg(duration_ms)"
+		case "p95":
+			agg = "quantile(0.95)(duration_ms)"
+		case "p99":
+			agg = "quantile(0.99)(duration_ms)"
+		case "error_count":
+			agg = "toFloat64(countIf(lower(status) = 'error' OR error != ''))"
+		case "error_rate":
+			agg = "if(count() = 0, 0, countIf(lower(status) = 'error' OR error != '') / count() * 100)"
+		}
+	case "logs":
+		table, timeCol = "logs", "timestamp"
+		switch r.Aggregation {
+		case "count":
+			agg = "toFloat64(count())"
+		case "error_count":
+			agg = "toFloat64(countIf(lower(level) IN ('error', 'fatal')))"
+		}
+	case "metrics":
+		table, timeCol = "metrics", "timestamp"
+		switch r.Aggregation {
+		case "value_avg":
+			agg = "avg(value)"
+		case "value_max":
+			agg = "max(value)"
+		}
+	}
+	if agg == "" || table == "" {
+		return nil, fmt.Errorf("unsupported rule: signal=%q aggregation=%q", r.Signal, r.Aggregation)
+	}
+
+	selectCols := "'' AS service, " + agg + " AS value"
+	groupBy := ""
+	if r.GroupByService {
+		selectCols = "service, " + agg + " AS value"
+		groupBy = "GROUP BY service"
+	}
+
+	query := "SELECT " + selectCols + " FROM " + table +
+		" WHERE " + timeCol + " >= now() - INTERVAL ? MINUTE"
+	args = append(args, r.WindowMinutes)
+
+	if r.Signal == "metrics" {
+		query += " AND name = ?"
+		args = append(args, r.MetricName)
+	}
+	if r.Service != "" {
+		query += " AND service = ?"
+		args = append(args, r.Service)
+	}
+	if groupBy != "" {
+		query += " " + groupBy
+	}
+
+	rows, err := s.conn.Query(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var results []RuleResult
+	for rows.Next() {
+		var res RuleResult
+		if err := rows.Scan(&res.Service, &res.Value); err != nil {
+			return nil, err
+		}
+		results = append(results, res)
+	}
+	return results, nil
 }
 
 // --- Alerts (history) ---
