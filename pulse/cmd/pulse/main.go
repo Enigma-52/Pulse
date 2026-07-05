@@ -4,7 +4,9 @@ import (
 	"context"
 	"log"
 	"net/http"
+	"time"
 
+	"github.com/pulse-observability/pulse/pulse/internal/alerting"
 	"github.com/pulse-observability/pulse/pulse/internal/config"
 	"github.com/pulse-observability/pulse/pulse/internal/ingest"
 	"github.com/pulse-observability/pulse/pulse/internal/pipeline"
@@ -39,6 +41,10 @@ func main() {
 	// Writer goroutine: drains pipeline → ClickHouse
 	w := writer.New(ws, pipe)
 	go w.Run(ctx)
+
+	// Alert evaluator goroutine: evaluates rules, records firing/resolved
+	evaluator := alerting.New(qs, time.Duration(cfg.AlertEvalIntervalSeconds)*time.Second)
+	go evaluator.Run(ctx)
 
 	// HTTP server: OTLP ingest + query API on a single port
 	ih := ingest.NewHandlerWithLimit(pipe, cfg.IngestRPS)
