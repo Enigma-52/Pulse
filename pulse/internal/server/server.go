@@ -45,6 +45,12 @@ func New(ih *ingest.Handler, qh *handler.Handler) http.Handler {
 	protected.HandleFunc("/alerts/rules/{id}", qh.HandleAlertRuleGet).Methods(http.MethodGet, http.MethodOptions)
 	protected.HandleFunc("/alerts/rules/{id}", qh.HandleAlertRuleUpdate).Methods(http.MethodPut)
 	protected.HandleFunc("/alerts/rules/{id}", qh.HandleAlertRuleDelete).Methods(http.MethodDelete)
+	protected.HandleFunc("/alerts/channels", qh.HandleChannelsList).Methods(http.MethodGet, http.MethodOptions)
+	protected.HandleFunc("/alerts/channels", qh.HandleChannelCreate).Methods(http.MethodPost)
+	protected.HandleFunc("/alerts/channels/{id}", qh.HandleChannelUpdate).Methods(http.MethodPut, http.MethodOptions)
+	protected.HandleFunc("/alerts/channels/{id}", qh.HandleChannelDelete).Methods(http.MethodDelete)
+	protected.HandleFunc("/alerts", qh.HandleAlertsList).Methods(http.MethodGet, http.MethodOptions)
+	protected.HandleFunc("/alerts/{id}", qh.HandleAlertGet).Methods(http.MethodGet, http.MethodOptions)
 
 	r.Use(corsMiddleware)
 	return r
