@@ -38,15 +38,14 @@ Organized by priority. Each section lists what SigNoz has that Pulse does not.
 ### P0 — Core Gaps (blocks production use)
 
 #### Alerting System
-SigNoz has a full alerting engine. Pulse has none.
-- [ ] Alert rule engine (threshold-based on metrics, logs, traces)
+- [x] Alert rule engine (threshold-based on metrics, logs, traces)
 - [ ] Multi-condition alert rules
-- [ ] Alert evaluation loop (background worker or cron)
-- [ ] Alert history and status tracking
+- [x] Alert evaluation loop (background worker, 30s ticker, in-process)
+- [x] Alert history and status tracking (firing/resolved in pulse_alerts)
 - [ ] Alert silencing and grouping
-- [ ] Notification integrations: Slack webhook, email, PagerDuty, generic webhook
+- [x] Notification integrations: Slack webhook, generic webhook (email config stored, delivery not implemented; PagerDuty open)
 - [ ] Alert routing / notification policies
-- [ ] UI: alert rule CRUD, alert list, alert detail, test rule
+- [x] UI: alert rule CRUD, alert list, alert detail (test rule open)
 
 #### Exception Monitoring
 SigNoz auto-captures and groups exceptions. Pulse does not track exceptions as a concept.

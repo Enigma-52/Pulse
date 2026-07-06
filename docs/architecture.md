@@ -67,6 +67,22 @@ Why ClickHouse:
 - JWT auth with setup/login flow
 - The dashboard UI is a separate React SPA that talks to the query API
 
+### Alerting
+
+A background evaluator goroutine inside the pulse binary evaluates enabled alert rules on a fixed interval (default 30s, `PULSE_ALERT_EVAL_INTERVAL_SECONDS`, 0 disables):
+
+```
+pulse_alert_rules → evaluator (aggregation SQL per rule over trailing window)
+                  → in-memory state map (ruleID|service)
+                  → transitions recorded in pulse_alerts (firing / resolved)
+                  → notifiers (Slack webhook, generic webhook; email stored but not delivered)
+```
+
+- Rules target one signal (`traces`, `logs`, `metrics`) with an aggregation (count, avg, p95, p99, error_rate, error_count, value_avg, value_max), operator, threshold, and window. Rules can filter to one service or evaluate per-service (`group_by_service`).
+- Storage: `pulse_alert_rules`, `pulse_alerts`, and `pulse_notification_channels` are ClickHouse `ReplacingMergeTree(updated_at)` tables keyed by id — updates insert a new version row, deletes set a `deleted` flag, reads use `FINAL`.
+- Transition dedup: while a rule instance stays breaching there is no re-notification; resolution re-inserts the same alert id with status `resolved`.
+- Restart caveat: evaluator state is in-memory only. After a restart, a still-breaching rule re-fires as a new alert (a fresh row), which is acceptable for v1.
+
 ### Configuration
 
 All configuration is via environment variables:
@@ -81,6 +97,7 @@ All configuration is via environment variables:
 | `PULSE_JWT_SECRET` | insecure built-in | Secret for dashboard auth tokens — always set in production |
 | `PULSE_PIPELINE_CAP` | `10000` | In-process pipeline buffer capacity |
 | `PULSE_INGEST_RPS` | `0` (unlimited) | Max OTLP ingest requests/sec (token bucket, 429 when exceeded) |
+| `PULSE_ALERT_EVAL_INTERVAL_SECONDS` | `30` | Alert rule evaluation interval; `0` disables the evaluator |
 
 ### Health and readiness
 
