@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { Activity, BarChart3, Database, GitBranch, Home, LogOut, ScrollText, Search, Settings, Server } from "lucide-react";
+import { Activity, BarChart3, Bell, Database, GitBranch, Home, LogOut, ScrollText, Search, Settings, Server } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 
 const nav = [
@@ -9,6 +9,7 @@ const nav = [
   { to: "/app/logs", label: "Logs", icon: ScrollText },
   { to: "/app/databases", label: "Databases", icon: Database },
   { to: "/app/metrics", label: "Metrics", icon: BarChart3 },
+  { to: "/app/alerts", label: "Alerts", icon: Bell },
 ];
 
 export default function AppLayout() {

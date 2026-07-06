@@ -21,6 +21,8 @@ import Services from "./pages/Services";
 import ServiceDetail from "./pages/ServiceDetail";
 import Databases from "./pages/Databases";
 import DatabaseDetail from "./pages/DatabaseDetail";
+import Alerts from "./pages/Alerts";
+import AlertRuleForm from "./pages/AlertRuleForm";
 
 const queryClient = new QueryClient();
 
@@ -54,6 +56,9 @@ const App = () => (
               <Route path="databases/:system" element={<DatabaseDetail />} />
               <Route path="metrics" element={<Metrics />} />
               <Route path="metrics/:id" element={<MetricDetail />} />
+              <Route path="alerts" element={<Alerts />} />
+              <Route path="alerts/rules/new" element={<AlertRuleForm />} />
+              <Route path="alerts/rules/:id/edit" element={<AlertRuleForm />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>

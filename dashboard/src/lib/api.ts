@@ -476,3 +476,139 @@ export async function fetchDashboardSummary(minutes = 15): Promise<DashboardData
     traceCount: data.trace_count,
   };
 }
+
+// ── Alerts ──────────────────────────────────────────────────────────────
+
+export interface AlertRule {
+  id: string;
+  name: string;
+  signal: "traces" | "logs" | "metrics";
+  metric_name: string;
+  service: string;
+  group_by_service: boolean;
+  aggregation: string;
+  operator: "gt" | "gte" | "lt" | "lte";
+  threshold: number;
+  window_minutes: number;
+  channel_ids: string[];
+  enabled: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export type AlertRulePayload = Omit<AlertRule, "id" | "created_at" | "updated_at">;
+
+export interface Alert {
+  id: string;
+  rule_id: string;
+  rule_name: string;
+  service: string;
+  status: "firing" | "resolved";
+  value: number;
+  threshold: number;
+  message: string;
+  fired_at: string;
+  resolved_at: string;
+}
+
+export interface NotificationChannel {
+  id: string;
+  name: string;
+  type: "webhook" | "slack" | "email";
+  config_json: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export async function fetchAlertRules(): Promise<AlertRule[]> {
+  const res = await fetch(`${API_BASE}/alerts/rules`, { headers: authHeaders() });
+  if (!res.ok) return [];
+  const data: { items: AlertRule[] } = await res.json();
+  return data.items || [];
+}
+
+export async function fetchAlertRule(id: string): Promise<AlertRule | null> {
+  const res = await fetch(`${API_BASE}/alerts/rules/${encodeURIComponent(id)}`, { headers: authHeaders() });
+  if (!res.ok) return null;
+  return await res.json();
+}
+
+export async function createAlertRule(payload: AlertRulePayload): Promise<AlertRule | null> {
+  const res = await fetch(`${API_BASE}/alerts/rules`, {
+    method: "POST",
+    headers: { ...authHeaders(), "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) return null;
+  return await res.json();
+}
+
+export async function updateAlertRule(id: string, payload: AlertRulePayload): Promise<AlertRule | null> {
+  const res = await fetch(`${API_BASE}/alerts/rules/${encodeURIComponent(id)}`, {
+    method: "PUT",
+    headers: { ...authHeaders(), "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) return null;
+  return await res.json();
+}
+
+export async function deleteAlertRule(id: string): Promise<boolean> {
+  const res = await fetch(`${API_BASE}/alerts/rules/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+    headers: authHeaders(),
+  });
+  return res.ok;
+}
+
+export async function fetchAlerts(params?: { status?: string; ruleId?: string; limit?: number }): Promise<Alert[]> {
+  const search = new URLSearchParams();
+  if (params?.status) search.set("status", params.status);
+  if (params?.ruleId) search.set("rule_id", params.ruleId);
+  if (params?.limit) search.set("limit", String(params.limit));
+  const res = await fetch(`${API_BASE}/alerts?${search}`, { headers: authHeaders() });
+  if (!res.ok) return [];
+  const data: { items: Alert[] } = await res.json();
+  return data.items || [];
+}
+
+export async function fetchAlert(id: string): Promise<Alert | null> {
+  const res = await fetch(`${API_BASE}/alerts/${encodeURIComponent(id)}`, { headers: authHeaders() });
+  if (!res.ok) return null;
+  return await res.json();
+}
+
+export async function fetchChannels(): Promise<NotificationChannel[]> {
+  const res = await fetch(`${API_BASE}/alerts/channels`, { headers: authHeaders() });
+  if (!res.ok) return [];
+  const data: { items: NotificationChannel[] } = await res.json();
+  return data.items || [];
+}
+
+export async function createChannel(payload: { name: string; type: string; config_json: string }): Promise<NotificationChannel | null> {
+  const res = await fetch(`${API_BASE}/alerts/channels`, {
+    method: "POST",
+    headers: { ...authHeaders(), "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) return null;
+  return await res.json();
+}
+
+export async function updateChannel(id: string, payload: { name: string; type: string; config_json: string }): Promise<NotificationChannel | null> {
+  const res = await fetch(`${API_BASE}/alerts/channels/${encodeURIComponent(id)}`, {
+    method: "PUT",
+    headers: { ...authHeaders(), "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) return null;
+  return await res.json();
+}
+
+export async function deleteChannel(id: string): Promise<boolean> {
+  const res = await fetch(`${API_BASE}/alerts/channels/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+    headers: authHeaders(),
+  });
+  return res.ok;
+}
