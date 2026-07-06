@@ -29,7 +29,7 @@ func Load() Config {
 			User:     getEnv("PULSE_CLICKHOUSE_USER", "default"),
 			Password: getEnv("PULSE_CLICKHOUSE_PASSWORD", ""),
 		},
-		PipelineCap:              getEnvInt("PULSE_PIPELINE_CAP", 10000),
+		PipelineCap:              max(1, getEnvInt("PULSE_PIPELINE_CAP", 10000)),
 		IngestRPS:                getEnvInt("PULSE_INGEST_RPS", 0),
 		AlertEvalIntervalSeconds: getEnvInt("PULSE_ALERT_EVAL_INTERVAL_SECONDS", 30),
 	}
@@ -37,7 +37,7 @@ func Load() Config {
 
 func getEnvInt(key string, def int) int {
 	if v := os.Getenv(key); v != "" {
-		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+		if n, err := strconv.Atoi(v); err == nil && n >= 0 {
 			return n
 		}
 	}
