@@ -37,6 +37,20 @@ type LogEntry struct {
 	ScopeVersion           string
 }
 
+type Exception struct {
+	TimestampMs    int64
+	Service        string
+	Environment    string
+	TraceID        string
+	SpanID         string
+	Route          string
+	Type           string
+	Message        string
+	Stacktrace     string
+	Fingerprint    string
+	AttributesJSON string
+}
+
 type MetricPoint struct {
 	Name                   string
 	Type                   string

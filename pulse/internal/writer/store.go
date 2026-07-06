@@ -136,6 +136,26 @@ ORDER BY (service, name, timestamp)
 		_ = s.conn.Exec(ctx, m)
 	}
 
+	const exceptionsDDL = `
+CREATE TABLE IF NOT EXISTS exceptions (
+	timestamp DateTime64(3),
+	service String,
+	environment String DEFAULT '',
+	trace_id String DEFAULT '',
+	span_id String DEFAULT '',
+	route String DEFAULT '',
+	exception_type String,
+	exception_message String DEFAULT '',
+	stacktrace String DEFAULT '',
+	fingerprint FixedString(40),
+	attributes_json String DEFAULT '{}'
+) ENGINE = MergeTree
+ORDER BY (service, fingerprint, timestamp)
+`
+	if err := s.conn.Exec(ctx, exceptionsDDL); err != nil {
+		return err
+	}
+
 	// Alerting tables: tiny row counts, versioned rows via ReplacingMergeTree,
 	// soft deletes via the deleted flag. Reads must use FINAL.
 	const alertRulesDDL = `
@@ -234,6 +254,34 @@ INSERT INTO traces (
 			time.UnixMilli(sp.StartTimeMs), time.UnixMilli(sp.EndTimeMs),
 			sp.AttributesJSON, sp.EventsJSON, sp.LinksJSON,
 			sp.ResourceAttributesJSON, sp.ScopeName, sp.ScopeVersion,
+		); err != nil {
+			return err
+		}
+	}
+
+	return batch.Send()
+}
+
+func (s *Store) InsertExceptions(ctx context.Context, excs []Exception) error {
+	if len(excs) == 0 {
+		return nil
+	}
+
+	batch, err := s.conn.PrepareBatch(ctx, `
+INSERT INTO exceptions (
+	timestamp, service, environment, trace_id, span_id, route,
+	exception_type, exception_message, stacktrace, fingerprint, attributes_json
+) VALUES
+`)
+	if err != nil {
+		return err
+	}
+
+	for _, e := range excs {
+		if err := batch.Append(
+			time.UnixMilli(e.TimestampMs), e.Service, e.Environment,
+			e.TraceID, e.SpanID, e.Route,
+			e.Type, e.Message, e.Stacktrace, e.Fingerprint, e.AttributesJSON,
 		); err != nil {
 			return err
 		}

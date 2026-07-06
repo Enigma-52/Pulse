@@ -63,6 +63,7 @@ func (w *Writer) processTraces(ctx context.Context, data []byte) error {
 	}
 
 	var spans []Span
+	var exceptions []Exception
 	for _, rs := range req.ResourceSpans {
 		svc, env := extractResourceInfo(rs.Resource)
 		resAttrs := marshalKVs(rs.Resource.GetAttributes())
@@ -77,7 +78,7 @@ func (w *Writer) processTraces(ctx context.Context, data []byte) error {
 				attrs := kvListToMap(s.Attributes)
 				route := extractRoute(attrs)
 
-				spans = append(spans, Span{
+				span := Span{
 					TraceID:                hex.EncodeToString(s.TraceId),
 					SpanID:                 hex.EncodeToString(s.SpanId),
 					ParentSpanID:           hex.EncodeToString(s.ParentSpanId),
@@ -97,11 +98,16 @@ func (w *Writer) processTraces(ctx context.Context, data []byte) error {
 					ResourceAttributesJSON: resAttrs,
 					ScopeName:              scopeName,
 					ScopeVersion:           scopeVer,
-				})
+				}
+				spans = append(spans, span)
+				exceptions = append(exceptions, extractExceptions(span, s.Events)...)
 			}
 		}
 	}
-	return w.store.InsertSpans(ctx, spans)
+	if err := w.store.InsertSpans(ctx, spans); err != nil {
+		return err
+	}
+	return w.store.InsertExceptions(ctx, exceptions)
 }
 
 func (w *Writer) processLogs(ctx context.Context, data []byte) error {
