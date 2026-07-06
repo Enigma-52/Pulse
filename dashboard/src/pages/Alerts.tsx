@@ -5,7 +5,14 @@ import {
   fetchAlertRules,
   updateAlertRule,
   deleteAlertRule,
+  fetchAlerts,
+  fetchChannels,
+  createChannel,
+  updateChannel,
+  deleteChannel,
   type AlertRule,
+  type Alert,
+  type NotificationChannel,
 } from "@/lib/api";
 import AutoRefreshPicker from "@/components/AutoRefreshPicker";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
@@ -19,16 +26,28 @@ function conditionSummary(r: AlertRule) {
   return `${r.aggregation}(${target}) ${OPERATOR_LABELS[r.operator] || r.operator} ${r.threshold}`;
 }
 
+function fmtTime(ts: string) {
+  if (!ts || ts.startsWith("1970")) return "-";
+  return new Date(ts).toLocaleString("en-US", {
+    month: "short", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false,
+  });
+}
+
 export default function Alerts() {
   const [tab, setTab] = useState<Tab>("rules");
   const [rules, setRules] = useState<AlertRule[]>([]);
+  const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [statusFilter, setStatusFilter] = useState<"" | "firing" | "resolved">("");
+  const [channels, setChannels] = useState<NotificationChannel[]>([]);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(() => {
-    fetchAlertRules()
-      .then(setRules)
-      .finally(() => setLoading(false));
-  }, []);
+    Promise.all([
+      fetchAlertRules().then(setRules),
+      fetchAlerts({ status: statusFilter || undefined, limit: 100 }).then(setAlerts),
+      fetchChannels().then(setChannels),
+    ]).finally(() => setLoading(false));
+  }, [statusFilter]);
 
   useEffect(() => {
     load();
@@ -152,12 +171,215 @@ export default function Alerts() {
       )}
 
       {tab === "history" && (
-        <div className="panel px-5 py-10 text-center text-sm text-muted-foreground">Alert history coming soon.</div>
+        <div className="space-y-4">
+          <div className="flex items-center gap-1">
+            {(["", "firing", "resolved"] as const).map((s) => (
+              <button
+                key={s || "all"}
+                onClick={() => setStatusFilter(s)}
+                className={`h-7 px-2.5 text-xs rounded border transition-colors ${
+                  statusFilter === s
+                    ? "border-ring bg-secondary text-foreground"
+                    : "border-border text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {s || "all"}
+              </button>
+            ))}
+          </div>
+          <div className="panel">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-muted-foreground border-b border-border">
+                  <th className="px-5 py-2.5 font-medium text-[11px] uppercase tracking-wider">Status</th>
+                  <th className="px-5 py-2.5 font-medium text-[11px] uppercase tracking-wider">Rule</th>
+                  <th className="px-5 py-2.5 font-medium text-[11px] uppercase tracking-wider">Service</th>
+                  <th className="px-5 py-2.5 font-medium text-[11px] uppercase tracking-wider text-right">Value / threshold</th>
+                  <th className="px-5 py-2.5 font-medium text-[11px] uppercase tracking-wider text-right">Fired</th>
+                  <th className="px-5 py-2.5 font-medium text-[11px] uppercase tracking-wider text-right">Resolved</th>
+                </tr>
+              </thead>
+              <tbody>
+                {loading ? (
+                  <tr><td colSpan={6} className="px-5 py-10 text-center text-sm text-muted-foreground">Loading alerts...</td></tr>
+                ) : alerts.length === 0 ? (
+                  <tr><td colSpan={6} className="px-5 py-10 text-center text-sm text-muted-foreground">No alerts recorded{statusFilter ? ` with status ${statusFilter}` : ""}.</td></tr>
+                ) : (
+                  alerts.map((a) => (
+                    <tr key={a.id} className="border-b border-border last:border-0 hover:bg-secondary/40">
+                      <td className="px-5 py-3">
+                        <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded border ${
+                          a.status === "firing"
+                            ? "border-status-error/40 text-status-error"
+                            : "border-status-ok/40 text-status-ok"
+                        }`}>
+                          {a.status.toUpperCase()}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3">
+                        <Link to={`/app/alerts/${a.id}`} className="font-medium hover:underline">{a.rule_name}</Link>
+                      </td>
+                      <td className="px-5 py-3 font-mono text-xs text-muted-foreground">{a.service || "-"}</td>
+                      <td className="px-5 py-3 font-mono text-xs text-right">
+                        {a.value.toFixed(2)} <span className="text-muted-foreground">/ {a.threshold.toFixed(2)}</span>
+                      </td>
+                      <td className="px-5 py-3 font-mono text-xs text-right text-muted-foreground">{fmtTime(a.fired_at)}</td>
+                      <td className="px-5 py-3 font-mono text-xs text-right text-muted-foreground">{fmtTime(a.resolved_at)}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
       )}
 
-      {tab === "channels" && (
-        <div className="panel px-5 py-10 text-center text-sm text-muted-foreground">Notification channels coming soon.</div>
+      {tab === "channels" && <ChannelsTab channels={channels} onChanged={load} />}
+    </div>
+  );
+}
+
+function ChannelsTab({ channels, onChanged }: { channels: NotificationChannel[]; onChanged: () => void }) {
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [showForm, setShowForm] = useState(false);
+  const [name, setName] = useState("");
+  const [type, setType] = useState<"webhook" | "slack" | "email">("slack");
+  const [url, setUrl] = useState("");
+  const [to, setTo] = useState("");
+  const [error, setError] = useState("");
+
+  const inputClass =
+    "h-8 w-full px-3 text-sm rounded bg-secondary border border-border focus:outline-none focus:border-ring placeholder:text-muted-foreground";
+
+  const startCreate = () => {
+    setEditingId(null);
+    setName("");
+    setType("slack");
+    setUrl("");
+    setTo("");
+    setError("");
+    setShowForm(true);
+  };
+
+  const startEdit = (c: NotificationChannel) => {
+    let cfg: { url?: string; to?: string } = {};
+    try { cfg = JSON.parse(c.config_json); } catch { /* ignore */ }
+    setEditingId(c.id);
+    setName(c.name);
+    setType(c.type);
+    setUrl(cfg.url || "");
+    setTo(cfg.to || "");
+    setError("");
+    setShowForm(true);
+  };
+
+  const save = async () => {
+    const config = type === "email" ? { to } : { url };
+    const payload = { name, type, config_json: JSON.stringify(config) };
+    const result = editingId ? await updateChannel(editingId, payload) : await createChannel(payload);
+    if (!result) {
+      setError("Failed to save channel — check the URL is a valid http(s) address.");
+      return;
+    }
+    setShowForm(false);
+    onChanged();
+  };
+
+  const remove = async (c: NotificationChannel) => {
+    if (!window.confirm(`Delete channel "${c.name}"?`)) return;
+    await deleteChannel(c.id);
+    onChanged();
+  };
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <button
+          onClick={startCreate}
+          className="h-8 px-3 inline-flex items-center gap-1.5 text-xs font-medium rounded bg-secondary border border-border hover:border-ring"
+        >
+          <Plus className="w-3.5 h-3.5" />
+          Add channel
+        </button>
+      </div>
+
+      {showForm && (
+        <div className="panel p-5 space-y-4 max-w-xl">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <div className="data-label mb-1.5">Name</div>
+              <input className={inputClass} value={name} onChange={(e) => setName(e.target.value)} placeholder="team-slack" />
+            </div>
+            <div>
+              <div className="data-label mb-1.5">Type</div>
+              <select className={inputClass} value={type} onChange={(e) => setType(e.target.value as typeof type)}>
+                <option value="slack">Slack webhook</option>
+                <option value="webhook">Generic webhook</option>
+                <option value="email">Email</option>
+              </select>
+            </div>
+          </div>
+          {type === "email" ? (
+            <div>
+              <div className="data-label mb-1.5">Recipient</div>
+              <input className={inputClass} value={to} onChange={(e) => setTo(e.target.value)} placeholder="oncall@example.com" />
+              <p className="text-xs text-muted-foreground mt-1.5">Email config is stored, but delivery is not yet implemented — alerts to this channel are logged only.</p>
+            </div>
+          ) : (
+            <div>
+              <div className="data-label mb-1.5">Webhook URL</div>
+              <input className={inputClass} value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://hooks.slack.com/services/..." />
+            </div>
+          )}
+          {error && <p className="text-sm text-status-error">{error}</p>}
+          <div className="flex items-center gap-3">
+            <button onClick={save} className="h-8 px-4 text-xs font-medium rounded bg-primary text-primary-foreground hover:opacity-90">
+              {editingId ? "Save changes" : "Add channel"}
+            </button>
+            <button onClick={() => setShowForm(false)} className="h-8 px-4 text-xs font-medium rounded bg-secondary border border-border hover:border-ring">
+              Cancel
+            </button>
+          </div>
+        </div>
       )}
+
+      <div className="panel">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="text-left text-muted-foreground border-b border-border">
+              <th className="px-5 py-2.5 font-medium text-[11px] uppercase tracking-wider">Name</th>
+              <th className="px-5 py-2.5 font-medium text-[11px] uppercase tracking-wider">Type</th>
+              <th className="px-5 py-2.5 font-medium text-[11px] uppercase tracking-wider">Destination</th>
+              <th className="px-5 py-2.5 font-medium text-[11px] uppercase tracking-wider text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {channels.length === 0 ? (
+              <tr><td colSpan={4} className="px-5 py-10 text-center text-sm text-muted-foreground">No notification channels configured.</td></tr>
+            ) : (
+              channels.map((c) => {
+                let cfg: { url?: string; to?: string } = {};
+                try { cfg = JSON.parse(c.config_json); } catch { /* ignore */ }
+                return (
+                  <tr key={c.id} className="border-b border-border last:border-0 hover:bg-secondary/40">
+                    <td className="px-5 py-3 font-medium">{c.name}</td>
+                    <td className="px-5 py-3">
+                      <span className="text-[10px] font-mono px-1.5 py-0.5 rounded border border-status-info/40 text-status-info">{c.type}</span>
+                    </td>
+                    <td className="px-5 py-3 font-mono text-xs text-muted-foreground truncate max-w-[320px]">{cfg.url || cfg.to || "-"}</td>
+                    <td className="px-5 py-3 text-right">
+                      <div className="inline-flex items-center gap-2">
+                        <button onClick={() => startEdit(c)} className="text-xs text-status-info hover:underline">Edit</button>
+                        <button onClick={() => remove(c)} className="text-xs text-status-error hover:underline">Delete</button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
