@@ -44,6 +44,7 @@ func main() {
 
 	// Alert evaluator goroutine: evaluates rules, records firing/resolved
 	evaluator := alerting.New(qs, time.Duration(cfg.AlertEvalIntervalSeconds)*time.Second)
+	evaluator.Notify = alerting.NewNotifier(qs).Send
 	go evaluator.Run(ctx)
 
 	// HTTP server: OTLP ingest + query API on a single port
