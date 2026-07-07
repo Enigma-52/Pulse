@@ -222,6 +222,51 @@ type DatabaseOverviewResponse struct {
 	Throughput []DatabaseThroughputPoint `json:"throughput"`
 }
 
+// Exception models
+
+type ExceptionGroup struct {
+	Fingerprint string    `json:"fingerprint"`
+	Type        string    `json:"type"`
+	Message     string    `json:"message"`
+	Service     string    `json:"service"`
+	Occurrences uint64    `json:"occurrences"`
+	FirstSeen   time.Time `json:"first_seen"`
+	LastSeen    time.Time `json:"last_seen"`
+}
+
+type ExceptionDetail struct {
+	Fingerprint string    `json:"fingerprint"`
+	Type        string    `json:"type"`
+	Message     string    `json:"message"`
+	Service     string    `json:"service"`
+	Environment string    `json:"environment"`
+	Route       string    `json:"route"`
+	Occurrences uint64    `json:"occurrences"`
+	FirstSeen   time.Time `json:"first_seen"`
+	LastSeen    time.Time `json:"last_seen"`
+	Stacktrace  string    `json:"stacktrace"`
+	TraceIDs    []string  `json:"trace_ids"`
+}
+
+type ExceptionBucket struct {
+	Timestamp time.Time `json:"timestamp"`
+	Count     uint64    `json:"count"`
+}
+
+type ExceptionsResponse struct {
+	Items  []ExceptionGroup `json:"items"`
+	Limit  int              `json:"limit"`
+	Offset int              `json:"offset"`
+}
+
+type ExceptionFilters struct {
+	Service string
+	Search  string
+	Minutes int
+	Limit   int
+	Offset  int
+}
+
 // Alerting models
 
 type AlertRule struct {
