@@ -612,3 +612,55 @@ export async function deleteChannel(id: string): Promise<boolean> {
   });
   return res.ok;
 }
+
+// ── Exceptions ──────────────────────────────────────────────────────────
+
+export interface ExceptionGroup {
+  fingerprint: string;
+  type: string;
+  message: string;
+  service: string;
+  occurrences: number;
+  first_seen: string;
+  last_seen: string;
+}
+
+export interface ExceptionDetail extends ExceptionGroup {
+  environment: string;
+  route: string;
+  stacktrace: string;
+  trace_ids: string[];
+}
+
+export interface ExceptionBucket {
+  timestamp: string;
+  count: number;
+}
+
+export async function fetchExceptions(params?: { minutes?: number; service?: string; q?: string; limit?: number }): Promise<ExceptionGroup[]> {
+  const search = new URLSearchParams();
+  if (params?.minutes) search.set("minutes", String(params.minutes));
+  if (params?.service) search.set("service", params.service);
+  if (params?.q) search.set("q", params.q);
+  if (params?.limit) search.set("limit", String(params.limit));
+  const res = await fetch(`${API_BASE}/exceptions?${search}`, { headers: authHeaders() });
+  if (!res.ok) return [];
+  const data: { items: ExceptionGroup[] } = await res.json();
+  return data.items || [];
+}
+
+export async function fetchExceptionDetail(fingerprint: string, minutes = 15): Promise<ExceptionDetail | null> {
+  const res = await fetch(`${API_BASE}/exceptions/${encodeURIComponent(fingerprint)}?minutes=${minutes}`, { headers: authHeaders() });
+  if (!res.ok) return null;
+  return await res.json();
+}
+
+export async function fetchExceptionTimeseries(fingerprint: string, minutes = 15, interval = 1): Promise<ExceptionBucket[]> {
+  const res = await fetch(
+    `${API_BASE}/exceptions/${encodeURIComponent(fingerprint)}/timeseries?minutes=${minutes}&interval=${interval}`,
+    { headers: authHeaders() },
+  );
+  if (!res.ok) return [];
+  const data: { points: ExceptionBucket[] } = await res.json();
+  return data.points || [];
+}

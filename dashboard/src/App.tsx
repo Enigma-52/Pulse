@@ -24,6 +24,7 @@ import DatabaseDetail from "./pages/DatabaseDetail";
 import Alerts from "./pages/Alerts";
 import AlertRuleForm from "./pages/AlertRuleForm";
 import AlertDetail from "./pages/AlertDetail";
+import Exceptions from "./pages/Exceptions";
 
 const queryClient = new QueryClient();
 
@@ -57,6 +58,7 @@ const App = () => (
               <Route path="databases/:system" element={<DatabaseDetail />} />
               <Route path="metrics" element={<Metrics />} />
               <Route path="metrics/:id" element={<MetricDetail />} />
+              <Route path="exceptions" element={<Exceptions />} />
               <Route path="alerts" element={<Alerts />} />
               <Route path="alerts/rules/new" element={<AlertRuleForm />} />
               <Route path="alerts/rules/:id/edit" element={<AlertRuleForm />} />
