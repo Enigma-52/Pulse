@@ -25,6 +25,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("clickhouse connect: %v", err)
 	}
+	ws.Retention = cfg.Retention
 	if err := ws.EnsureTables(ctx); err != nil {
 		log.Fatalf("clickhouse tables: %v", err)
 	}

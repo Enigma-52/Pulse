@@ -33,6 +33,11 @@ services:
       PULSE_CLICKHOUSE_PASSWORD: pulse
       # Override in production: export PULSE_JWT_SECRET before docker compose up
       PULSE_JWT_SECRET: ${PULSE_JWT_SECRET:-change-me-in-production}
+      # Per-signal retention in days, 0 or unset = keep forever
+      # PULSE_RETENTION_TRACES_DAYS: "15"
+      # PULSE_RETENTION_LOGS_DAYS: "7"
+      # PULSE_RETENTION_METRICS_DAYS: "30"
+      # PULSE_RETENTION_EXCEPTIONS_DAYS: "30"
     depends_on:
       clickhouse:
         condition: service_healthy

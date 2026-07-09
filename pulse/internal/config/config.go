@@ -12,12 +12,21 @@ type ClickHouseConfig struct {
 	Password string
 }
 
+// RetentionConfig holds per-signal retention in days; 0 = keep forever.
+type RetentionConfig struct {
+	TracesDays     int
+	LogsDays       int
+	MetricsDays    int
+	ExceptionsDays int
+}
+
 type Config struct {
 	Addr                     string // single listen address for OTLP + API
 	ClickHouse               ClickHouseConfig
 	PipelineCap              int
 	IngestRPS                int // max ingest requests/sec, 0 = unlimited
 	AlertEvalIntervalSeconds int // 0 disables the alert evaluator
+	Retention                RetentionConfig
 }
 
 func Load() Config {
@@ -32,6 +41,12 @@ func Load() Config {
 		PipelineCap:              max(1, getEnvInt("PULSE_PIPELINE_CAP", 10000)),
 		IngestRPS:                getEnvInt("PULSE_INGEST_RPS", 0),
 		AlertEvalIntervalSeconds: getEnvInt("PULSE_ALERT_EVAL_INTERVAL_SECONDS", 30),
+		Retention: RetentionConfig{
+			TracesDays:     getEnvInt("PULSE_RETENTION_TRACES_DAYS", 0),
+			LogsDays:       getEnvInt("PULSE_RETENTION_LOGS_DAYS", 0),
+			MetricsDays:    getEnvInt("PULSE_RETENTION_METRICS_DAYS", 0),
+			ExceptionsDays: getEnvInt("PULSE_RETENTION_EXCEPTIONS_DAYS", 0),
+		},
 	}
 }
 

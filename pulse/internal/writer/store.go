@@ -2,6 +2,8 @@ package writer
 
 import (
 	"context"
+	"fmt"
+	"log"
 	"time"
 
 	clickhouse "github.com/ClickHouse/clickhouse-go/v2"
@@ -10,7 +12,8 @@ import (
 )
 
 type Store struct {
-	conn driver.Conn
+	conn      driver.Conn
+	Retention config.RetentionConfig
 }
 
 func ConnectStore(cfg config.ClickHouseConfig) (*Store, error) {
@@ -218,7 +221,35 @@ ORDER BY (id)
 		return err
 	}
 
+	s.applyRetention(ctx)
+
 	return nil
+}
+
+// applyRetention sets a TTL on each signal table when configured (>0 days).
+// Idempotent; failures are logged, not fatal, matching column migrations.
+func (s *Store) applyRetention(ctx context.Context) {
+	ttls := []struct {
+		table   string
+		timeCol string
+		days    int
+	}{
+		{"traces", "start_time", s.Retention.TracesDays},
+		{"logs", "timestamp", s.Retention.LogsDays},
+		{"metrics", "timestamp", s.Retention.MetricsDays},
+		{"exceptions", "timestamp", s.Retention.ExceptionsDays},
+	}
+	for _, t := range ttls {
+		if t.days <= 0 {
+			continue
+		}
+		stmt := fmt.Sprintf("ALTER TABLE %s MODIFY TTL toDateTime(%s) + INTERVAL %d DAY", t.table, t.timeCol, t.days)
+		if err := s.conn.Exec(ctx, stmt); err != nil {
+			log.Printf("retention: %s: %v", t.table, err)
+		} else {
+			log.Printf("retention: %s keeps %d days", t.table, t.days)
+		}
+	}
 }
 
 func (s *Store) InsertSpans(ctx context.Context, spans []Span) error {
