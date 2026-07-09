@@ -51,6 +51,7 @@ func main() {
 	// HTTP server: OTLP ingest + query API on a single port
 	ih := ingest.NewHandlerWithLimit(pipe, cfg.IngestRPS)
 	qh := queryhandler.New(qs)
+	qh.Retention = cfg.Retention
 	srv := server.New(ih, qh)
 
 	log.Printf("pulse listening on %s (OTLP ingest + query API)", cfg.Addr)

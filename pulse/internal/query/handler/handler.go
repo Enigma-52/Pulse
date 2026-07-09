@@ -1,9 +1,13 @@
 package handler
 
-import "github.com/pulse-observability/pulse/pulse/internal/query/store"
+import (
+	"github.com/pulse-observability/pulse/pulse/internal/config"
+	"github.com/pulse-observability/pulse/pulse/internal/query/store"
+)
 
 type Handler struct {
-	Store *store.Store
+	Store     *store.Store
+	Retention config.RetentionConfig
 }
 
 func New(s *store.Store) *Handler {
