@@ -67,6 +67,14 @@ Why ClickHouse:
 - JWT auth with setup/login flow
 - The dashboard UI is a separate React SPA that talks to the query API
 
+### Exception monitoring
+
+OTel SDKs record exceptions as span events named `exception` (attributes `exception.type`, `exception.message`, `exception.stacktrace`). The writer extracts these at write time into a dedicated `exceptions` MergeTree table (`ORDER BY (service, fingerprint, timestamp)`) so grouping never scans `events_json`.
+
+- **Fingerprint** = `sha1(type + normalized_message + top_stack_frame)`; digits, hex addresses, and UUIDs in the message are masked so variable payloads ("timeout after 31ms" vs "88ms") group together.
+- Write-time extraction means exceptions ingested before this feature are not backfilled.
+- Query API: `GET /exceptions` (grouped), `GET /exceptions/{fingerprint}` (detail + recent trace ids), `GET /exceptions/{fingerprint}/timeseries`.
+
 ### Alerting
 
 A background evaluator goroutine inside the pulse binary evaluates enabled alert rules on a fixed interval (default 30s, `PULSE_ALERT_EVAL_INTERVAL_SECONDS`, 0 disables):

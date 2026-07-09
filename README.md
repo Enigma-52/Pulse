@@ -21,6 +21,7 @@ Most observability tools are either expensive SaaS or painfully complex to self-
 ## What You Get
 
 - **Alerting** — threshold rules on traces, logs, and metrics with Slack and webhook notifications
+- **Exception Monitoring** — auto-captured from OTel exception events, grouped by fingerprint with stack traces and linked traces
 - **Distributed Tracing** — flamegraph, waterfall view, service breakdown, span attributes
 - **Log Management** — stream and grouped views, level filters, search, trace correlation
 - **Metrics** — time-series charts, per-service breakdown, queryable explorer

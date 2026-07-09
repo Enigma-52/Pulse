@@ -48,13 +48,12 @@ Organized by priority. Each section lists what SigNoz has that Pulse does not.
 - [x] UI: alert rule CRUD, alert list, alert detail (test rule open)
 
 #### Exception Monitoring
-SigNoz auto-captures and groups exceptions. Pulse does not track exceptions as a concept.
-- [ ] Exception capture in SDK (catch + report with stack trace)
-- [ ] Exception grouping by fingerprint (message + stack frame)
-- [ ] Exceptions table in ClickHouse
-- [ ] Exceptions query API endpoints
-- [ ] Exceptions UI: list, detail, frequency chart, linked traces/logs
-- [ ] SDK support: JavaScript, Python, Java, Ruby
+- [x] Exception capture (standard OTel SDKs emit exception span events — no custom SDK needed)
+- [x] Exception grouping by fingerprint (type + normalized message + top stack frame)
+- [x] Exceptions table in ClickHouse (write-time extraction from span events)
+- [x] Exceptions query API endpoints
+- [x] Exceptions UI: list, detail, frequency chart, linked traces
+- [x] SDK support: any language with an OTel SDK (JavaScript, Python, Java, Ruby, Go, .NET)
 
 #### Data Retention and Management
 - [ ] Configurable retention policies per signal (traces, logs, metrics)
