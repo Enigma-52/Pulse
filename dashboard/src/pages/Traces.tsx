@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
+import TraceAnalytics from "@/components/TraceAnalytics";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Cell } from "recharts";
 import TimeRangeSelector, { type TimeRange, rangeToStartEnd, rangeToLabel, SHORT_RANGES } from "@/components/TimeRangeSelector";
 import AutoRefreshPicker from "@/components/AutoRefreshPicker";
@@ -32,11 +33,22 @@ function buildDurationBuckets(traces: Trace[]) {
 }
 
 export default function Traces() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const view = searchParams.get("view") === "analytics" ? "analytics" : "list";
   const [traces, setTraces] = useState<Trace[]>([]);
   const [loading, setLoading] = useState(true);
   const [range, setRange] = useState<TimeRange>("15m");
-  const [serviceFilter, setServiceFilter] = useState("");
+  const [serviceFilter, setServiceFilter] = useState(searchParams.get("service") || "");
   const [statusFilter, setStatusFilter] = useState("");
+
+  const setView = (v: "list" | "analytics") => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (v === "analytics") next.set("view", "analytics");
+      else next.delete("view");
+      return next;
+    });
+  };
 
   const load = useCallback((r: TimeRange, service?: string, status?: string) => {
     setLoading(true);
@@ -84,6 +96,24 @@ export default function Traces() {
         </div>
       </div>
 
+      {/* View tabs */}
+      <div className="flex items-center gap-1 border-b border-border">
+        {(["list", "analytics"] as const).map((v) => (
+          <button
+            key={v}
+            onClick={() => setView(v)}
+            className={`px-3 py-2 text-sm capitalize border-b-2 -mb-px transition-colors ${
+              view === v ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {v}
+          </button>
+        ))}
+      </div>
+
+      {view === "analytics" && <TraceAnalytics range={range} service={serviceFilter || undefined} />}
+
+      {view === "list" && (<>
       {/* Filters */}
       <div className="flex gap-2">
         <input
@@ -201,6 +231,7 @@ export default function Traces() {
           </tbody>
         </table>
       </div>
+      </>)}
     </div>
   );
 }

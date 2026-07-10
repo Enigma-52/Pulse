@@ -682,3 +682,69 @@ export async function fetchUsage(): Promise<UsageStat[]> {
   const data: { items: UsageStat[] } = await res.json();
   return data.items || [];
 }
+
+// ── Trace analytics ─────────────────────────────────────────────────────
+
+export interface TraceAnalyticsRow {
+  group: string;
+  trace_count: number;
+  avg_ms: number;
+  p95_ms: number;
+  p99_ms: number;
+  error_count: number;
+  error_rate: number;
+}
+
+export interface TraceAnalyticsPoint {
+  timestamp: string;
+  group: string;
+  value: number;
+}
+
+export interface SlowTrace {
+  trace_id: string;
+  service: string;
+  name: string;
+  route: string;
+  duration_ms: number;
+  status: string;
+  timestamp: string;
+}
+
+export async function fetchTraceAnalytics(params: { groupBy: string; service?: string; minutes?: number }): Promise<TraceAnalyticsRow[]> {
+  const search = new URLSearchParams({ group_by: params.groupBy });
+  if (params.service) search.set("service", params.service);
+  if (params.minutes) search.set("minutes", String(params.minutes));
+  const res = await fetch(`${API_BASE}/traces/analytics?${search}`, { headers: authHeaders() });
+  if (!res.ok) return [];
+  const data: { items: TraceAnalyticsRow[] } = await res.json();
+  return data.items || [];
+}
+
+export async function fetchTraceAnalyticsTimeseries(params: {
+  metric: string;
+  groupBy: string;
+  service?: string;
+  minutes?: number;
+  interval?: number;
+}): Promise<TraceAnalyticsPoint[]> {
+  const search = new URLSearchParams({ metric: params.metric, group_by: params.groupBy });
+  if (params.service) search.set("service", params.service);
+  if (params.minutes) search.set("minutes", String(params.minutes));
+  if (params.interval) search.set("interval", String(params.interval));
+  const res = await fetch(`${API_BASE}/traces/analytics/timeseries?${search}`, { headers: authHeaders() });
+  if (!res.ok) return [];
+  const data: { points: TraceAnalyticsPoint[] } = await res.json();
+  return data.points || [];
+}
+
+export async function fetchSlowestTraces(params?: { service?: string; minutes?: number; limit?: number }): Promise<SlowTrace[]> {
+  const search = new URLSearchParams();
+  if (params?.service) search.set("service", params.service);
+  if (params?.minutes) search.set("minutes", String(params.minutes));
+  if (params?.limit) search.set("limit", String(params.limit));
+  const res = await fetch(`${API_BASE}/traces/slowest?${search}`, { headers: authHeaders() });
+  if (!res.ok) return [];
+  const data: { items: SlowTrace[] } = await res.json();
+  return data.items || [];
+}
