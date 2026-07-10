@@ -61,6 +61,10 @@ Why ClickHouse:
 - Cost-effective for large time-series datasets
 - Well-suited to high-cardinality telemetry workloads
 
+### Trace analytics
+
+`GET /traces/analytics?group_by=service|route|name` aggregates spans per group (count, avg, p95, p99, error rate). `GET /traces/analytics/timeseries?metric=count|p95|error_rate&group_by=...&interval=...` returns bucketed series for the top-8 groups by volume. `GET /traces/slowest` lists top-N slowest root spans. `group_by` and `metric` are validated against whitelists — user input is never interpolated into SQL.
+
 ### Query API and web UI
 
 - The query API (served on the same port) exposes endpoints for traces, logs, metrics, services, and dashboard summaries

@@ -88,10 +88,9 @@ Pulse monitors applications only. SigNoz also monitors infrastructure.
 - [ ] Semantic convention mapping for attributes
 
 #### Trace Aggregation and Analytics
-SigNoz has trace analytics beyond listing.
-- [ ] Trace aggregation queries (group by service, operation; aggregate by count, avg, p99)
-- [ ] Trace analytics charts (e.g. error rate by service over time)
-- [ ] Slow trace identification / top-N slowest
+- [x] Trace aggregation queries (group by service/route/operation; count, avg, p95, p99, error rate)
+- [x] Trace analytics charts (count/p95/error-rate over time, top-8 groups)
+- [x] Slow trace identification / top-N slowest
 - [ ] Cross-service latency breakdown visualization
 
 #### Database Monitoring
