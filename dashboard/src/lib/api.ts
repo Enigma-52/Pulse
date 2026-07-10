@@ -664,3 +664,21 @@ export async function fetchExceptionTimeseries(fingerprint: string, minutes = 15
   const data: { points: ExceptionBucket[] } = await res.json();
   return data.points || [];
 }
+
+// ── Usage / settings ────────────────────────────────────────────────────
+
+export interface UsageStat {
+  signal: string;
+  rows: number;
+  bytes: number;
+  oldest: string;
+  newest: string;
+  retention_days: number;
+}
+
+export async function fetchUsage(): Promise<UsageStat[]> {
+  const res = await fetch(`${API_BASE}/usage`, { headers: authHeaders() });
+  if (!res.ok) return [];
+  const data: { items: UsageStat[] } = await res.json();
+  return data.items || [];
+}

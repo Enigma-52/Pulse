@@ -11,6 +11,7 @@ const nav = [
   { to: "/app/databases", label: "Databases", icon: Database },
   { to: "/app/metrics", label: "Metrics", icon: BarChart3 },
   { to: "/app/alerts", label: "Alerts", icon: Bell },
+  { to: "/app/settings", label: "Settings", icon: Settings },
 ];
 
 export default function AppLayout() {

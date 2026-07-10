@@ -56,9 +56,9 @@ Organized by priority. Each section lists what SigNoz has that Pulse does not.
 - [x] SDK support: any language with an OTel SDK (JavaScript, Python, Java, Ruby, Go, .NET)
 
 #### Data Retention and Management
-- [ ] Configurable retention policies per signal (traces, logs, metrics)
-- [ ] TTL-based ClickHouse table cleanup
-- [ ] Data volume / usage dashboard
+- [x] Configurable retention policies per signal (PULSE_RETENTION_*_DAYS env vars)
+- [x] TTL-based ClickHouse table cleanup
+- [x] Data volume / usage dashboard (Settings page)
 
 ### P1 — Important Gaps (needed for serious adoption)
 
