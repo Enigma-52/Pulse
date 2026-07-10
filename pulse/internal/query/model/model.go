@@ -222,6 +222,24 @@ type DatabaseOverviewResponse struct {
 	Throughput []DatabaseThroughputPoint `json:"throughput"`
 }
 
+// Trace analytics models
+
+type TraceAnalyticsRow struct {
+	Group      string  `json:"group"`
+	TraceCount uint64  `json:"trace_count"`
+	AvgMs      float64 `json:"avg_ms"`
+	P95Ms      float64 `json:"p95_ms"`
+	P99Ms      float64 `json:"p99_ms"`
+	ErrorCount uint64  `json:"error_count"`
+	ErrorRate  float64 `json:"error_rate"`
+}
+
+type TraceAnalyticsPoint struct {
+	Timestamp time.Time `json:"timestamp"`
+	Group     string    `json:"group"`
+	Value     float64   `json:"value"`
+}
+
 // Exception models
 
 type ExceptionGroup struct {
