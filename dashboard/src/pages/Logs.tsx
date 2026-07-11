@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import type { LogLevel, Log } from "@/lib/mockData";
 import { fetchLogs } from "@/lib/api";
 import TimeRangeSelector, { type TimeRange, rangeToStartEnd, rangeToLabel, SHORT_RANGES } from "@/components/TimeRangeSelector";
+import { useGlobalTimeRange } from "@/lib/timeRange";
 import AutoRefreshPicker from "@/components/AutoRefreshPicker";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 
@@ -56,7 +57,7 @@ export default function Logs() {
   const [loading, setLoading] = useState(true);
   const [activeLevel, setActiveLevel] = useState<LogLevel | null>(null);
   const [search, setSearch] = useState("");
-  const [range, setRange] = useState<TimeRange>("15m");
+  const { range, setRange } = useGlobalTimeRange();
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("stream");
   const [expandedGroup, setExpandedGroup] = useState<string | null>(null);

@@ -1,8 +1,11 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import TraceAnalytics from "@/components/TraceAnalytics";
+import EmptyState from "@/components/EmptyState";
+import { GitBranch } from "lucide-react";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Cell } from "recharts";
 import TimeRangeSelector, { type TimeRange, rangeToStartEnd, rangeToLabel, SHORT_RANGES } from "@/components/TimeRangeSelector";
+import { useGlobalTimeRange } from "@/lib/timeRange";
 import AutoRefreshPicker from "@/components/AutoRefreshPicker";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import type { Trace } from "@/lib/mockData";
@@ -37,7 +40,7 @@ export default function Traces() {
   const view = searchParams.get("view") === "analytics" ? "analytics" : "list";
   const [traces, setTraces] = useState<Trace[]>([]);
   const [loading, setLoading] = useState(true);
-  const [range, setRange] = useState<TimeRange>("15m");
+  const { range, setRange } = useGlobalTimeRange();
   const [serviceFilter, setServiceFilter] = useState(searchParams.get("service") || "");
   const [statusFilter, setStatusFilter] = useState("");
 
@@ -206,7 +209,13 @@ export default function Traces() {
               </tr>
             ) : traces.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-5 py-10 text-center text-sm text-muted-foreground">No traces found</td>
+                <td colSpan={6}>
+                  <EmptyState
+                    icon={GitBranch}
+                    title="No traces in this time range"
+                    hint="Point any OpenTelemetry SDK's OTLP/HTTP exporter at http://<pulse-host>:4321/v1/traces to start seeing traces here."
+                  />
+                </td>
               </tr>
             ) : traces.map(t => (
               <tr key={t.id} className="border-b border-border last:border-0 hover:bg-secondary/40 transition-colors">

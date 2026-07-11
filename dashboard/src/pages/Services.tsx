@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { fetchServicesList, type ServiceSummary } from "@/lib/api";
 import TimeRangeSelector, { type TimeRange, rangeToMinutes, rangeToLabel, SHORT_RANGES } from "@/components/TimeRangeSelector";
+import { useGlobalTimeRange } from "@/lib/timeRange";
 import AutoRefreshPicker from "@/components/AutoRefreshPicker";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import { serviceColor, status as statusColors } from "@/lib/colors";
@@ -9,7 +10,7 @@ import { serviceColor, status as statusColors } from "@/lib/colors";
 export default function Services() {
   const [services, setServices] = useState<ServiceSummary[]>([]);
   const [loading, setLoading] = useState(true);
-  const [range, setRange] = useState<TimeRange>("15m");
+  const { range, setRange } = useGlobalTimeRange();
 
   const load = useCallback(() => {
     fetchServicesList(rangeToMinutes(range))

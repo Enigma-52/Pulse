@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { Search } from "lucide-react";
 import { fetchExceptions, type ExceptionGroup } from "@/lib/api";
 import TimeRangeSelector, { type TimeRange, rangeToMinutes, rangeToLabel, SHORT_RANGES } from "@/components/TimeRangeSelector";
+import { useGlobalTimeRange } from "@/lib/timeRange";
 import AutoRefreshPicker from "@/components/AutoRefreshPicker";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import { serviceColor } from "@/lib/colors";
@@ -18,7 +19,7 @@ function relTime(ts: string) {
 export default function Exceptions() {
   const [groups, setGroups] = useState<ExceptionGroup[]>([]);
   const [loading, setLoading] = useState(true);
-  const [range, setRange] = useState<TimeRange>("1h");
+  const { range, setRange } = useGlobalTimeRange();
   const [search, setSearch] = useState("");
   const [query, setQuery] = useState("");
 

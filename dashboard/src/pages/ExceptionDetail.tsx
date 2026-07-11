@@ -9,6 +9,7 @@ import {
   type ExceptionBucket,
 } from "@/lib/api";
 import TimeRangeSelector, { type TimeRange, rangeToMinutes, rangeToInterval, SHORT_RANGES } from "@/components/TimeRangeSelector";
+import { useGlobalTimeRange } from "@/lib/timeRange";
 import { status, serviceColor } from "@/lib/colors";
 
 function Stat({ label, value }: { label: string; value: string }) {
@@ -31,7 +32,7 @@ export default function ExceptionDetail() {
   const [detail, setDetail] = useState<ExceptionDetailData | null>(null);
   const [buckets, setBuckets] = useState<ExceptionBucket[]>([]);
   const [loading, setLoading] = useState(true);
-  const [range, setRange] = useState<TimeRange>("1h");
+  const { range, setRange } = useGlobalTimeRange();
 
   const load = useCallback(() => {
     if (!fingerprint) return;

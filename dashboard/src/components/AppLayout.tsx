@@ -2,6 +2,8 @@ import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { Activity, BarChart3, Bell, Bug, Database, GitBranch, Globe, Home, LogOut, ScrollText, Settings, Server, Terminal } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import GlobalSearch from "@/components/GlobalSearch";
+import TimeRangeSelector, { SHORT_RANGES } from "@/components/TimeRangeSelector";
+import { useGlobalTimeRange } from "@/lib/timeRange";
 
 const nav = [
   { to: "/app", label: "Overview", icon: Home, end: true },
@@ -21,6 +23,7 @@ export default function AppLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const { logout } = useAuth();
+  const { range, setRange } = useGlobalTimeRange();
   const crumb = location.pathname.split("/").filter(Boolean).slice(1);
 
   return (
@@ -96,9 +99,7 @@ export default function AppLayout() {
 
           <div className="ml-auto flex items-center gap-3">
             <GlobalSearch />
-            <button className="h-8 px-3 text-xs font-medium rounded bg-secondary border border-border hover:border-ring">
-              Last 15m
-            </button>
+            <TimeRangeSelector value={range} onChange={setRange} ranges={SHORT_RANGES} />
             <div className="w-7 h-7 rounded-full bg-accent border border-border flex items-center justify-center text-xs font-medium">
               EM
             </div>

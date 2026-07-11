@@ -4,11 +4,12 @@ import { ArrowLeft } from "lucide-react";
 import { ResponsiveContainer, AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ComposedChart, Line } from "recharts";
 import { fetchDatabaseOverview, fetchDatabaseQueries, type DatabaseOverviewData, type DatabaseOperation } from "@/lib/api";
 import TimeRangeSelector, { type TimeRange, rangeToMinutes, rangeToLabel, SHORT_RANGES } from "@/components/TimeRangeSelector";
+import { useGlobalTimeRange } from "@/lib/timeRange";
 import { fmtMs, chart as chartColors, status as statusColors } from "@/lib/colors";
 
 export default function DatabaseDetail() {
   const { system } = useParams();
-  const [range, setRange] = useState<TimeRange>("15m");
+  const { range, setRange } = useGlobalTimeRange();
   const [overview, setOverview] = useState<DatabaseOverviewData | null>(null);
   const [queries, setQueries] = useState<DatabaseOperation[]>([]);
   const [loading, setLoading] = useState(true);

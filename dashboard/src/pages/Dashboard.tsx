@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 import TimeRangeSelector, { type TimeRange, rangeToMinutes, rangeToLabel, rangeToStartEnd, rangeToInterval } from "@/components/TimeRangeSelector";
+import { useGlobalTimeRange } from "@/lib/timeRange";
 import type { Trace } from "@/lib/mockData";
 import { fetchTraces, fetchDashboardSummary, fetchMetricSeries, type DashboardData } from "@/lib/api";
 import { Link } from "react-router-dom";
@@ -12,7 +13,7 @@ export default function Dashboard() {
   const [summary, setSummary] = useState<DashboardData | null>(null);
   const [traces, setTraces] = useState<Trace[]>([]);
   const [reqSeries, setReqSeries] = useState<{ t: string; value: number }[]>([]);
-  const [range, setRange] = useState<TimeRange>("15m");
+  const { range, setRange } = useGlobalTimeRange();
 
   const load = useCallback((r: TimeRange) => {
     const minutes = rangeToMinutes(r);

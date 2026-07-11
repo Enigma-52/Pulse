@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { fetchDatabasesList, type DatabaseSummary } from "@/lib/api";
 import TimeRangeSelector, { type TimeRange, rangeToMinutes, rangeToLabel, SHORT_RANGES } from "@/components/TimeRangeSelector";
+import { useGlobalTimeRange } from "@/lib/timeRange";
 import AutoRefreshPicker from "@/components/AutoRefreshPicker";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import { fmtMs } from "@/lib/colors";
@@ -26,7 +27,7 @@ function dbBadge(system: string) {
 export default function Databases() {
   const [databases, setDatabases] = useState<DatabaseSummary[]>([]);
   const [loading, setLoading] = useState(true);
-  const [range, setRange] = useState<TimeRange>("15m");
+  const { range, setRange } = useGlobalTimeRange();
 
   const load = useCallback(() => {
     fetchDatabasesList(rangeToMinutes(range))

@@ -5,6 +5,7 @@ import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianG
 import { fetchMetrics, fetchMetricSeries } from "@/lib/api";
 import type { Metric } from "@/lib/mockData";
 import TimeRangeSelector, { type TimeRange, TIME_RANGES, rangeToMinutes, rangeToInterval, rangeToLabel } from "@/components/TimeRangeSelector";
+import { useGlobalTimeRange } from "@/lib/timeRange";
 import AutoRefreshPicker from "@/components/AutoRefreshPicker";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import { chart as chartColors, fmtMs } from "@/lib/colors";
@@ -21,7 +22,7 @@ export default function MetricDetail() {
   const [metric, setMetric] = useState<Metric | null>(null);
   const [series, setSeries] = useState<{ t: string; value: number }[]>([]);
   const [loading, setLoading] = useState(true);
-  const [range, setRange] = useState<TimeRange>("1h");
+  const { range, setRange } = useGlobalTimeRange();
 
   const loadSeries = useCallback((m: Metric, r: TimeRange) => {
     const minutes = rangeToMinutes(r);

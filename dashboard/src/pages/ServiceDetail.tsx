@@ -3,12 +3,13 @@ import { Link, useParams } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import type { Trace, Log } from "@/lib/mockData";
 import TimeRangeSelector, { type TimeRange, rangeToStartEnd, rangeToLabel, rangeToMinutes, SHORT_RANGES } from "@/components/TimeRangeSelector";
+import { useGlobalTimeRange } from "@/lib/timeRange";
 import { fetchTraces, fetchLogs, fetchServicesList, fetchTraceAnalytics, fetchExternalCalls, type ServiceSummary, type TraceAnalyticsRow, type ExternalCallSummary } from "@/lib/api";
 import { fmtMs } from "@/lib/colors";
 
 export default function ServiceDetail() {
   const { id } = useParams();
-  const [range, setRange] = useState<TimeRange>("15m");
+  const { range, setRange } = useGlobalTimeRange();
   const [recentTraces, setRecentTraces] = useState<Trace[]>([]);
   const [recentLogs, setRecentLogs] = useState<Log[]>([]);
   const [svc, setSvc] = useState<ServiceSummary | null>(null);
