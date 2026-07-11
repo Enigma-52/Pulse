@@ -748,3 +748,21 @@ export async function fetchSlowestTraces(params?: { service?: string; minutes?: 
   const data: { items: SlowTrace[] } = await res.json();
   return data.items || [];
 }
+
+// ── Global search ───────────────────────────────────────────────────────
+
+export interface SearchResult {
+  type: "trace" | "service" | "log" | "metric" | "exception";
+  id: string;
+  title: string;
+  subtitle: string;
+  timestamp: string;
+}
+
+export async function searchAll(q: string, minutes = 60): Promise<SearchResult[]> {
+  const search = new URLSearchParams({ q, minutes: String(minutes) });
+  const res = await fetch(`${API_BASE}/search?${search}`, { headers: authHeaders() });
+  if (!res.ok) return [];
+  const data: { results: SearchResult[] } = await res.json();
+  return data.results || [];
+}

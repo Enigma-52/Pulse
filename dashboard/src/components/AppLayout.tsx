@@ -1,6 +1,7 @@
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { Activity, BarChart3, Bell, Bug, Database, GitBranch, Home, LogOut, ScrollText, Search, Settings, Server } from "lucide-react";
 import { useAuth } from "@/lib/auth";
+import GlobalSearch from "@/components/GlobalSearch";
 
 const nav = [
   { to: "/app", label: "Overview", icon: Home, end: true },
@@ -92,14 +93,7 @@ export default function AppLayout() {
           </nav>
 
           <div className="ml-auto flex items-center gap-3">
-            <div className="relative">
-              <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
-              <input
-                placeholder="Search traces, logs, metrics…"
-                className="h-8 w-72 pl-8 pr-12 text-sm rounded bg-secondary border border-border focus:outline-none focus:border-ring placeholder:text-muted-foreground"
-              />
-              <kbd className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-mono text-muted-foreground border border-border px-1 rounded">⌘K</kbd>
-            </div>
+            <GlobalSearch />
             <button className="h-8 px-3 text-xs font-medium rounded bg-secondary border border-border hover:border-ring">
               Last 15m
             </button>
