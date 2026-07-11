@@ -222,6 +222,18 @@ type DatabaseOverviewResponse struct {
 	Throughput []DatabaseThroughputPoint `json:"throughput"`
 }
 
+// External call models
+
+type ExternalCallSummary struct {
+	Host       string    `json:"host"`
+	CallCount  uint64    `json:"call_count"`
+	ErrorCount uint64    `json:"error_count"`
+	ErrorRate  float64   `json:"error_rate"`
+	AvgMs      float64   `json:"avg_ms"`
+	P95Ms      float64   `json:"p95_ms"`
+	LastSeen   time.Time `json:"last_seen"`
+}
+
 // Trace analytics models
 
 type TraceAnalyticsRow struct {
