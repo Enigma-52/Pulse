@@ -108,7 +108,7 @@ Supported databases in SigNoz: PostgreSQL, MySQL, MongoDB, Redis, ClickHouse.
 SigNoz has a powerful flexible query engine. Pulse has basic text search and fixed metric queries.
 - [ ] Visual query builder with aggregation, group-by, filters
 - [ ] PromQL support for metric queries
-- [ ] ClickHouse SQL pass-through for advanced users
+- [x] ClickHouse SQL pass-through for advanced users (guarded: SELECT-only, readonly=1, 1000-row cap, Explore page)
 - [ ] Formula-based derived metrics (rate, ratio, arithmetic between queries)
 - [ ] Time comparisons (compare current window to previous period)
 - [ ] Multi-query panels (overlay multiple series)
@@ -125,7 +125,7 @@ SigNoz's strongest capability — seamless navigation between all signals. Pulse
 - [ ] Service → Traces (view all traces for a service, already partial)
 - [ ] Endpoint → Metrics (view latency/error metrics for a specific route)
 - [ ] Metric → Trace exemplars (click a metric data point to see example traces)
-- [ ] Unified cross-signal search (single search bar across traces, logs, metrics)
+- [x] Unified cross-signal search (header search bar across traces, logs, metrics, services, exceptions)
 
 #### LLM / AI Observability
 SigNoz has dedicated AI/LLM monitoring. Pulse has no AI-specific features.

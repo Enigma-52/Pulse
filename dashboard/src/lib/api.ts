@@ -766,3 +766,22 @@ export async function searchAll(q: string, minutes = 60): Promise<SearchResult[]
   const data: { results: SearchResult[] } = await res.json();
   return data.results || [];
 }
+
+// ── SQL explore ─────────────────────────────────────────────────────────
+
+export interface RawQueryResult {
+  columns: string[];
+  rows: unknown[][];
+  row_count: number;
+}
+
+export async function runSQL(query: string): Promise<{ result?: RawQueryResult; error?: string }> {
+  const res = await fetch(`${API_BASE}/query/sql`, {
+    method: "POST",
+    headers: { ...authHeaders(), "Content-Type": "application/json" },
+    body: JSON.stringify({ query }),
+  });
+  const data = await res.json().catch(() => null);
+  if (!res.ok) return { error: data?.error || `Query failed (${res.status})` };
+  return { result: data as RawQueryResult };
+}
