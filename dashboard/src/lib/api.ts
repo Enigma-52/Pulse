@@ -785,3 +785,27 @@ export async function runSQL(query: string): Promise<{ result?: RawQueryResult; 
   if (!res.ok) return { error: data?.error || `Query failed (${res.status})` };
   return { result: data as RawQueryResult };
 }
+
+// ── External calls ──────────────────────────────────────────────────────
+
+export interface ExternalCallSummary {
+  host: string;
+  call_count: number;
+  error_count: number;
+  error_rate: number;
+  avg_ms: number;
+  p95_ms: number;
+  last_seen: string;
+}
+
+export async function fetchExternalCalls(params?: { service?: string; minutes?: number }): Promise<ExternalCallSummary[]> {
+  const search = new URLSearchParams();
+  if (params?.minutes) search.set("minutes", String(params.minutes));
+  const base = params?.service
+    ? `${API_BASE}/services/${encodeURIComponent(params.service)}/external`
+    : `${API_BASE}/external`;
+  const res = await fetch(`${base}?${search}`, { headers: authHeaders() });
+  if (!res.ok) return [];
+  const data: { items: ExternalCallSummary[] } = await res.json();
+  return data.items || [];
+}

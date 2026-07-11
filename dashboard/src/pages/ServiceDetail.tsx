@@ -3,7 +3,8 @@ import { Link, useParams } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import type { Trace, Log } from "@/lib/mockData";
 import TimeRangeSelector, { type TimeRange, rangeToStartEnd, rangeToLabel, rangeToMinutes, SHORT_RANGES } from "@/components/TimeRangeSelector";
-import { fetchTraces, fetchLogs, fetchServicesList, type ServiceSummary } from "@/lib/api";
+import { fetchTraces, fetchLogs, fetchServicesList, fetchTraceAnalytics, fetchExternalCalls, type ServiceSummary, type TraceAnalyticsRow, type ExternalCallSummary } from "@/lib/api";
+import { fmtMs } from "@/lib/colors";
 
 export default function ServiceDetail() {
   const { id } = useParams();
@@ -11,6 +12,8 @@ export default function ServiceDetail() {
   const [recentTraces, setRecentTraces] = useState<Trace[]>([]);
   const [recentLogs, setRecentLogs] = useState<Log[]>([]);
   const [svc, setSvc] = useState<ServiceSummary | null>(null);
+  const [endpoints, setEndpoints] = useState<TraceAnalyticsRow[]>([]);
+  const [externalCalls, setExternalCalls] = useState<ExternalCallSummary[]>([]);
 
   const loadData = useCallback((r: TimeRange) => {
     if (!id) return;
@@ -22,6 +25,8 @@ export default function ServiceDetail() {
       const found = services.find(s => s.service === id);
       if (found) setSvc(found);
     });
+    fetchTraceAnalytics({ groupBy: "route", service: id, minutes }).then(setEndpoints);
+    fetchExternalCalls({ service: id, minutes }).then(setExternalCalls);
   }, [id]);
 
   useEffect(() => {
@@ -106,6 +111,70 @@ export default function ServiceDetail() {
             </div>
           )}
         </div>
+
+        <div className="panel">
+          <div className="px-5 py-3 border-b border-border">
+            <div className="data-label">Endpoints</div>
+          </div>
+          {endpoints.length === 0 ? (
+            <div className="px-5 py-6 text-xs text-muted-foreground">No routes recorded in this window.</div>
+          ) : (
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="text-left text-muted-foreground border-b border-border">
+                  <th className="px-5 py-2 font-medium text-[10px] uppercase tracking-wider">Route</th>
+                  <th className="px-5 py-2 font-medium text-[10px] uppercase tracking-wider text-right">Spans</th>
+                  <th className="px-5 py-2 font-medium text-[10px] uppercase tracking-wider text-right">p95</th>
+                  <th className="px-5 py-2 font-medium text-[10px] uppercase tracking-wider text-right">Error rate</th>
+                </tr>
+              </thead>
+              <tbody>
+                {endpoints.slice(0, 10).map((e) => {
+                  const errClass = e.error_rate > 5 ? "text-status-error" : e.error_rate > 1 ? "text-status-warn" : "text-muted-foreground";
+                  return (
+                    <tr key={e.group} className="border-b border-border last:border-0 hover:bg-secondary/40">
+                      <td className="px-5 py-2 font-mono max-w-[280px] truncate">{e.group}</td>
+                      <td className="px-5 py-2 font-mono text-right">{e.trace_count.toLocaleString()}</td>
+                      <td className="px-5 py-2 font-mono text-right text-muted-foreground">{fmtMs(e.p95_ms)}</td>
+                      <td className={`px-5 py-2 font-mono text-right ${errClass}`}>{e.error_rate.toFixed(2)}%</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
+        </div>
+
+        {externalCalls.length > 0 && (
+          <div className="panel">
+            <div className="px-5 py-3 border-b border-border">
+              <div className="data-label">External calls</div>
+            </div>
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="text-left text-muted-foreground border-b border-border">
+                  <th className="px-5 py-2 font-medium text-[10px] uppercase tracking-wider">Host</th>
+                  <th className="px-5 py-2 font-medium text-[10px] uppercase tracking-wider text-right">Calls</th>
+                  <th className="px-5 py-2 font-medium text-[10px] uppercase tracking-wider text-right">p95</th>
+                  <th className="px-5 py-2 font-medium text-[10px] uppercase tracking-wider text-right">Error rate</th>
+                </tr>
+              </thead>
+              <tbody>
+                {externalCalls.slice(0, 10).map((c) => {
+                  const errClass = c.error_rate > 5 ? "text-status-error" : c.error_rate > 1 ? "text-status-warn" : "text-muted-foreground";
+                  return (
+                    <tr key={c.host} className="border-b border-border last:border-0 hover:bg-secondary/40">
+                      <td className="px-5 py-2 font-mono max-w-[280px] truncate">{c.host}</td>
+                      <td className="px-5 py-2 font-mono text-right">{c.call_count.toLocaleString()}</td>
+                      <td className="px-5 py-2 font-mono text-right text-muted-foreground">{fmtMs(c.p95_ms)}</td>
+                      <td className={`px-5 py-2 font-mono text-right ${errClass}`}>{c.error_rate.toFixed(2)}%</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
 
         <div className="panel">
           <div className="px-5 py-3 border-b border-border flex items-center justify-between">
