@@ -29,34 +29,55 @@ const features = [
   },
   {
     n: "05",
+    t: "Alerting",
+    d: "Threshold rules on traces, logs, and metrics evaluated continuously. Firing and resolved states with Slack and webhook notifications built in.",
+    tags: ["thresholds", "slack", "webhooks"],
+    accent: "error",
+  },
+  {
+    n: "06",
+    t: "Exception Monitoring",
+    d: "Auto-captured from OTel exception events and grouped by fingerprint. Stack traces, frequency charts, and one-click jumps to the originating trace.",
+    tags: ["fingerprints", "stacktraces", "grouping"],
+    accent: "error",
+  },
+  {
+    n: "07",
     t: "Service Map",
     d: "All instrumented services at a glance. Latency percentiles (p50/p95/p99), error rates, request counts, and last-seen timestamps.",
     tags: ["p99", "error-rate", "services"],
     accent: "trace",
   },
   {
-    n: "06",
+    n: "08",
     t: "OTLP Native",
     d: "Accepts OTLP/HTTP with protobuf and JSON. No custom SDK needed — point any standard OpenTelemetry exporter at Pulse and go.",
     tags: ["otlp", "protobuf", "json"],
     accent: "log",
   },
   {
-    n: "07",
+    n: "09",
     t: "Single Binary",
     d: "One Go process handles OTLP ingestion, in-process pipeline, ClickHouse writing, and the query API. All on port 4321.",
     tags: ["go", "port-4321", "pipeline"],
     accent: "metric",
   },
   {
-    n: "08",
+    n: "10",
     t: "ClickHouse Storage",
     d: "Columnar storage built for observability workloads. Full OTLP fidelity — resource attributes, scope, links, events all preserved.",
     tags: ["columnar", "full-fidelity"],
     accent: "metric",
   },
   {
-    n: "09",
+    n: "11",
+    t: "Retention & Analytics",
+    d: "Per-signal TTL retention with a live data-usage view. Trace analytics with group-by breakdowns, error-rate charts, and ad hoc SQL exploring.",
+    tags: ["ttl", "sql-explore", "analytics"],
+    accent: "log",
+  },
+  {
+    n: "12",
     t: "One-Command Deploy",
     d: "Two containers: Pulse and ClickHouse. Docker Compose up and you're running. From clone to first trace in under a minute.",
     tags: ["docker", "self-hosted"],
@@ -87,8 +108,8 @@ const Features = () => (
             <span className="italic text-muted-foreground">Nothing you don't.</span>
           </h2>
           <p className="mt-6 text-lg text-muted-foreground max-w-2xl">
-            Traces, logs, metrics, and database monitoring in one platform — without the operational
-            overhead, the licensing math, or the vendor lock-in.
+            Traces, logs, metrics, exceptions, alerting, and database monitoring in one platform —
+            without the operational overhead, the licensing math, or the vendor lock-in.
           </p>
         </div>
       </div>

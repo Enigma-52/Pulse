@@ -1,7 +1,7 @@
 const stats = [
   { k: "2", l: "Containers to run the full stack" },
   { k: "4321", l: "One port for all telemetry" },
-  { k: "0", l: "Agents or collectors needed" },
+  { k: "6", l: "Signals: traces, logs, metrics, exceptions, alerts, db" },
   { k: "100%", l: "Open source, self-hosted" },
 ];
 
