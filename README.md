@@ -25,8 +25,13 @@ Most observability tools are either expensive SaaS or painfully complex to self-
 - **Distributed Tracing** — flamegraph, waterfall view, service breakdown, span attributes
 - **Log Management** — stream and grouped views, level filters, search, trace correlation
 - **Metrics** — time-series charts, per-service breakdown, queryable explorer
+- **Trace Analytics** — group-by breakdowns (service/route/operation), error-rate charts, top-N slowest traces
 - **Database Monitoring** — auto-detects PostgreSQL, MySQL, MongoDB, Redis queries from traces with slow query tracking
+- **External Call Monitoring** — outbound HTTP latency and error rates per remote host, derived from client spans
 - **Service Overview** — all instrumented services with latency percentiles, error rates, request counts
+- **Unified Search** — one search bar across traces, logs, metrics, services, and exceptions
+- **SQL Explore** — guarded read-only ClickHouse SQL over all your telemetry
+- **Retention** — per-signal TTL cleanup with a live data-usage view
 - **Works With Any Language** — accepts standard OpenTelemetry data from Node.js, Python, Go, Java, .NET, and more
 
 ## Get Started

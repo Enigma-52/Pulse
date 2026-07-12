@@ -33,9 +33,11 @@ go run ./cmd/pulse
 Pulse listens on `http://localhost:4321` and serves:
 
 - **OTLP ingest**: `POST /v1/traces`, `/v1/logs`, `/v1/metrics` (protobuf + JSON)
-- **Query API**: `GET /traces`, `/logs`, `/metrics`, `/services`, `/dashboard/summary`
+- **Query API**: `GET /traces`, `/logs`, `/metrics`, `/services`, `/exceptions`, `/databases`, `/external`, `/alerts`, `/search`, `/usage`, `/dashboard/summary`, `POST /query/sql`
 - **Auth**: `/auth/setup`, `/auth/login`
-- **Health**: `GET /healthz`
+- **Health**: `GET /healthz` (liveness), `GET /readyz` (ClickHouse readiness)
+
+Useful env vars while developing: `PULSE_JWT_SECRET`, `PULSE_PIPELINE_CAP`, `PULSE_INGEST_RPS`, `PULSE_ALERT_EVAL_INTERVAL_SECONDS`, `PULSE_RETENTION_{TRACES,LOGS,METRICS,EXCEPTIONS}_DAYS` — see [architecture.md](architecture.md#configuration).
 
 ### 3. Run the product dashboard frontend (`dashboard`)
 

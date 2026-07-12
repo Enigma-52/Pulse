@@ -83,8 +83,8 @@ Pulse monitors applications only. SigNoz also monitors infrastructure.
 #### OpenTelemetry Collector Compatibility
 - [x] OTLP/HTTP receiver endpoint on ingestion service
 - [x] Accept standard OTel resource attributes
-- [ ] OTLP/gRPC receiver endpoint on ingestion service
-- [ ] Support OTel Collector as a data forwarder
+- [ ] OTLP/gRPC receiver endpoint — deferred by design: grpc-go dependency + a second port (4317) is not justified while OTLP/HTTP covers every OTel SDK and the Collector's `otlphttp` exporter; revisit if users ask
+- [x] Support OTel Collector as a data forwarder (via the Collector's otlphttp exporter)
 - [ ] Semantic convention mapping for attributes
 
 #### Trace Aggregation and Analytics
