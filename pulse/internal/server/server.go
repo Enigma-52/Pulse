@@ -34,6 +34,7 @@ func New(ih *ingest.Handler, qh *handler.Handler) http.Handler {
 	protected.HandleFunc("/traces/slowest", qh.HandleSlowestTraces).Methods(http.MethodGet, http.MethodOptions)
 	protected.HandleFunc("/traces/{trace_id}", qh.HandleTraceDetail).Methods(http.MethodGet, http.MethodOptions)
 	protected.HandleFunc("/logs", qh.HandleLogs).Methods(http.MethodGet, http.MethodOptions)
+	protected.HandleFunc("/logs/histogram", qh.HandleLogsHistogram).Methods(http.MethodGet, http.MethodOptions)
 	protected.HandleFunc("/services", qh.HandleServicesList).Methods(http.MethodGet, http.MethodOptions)
 	protected.HandleFunc("/services/{service}/overview", qh.HandleServiceOverview).Methods(http.MethodGet, http.MethodOptions)
 	protected.HandleFunc("/services/{service}/external", qh.HandleExternalCalls).Methods(http.MethodGet, http.MethodOptions)

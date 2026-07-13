@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/pulse-observability/pulse/pulse/internal/query/model"
 )
@@ -31,15 +32,23 @@ func (h *Handler) HandleLogs(w http.ResponseWriter, r *http.Request) {
 func parseLogFilters(r *http.Request) (model.LogFilters, error) {
 	q := r.URL.Query()
 	filters := model.LogFilters{
-		Service: q.Get("service"), Level: q.Get("level"),
+		Service: q.Get("service"), Environment: q.Get("environment"),
 		Search: q.Get("search"), TraceID: q.Get("trace_id"),
 		Limit: model.DefaultLimit, Offset: 0,
 	}
 
-	if filters.Level != "" {
-		valid := map[string]bool{"debug": true, "info": true, "warn": true, "error": true}
-		if !valid[filters.Level] {
-			return filters, errors.New("invalid level: must be debug, info, warn, or error")
+	// level accepts a comma-separated list, e.g. level=error,warn
+	if raw := q.Get("level"); raw != "" {
+		valid := map[string]bool{"trace": true, "debug": true, "info": true, "warn": true, "error": true, "fatal": true}
+		for _, lv := range strings.Split(raw, ",") {
+			lv = strings.TrimSpace(lv)
+			if lv == "" {
+				continue
+			}
+			if !valid[lv] {
+				return filters, errors.New("invalid level: must be trace, debug, info, warn, error, or fatal")
+			}
+			filters.Levels = append(filters.Levels, lv)
 		}
 	}
 	if v := q.Get("start"); v != "" {
@@ -79,4 +88,28 @@ func parseLogFilters(r *http.Request) (model.LogFilters, error) {
 		filters.Offset = n
 	}
 	return filters, nil
+}
+
+func (h *Handler) HandleLogsHistogram(w http.ResponseWriter, r *http.Request) {
+	filters, err := parseLogFilters(r)
+	if err != nil {
+		writeJSONError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	interval := 1
+	if v := r.URL.Query().Get("interval"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			interval = n
+		}
+	}
+
+	points, err := h.Store.GetLogsHistogram(context.Background(), filters, interval)
+	if err != nil {
+		writeJSONError(w, http.StatusInternalServerError, "failed to query logs histogram")
+		return
+	}
+	if points == nil {
+		points = []model.LogHistogramPoint{}
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"points": points})
 }

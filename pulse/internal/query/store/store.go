@@ -364,13 +364,20 @@ FROM logs WHERE 1=1
 		sb.WriteString(" AND service = ?")
 		args = append(args, filters.Service)
 	}
-	if filters.Level != "" {
-		sb.WriteString(" AND level = ?")
-		args = append(args, filters.Level)
+	if len(filters.Levels) > 0 {
+		placeholders := strings.TrimSuffix(strings.Repeat("?, ", len(filters.Levels)), ", ")
+		sb.WriteString(" AND level IN (" + placeholders + ")")
+		for _, lv := range filters.Levels {
+			args = append(args, lv)
+		}
+	}
+	if filters.Environment != "" {
+		sb.WriteString(" AND environment = ?")
+		args = append(args, filters.Environment)
 	}
 	if filters.Search != "" {
-		sb.WriteString(" AND position(message, ?) > 0")
-		args = append(args, filters.Search)
+		sb.WriteString(" AND (position(message, ?) > 0 OR position(attributes_json, ?) > 0)")
+		args = append(args, filters.Search, filters.Search)
 	}
 	if filters.TraceID != "" {
 		sb.WriteString(" AND trace_id = ?")
@@ -438,4 +445,65 @@ FROM traces WHERE parent_span_id = ''
 	sb.WriteString(" ORDER BY start_time DESC LIMIT ? OFFSET ?")
 	args = append(args, filters.Limit, filters.Offset)
 	return sb.String(), args
+}
+
+// GetLogsHistogram buckets log counts per level over time using the same
+// filters as the log list (limit/offset ignored).
+func (s *Store) GetLogsHistogram(ctx context.Context, filters model.LogFilters, intervalMinutes int) ([]model.LogHistogramPoint, error) {
+	if intervalMinutes <= 0 {
+		intervalMinutes = 1
+	}
+
+	var sb strings.Builder
+	args := []any{intervalMinutes}
+	sb.WriteString("SELECT toStartOfInterval(timestamp, INTERVAL ? MINUTE) AS bucket, level, count() AS c FROM logs WHERE 1=1")
+
+	if filters.Service != "" {
+		sb.WriteString(" AND service = ?")
+		args = append(args, filters.Service)
+	}
+	if len(filters.Levels) > 0 {
+		placeholders := strings.TrimSuffix(strings.Repeat("?, ", len(filters.Levels)), ", ")
+		sb.WriteString(" AND level IN (" + placeholders + ")")
+		for _, lv := range filters.Levels {
+			args = append(args, lv)
+		}
+	}
+	if filters.Environment != "" {
+		sb.WriteString(" AND environment = ?")
+		args = append(args, filters.Environment)
+	}
+	if filters.Search != "" {
+		sb.WriteString(" AND (position(message, ?) > 0 OR position(attributes_json, ?) > 0)")
+		args = append(args, filters.Search, filters.Search)
+	}
+	if filters.TraceID != "" {
+		sb.WriteString(" AND trace_id = ?")
+		args = append(args, filters.TraceID)
+	}
+	if filters.HasStart {
+		sb.WriteString(" AND timestamp >= ?")
+		args = append(args, filters.Start)
+	}
+	if filters.HasEnd {
+		sb.WriteString(" AND timestamp <= ?")
+		args = append(args, filters.End)
+	}
+	sb.WriteString(" GROUP BY bucket, level ORDER BY bucket")
+
+	rows, err := s.conn.Query(ctx, sb.String(), args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var points []model.LogHistogramPoint
+	for rows.Next() {
+		var p model.LogHistogramPoint
+		if err := rows.Scan(&p.Timestamp, &p.Level, &p.Count); err != nil {
+			return nil, err
+		}
+		points = append(points, p)
+	}
+	return points, nil
 }

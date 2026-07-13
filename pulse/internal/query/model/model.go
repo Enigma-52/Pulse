@@ -84,11 +84,18 @@ type LogsResponse struct {
 	Offset int        `json:"offset"`
 }
 
+type LogHistogramPoint struct {
+	Timestamp time.Time `json:"timestamp"`
+	Level     string    `json:"level"`
+	Count     uint64    `json:"count"`
+}
+
 type LogFilters struct {
-	Service  string
-	Level    string
-	Search   string
-	TraceID  string
+	Service     string
+	Levels      []string
+	Environment string
+	Search      string
+	TraceID     string
 	Start    time.Time
 	End      time.Time
 	HasStart bool
