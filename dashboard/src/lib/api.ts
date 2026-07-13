@@ -809,3 +809,34 @@ export async function fetchExternalCalls(params?: { service?: string; minutes?: 
   const data: { items: ExternalCallSummary[] } = await res.json();
   return data.items || [];
 }
+
+// ── Logs histogram ──────────────────────────────────────────────────────
+
+export interface LogHistogramPoint {
+  timestamp: string;
+  level: string;
+  count: number;
+}
+
+export async function fetchLogsHistogram(params?: {
+  level?: string;
+  search?: string;
+  service?: string;
+  traceId?: string;
+  start?: string;
+  end?: string;
+  interval?: number;
+}): Promise<LogHistogramPoint[]> {
+  const q = new URLSearchParams();
+  if (params?.level) q.set("level", params.level);
+  if (params?.search) q.set("search", params.search);
+  if (params?.service) q.set("service", params.service);
+  if (params?.traceId) q.set("trace_id", params.traceId);
+  if (params?.start) q.set("start", params.start);
+  if (params?.end) q.set("end", params.end);
+  if (params?.interval) q.set("interval", String(params.interval));
+  const res = await fetch(`${API_BASE}/logs/histogram?${q}`, { headers: authHeaders() });
+  if (!res.ok) return [];
+  const data: { points: LogHistogramPoint[] } = await res.json();
+  return data.points || [];
+}

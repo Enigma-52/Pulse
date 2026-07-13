@@ -1,8 +1,10 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { Link } from "react-router-dom";
 import type { LogLevel, Log } from "@/lib/mockData";
-import { fetchLogs } from "@/lib/api";
-import TimeRangeSelector, { type TimeRange, rangeToStartEnd, rangeToLabel, SHORT_RANGES } from "@/components/TimeRangeSelector";
+import { fetchLogs, fetchLogsHistogram, type LogHistogramPoint } from "@/lib/api";
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from "recharts";
+import { logLevel as logLevelColors } from "@/lib/colors";
+import TimeRangeSelector, { type TimeRange, rangeToStartEnd, rangeToLabel, rangeToInterval, SHORT_RANGES } from "@/components/TimeRangeSelector";
 import { useGlobalTimeRange } from "@/lib/timeRange";
 import AutoRefreshPicker from "@/components/AutoRefreshPicker";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
@@ -55,45 +57,51 @@ function groupErrors(logs: Log[]): ErrorGroup[] {
 export default function Logs() {
   const [logs, setLogs] = useState<Log[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeLevel, setActiveLevel] = useState<LogLevel | null>(null);
+  const [activeLevels, setActiveLevels] = useState<LogLevel[]>([]);
+  const [histogram, setHistogram] = useState<LogHistogramPoint[]>([]);
   const [search, setSearch] = useState("");
   const { range, setRange } = useGlobalTimeRange();
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("stream");
   const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
 
-  const loadLogs = useCallback(async (level?: LogLevel | null, searchQuery?: string, timeRange?: TimeRange) => {
+  const loadLogs = useCallback(async (levels?: LogLevel[], searchQuery?: string, timeRange?: TimeRange) => {
     setLoading(true);
     try {
-      const { start, end } = rangeToStartEnd(timeRange ?? range);
-      const data = await fetchLogs({
-        level: level ?? undefined,
-        search: searchQuery || undefined,
-        start,
-        end,
-      });
+      const r = timeRange ?? range;
+      const { start, end } = rangeToStartEnd(r);
+      const levelParam = levels && levels.length > 0 ? levels.join(",") : undefined;
+      const searchParam = searchQuery || undefined;
+      const [data, hist] = await Promise.all([
+        fetchLogs({ level: levelParam, search: searchParam, start, end }),
+        fetchLogsHistogram({ level: levelParam, search: searchParam, start, end, interval: rangeToInterval(r) }),
+      ]);
       setLogs(data);
+      setHistogram(hist);
     } catch {
       setLogs([]);
+      setHistogram([]);
     } finally {
       setLoading(false);
     }
   }, [range]);
 
   useEffect(() => {
-    loadLogs(activeLevel, search, range);
+    loadLogs(activeLevels, search, range);
   }, [range]);
 
-  const refresh = useAutoRefresh(() => loadLogs(activeLevel, search, range));
+  const refresh = useAutoRefresh(() => loadLogs(activeLevels, search, range));
 
   const handleLevelClick = (level: LogLevel) => {
-    const next = activeLevel === level ? null : level;
-    setActiveLevel(next);
+    const next = activeLevels.includes(level)
+      ? activeLevels.filter(l => l !== level)
+      : [...activeLevels, level];
+    setActiveLevels(next);
     loadLogs(next, search);
   };
 
   const handleRun = () => {
-    loadLogs(activeLevel, search);
+    loadLogs(activeLevels, search);
   };
 
   const handleRangeChange = (r: TimeRange) => {
@@ -108,6 +116,21 @@ export default function Logs() {
   };
 
   const errorGroups = useMemo(() => groupErrors(logs), [logs]);
+
+  const histogramData = useMemo(() => {
+    const byTime = new Map<string, Record<string, number | string>>();
+    for (const p of histogram) {
+      const key = p.timestamp;
+      if (!byTime.has(key)) {
+        byTime.set(key, {
+          time: new Date(p.timestamp).toLocaleTimeString("en-US", { hour12: false, hour: "2-digit", minute: "2-digit" }),
+        });
+      }
+      const row = byTime.get(key)!;
+      row[p.level] = ((row[p.level] as number) || 0) + p.count;
+    }
+    return Array.from(byTime.values());
+  }, [histogram]);
 
   return (
     <div className="p-6 space-y-6">
@@ -136,13 +159,31 @@ export default function Logs() {
         <button onClick={handleRun} className="h-9 px-3 text-xs font-medium rounded bg-secondary border border-border hover:border-ring">Run</button>
       </div>
 
+      {histogramData.length > 0 && (
+        <div className="panel p-4">
+          <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2">Log volume by level</div>
+          <div className="h-24">
+            <ResponsiveContainer>
+              <BarChart data={histogramData}>
+                <XAxis dataKey="time" stroke="hsl(var(--muted-foreground))" fontSize={9} tickLine={false} axisLine={false} interval="preserveStartEnd" />
+                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={9} tickLine={false} axisLine={false} width={28} allowDecimals={false} />
+                <Tooltip contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 4, fontSize: 11 }} />
+                {(["debug", "info", "warn", "error"] as const).map(lv => (
+                  <Bar key={lv} dataKey={lv} stackId="levels" fill={logLevelColors[lv].dot} fillOpacity={0.85} />
+                ))}
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      )}
+
       <div className="flex items-center justify-between">
         <div className="flex gap-2 flex-wrap">
           {(["info", "warn", "error", "debug"] as LogLevel[]).map(l => (
             <button
               key={l}
               onClick={() => handleLevelClick(l)}
-              className={`px-2.5 py-1 text-[10px] font-mono uppercase rounded border ${levelStyle[l]} hover:bg-secondary ${activeLevel === l ? "bg-secondary ring-1 ring-ring" : ""}`}
+              className={`px-2.5 py-1 text-[10px] font-mono uppercase rounded border ${levelStyle[l]} hover:bg-secondary ${activeLevels.includes(l) ? "bg-secondary ring-1 ring-ring" : ""}`}
             >
               {l} · {levelCounts[l]}
             </button>
