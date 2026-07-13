@@ -25,7 +25,11 @@ func (h *Handler) HandleTraces(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusInternalServerError, "failed to query traces")
 		return
 	}
-	writeJSON(w, http.StatusOK, model.TracesResponse{Items: traces, Limit: filters.Limit, Offset: filters.Offset})
+	total, err := h.Store.GetTracesCount(ctx, filters)
+	if err != nil {
+		total = uint64(len(traces))
+	}
+	writeJSON(w, http.StatusOK, model.TracesResponse{Items: traces, Total: total, Limit: filters.Limit, Offset: filters.Offset})
 }
 
 func (h *Handler) HandleTraceDetail(w http.ResponseWriter, r *http.Request) {
@@ -86,8 +90,15 @@ func ParseTraceFilters(r *http.Request) (model.TraceFilters, error) {
 	q := r.URL.Query()
 	filters := model.TraceFilters{
 		Service: q.Get("service"), Route: q.Get("route"), Status: q.Get("status"),
+		Environment: q.Get("environment"), Kind: q.Get("kind"), Query: q.Get("q"),
 		TagKey: q.Get("tag_key"), TagValue: q.Get("tag_value"),
 		Limit: model.DefaultLimit, Offset: 0,
+	}
+	if filters.Kind != "" {
+		valid := map[string]bool{"server": true, "client": true, "producer": true, "consumer": true, "internal": true}
+		if !valid[filters.Kind] {
+			return filters, errors.New("invalid kind")
+		}
 	}
 
 	if v := q.Get("error_only"); v != "" {

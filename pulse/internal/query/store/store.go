@@ -398,13 +398,23 @@ FROM logs WHERE 1=1
 }
 
 func buildTraceQuery(filters model.TraceFilters) (string, []any) {
-	var sb strings.Builder
-	args := make([]any, 0, 12)
-
-	sb.WriteString(`
+	where, args := buildTraceWhere(filters)
+	query := `
 SELECT trace_id, service, name, route, duration_ms, status, start_time
 FROM traces WHERE parent_span_id = ''
-`)
+` + where + " ORDER BY start_time DESC LIMIT ? OFFSET ?"
+	args = append(args, filters.Limit, filters.Offset)
+	return query, args
+}
+
+func buildTraceCountQuery(filters model.TraceFilters) (string, []any) {
+	where, args := buildTraceWhere(filters)
+	return "SELECT count() FROM traces WHERE parent_span_id = ''" + where, args
+}
+
+func buildTraceWhere(filters model.TraceFilters) (string, []any) {
+	var sb strings.Builder
+	args := make([]any, 0, 12)
 
 	if filters.Service != "" {
 		sb.WriteString(" AND service = ?")
@@ -417,6 +427,19 @@ FROM traces WHERE parent_span_id = ''
 	if filters.Status != "" {
 		sb.WriteString(" AND status = ?")
 		args = append(args, filters.Status)
+	}
+	if filters.Environment != "" {
+		sb.WriteString(" AND environment = ?")
+		args = append(args, filters.Environment)
+	}
+	if filters.Kind != "" {
+		sb.WriteString(" AND kind = ?")
+		args = append(args, filters.Kind)
+	}
+	if filters.Query != "" {
+		sb.WriteString(" AND (route ILIKE ? OR name ILIKE ?)")
+		pattern := "%" + filters.Query + "%"
+		args = append(args, pattern, pattern)
 	}
 	if filters.ErrorOnly {
 		sb.WriteString(" AND (lower(status) = 'error' OR error != '')")
@@ -442,9 +465,23 @@ FROM traces WHERE parent_span_id = ''
 		args = append(args, filters.End)
 	}
 
-	sb.WriteString(" ORDER BY start_time DESC LIMIT ? OFFSET ?")
-	args = append(args, filters.Limit, filters.Offset)
 	return sb.String(), args
+}
+
+func (s *Store) GetTracesCount(ctx context.Context, filters model.TraceFilters) (uint64, error) {
+	query, args := buildTraceCountQuery(filters)
+	rows, err := s.conn.Query(ctx, query, args...)
+	if err != nil {
+		return 0, err
+	}
+	defer rows.Close()
+	var total uint64
+	if rows.Next() {
+		if err := rows.Scan(&total); err != nil {
+			return 0, err
+		}
+	}
+	return total, nil
 }
 
 // GetLogsHistogram buckets log counts per level over time using the same

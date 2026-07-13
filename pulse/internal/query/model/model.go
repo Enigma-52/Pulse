@@ -54,6 +54,7 @@ type TraceDetailResponse struct {
 
 type TracesResponse struct {
 	Items  []Trace `json:"items"`
+	Total  uint64  `json:"total"`
 	Limit  int     `json:"limit"`
 	Offset int     `json:"offset"`
 }
@@ -80,6 +81,7 @@ type LogEntry struct {
 
 type LogsResponse struct {
 	Items  []LogEntry `json:"items"`
+	Total  uint64     `json:"total"`
 	Limit  int        `json:"limit"`
 	Offset int        `json:"offset"`
 }
@@ -374,6 +376,9 @@ type TraceFilters struct {
 	Service       string
 	Route         string
 	Status        string
+	Environment   string
+	Kind          string
+	Query         string
 	ErrorOnly     bool
 	TagKey        string
 	TagValue      string
