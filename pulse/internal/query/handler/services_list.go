@@ -30,3 +30,29 @@ func (h *Handler) HandleServicesList(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSON(w, http.StatusOK, model.ServicesListResponse{Items: services})
 }
+
+func (h *Handler) HandleServicesTimeseries(w http.ResponseWriter, r *http.Request) {
+	q := r.URL.Query()
+	interval := 1
+	if v := q.Get("interval"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			interval = n
+		}
+	}
+	topN := 10
+	if v := q.Get("top"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			topN = n
+		}
+	}
+
+	points, err := h.Store.GetServicesTimeseries(context.Background(), parseMinutes(r, 15), interval, topN)
+	if err != nil {
+		writeJSONError(w, http.StatusInternalServerError, "failed to query services timeseries")
+		return
+	}
+	if points == nil {
+		points = []model.TraceAnalyticsPoint{}
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"points": points})
+}

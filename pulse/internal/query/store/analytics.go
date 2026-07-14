@@ -164,3 +164,44 @@ WHERE parent_span_id = '' AND start_time >= now() - INTERVAL ? MINUTE`)
 	}
 	return traces, nil
 }
+
+// GetServicesTimeseries returns request-count buckets for the top-N services
+// by volume in one query, for sparklines on the services and overview pages.
+func (s *Store) GetServicesTimeseries(ctx context.Context, minutes, intervalMinutes, topN int) ([]model.TraceAnalyticsPoint, error) {
+	if minutes <= 0 {
+		minutes = 15
+	}
+	if intervalMinutes <= 0 {
+		intervalMinutes = 1
+	}
+	if topN <= 0 || topN > 20 {
+		topN = 10
+	}
+
+	rows, err := s.conn.Query(ctx, `
+SELECT toStartOfInterval(start_time, INTERVAL ? MINUTE) AS bucket,
+       service AS grp,
+       toFloat64(count()) AS value
+FROM traces
+WHERE start_time >= now() - INTERVAL ? MINUTE
+  AND service IN (
+    SELECT service FROM traces WHERE start_time >= now() - INTERVAL ? MINUTE GROUP BY service ORDER BY count() DESC LIMIT ?
+  )
+GROUP BY bucket, grp
+ORDER BY bucket
+`, intervalMinutes, minutes, minutes, topN)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var out []model.TraceAnalyticsPoint
+	for rows.Next() {
+		var p model.TraceAnalyticsPoint
+		if err := rows.Scan(&p.Timestamp, &p.Group, &p.Value); err != nil {
+			return nil, err
+		}
+		out = append(out, p)
+	}
+	return out, nil
+}
