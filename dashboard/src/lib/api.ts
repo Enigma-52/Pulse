@@ -193,6 +193,44 @@ function traceDisplayName(t: APITrace): string {
 
 // ── Traces ──────────────────────────────────────────────────────────────
 
+export interface TracesPage {
+  items: Trace[];
+  total: number;
+}
+
+export async function fetchTracesPage(params?: {
+  service?: string;
+  status?: string;
+  q?: string;
+  start?: string;
+  end?: string;
+  limit?: number;
+  offset?: number;
+}): Promise<TracesPage> {
+  const q = new URLSearchParams();
+  q.set("limit", String(params?.limit ?? 50));
+  if (params?.offset) q.set("offset", String(params.offset));
+  if (params?.service) q.set("service", params.service);
+  if (params?.status) q.set("status", params.status);
+  if (params?.q) q.set("q", params.q);
+  if (params?.start) q.set("start", params.start);
+  if (params?.end) q.set("end", params.end);
+
+  const res = await fetch(`${API_BASE}/traces?${q}`, { headers: authHeaders() });
+  if (!res.ok) return { items: [], total: 0 };
+  const data: { items: APITrace[]; total?: number } = await res.json();
+  const items = (data.items || []).map((t) => ({
+    id: t.trace_id,
+    name: traceDisplayName(t),
+    service: t.service,
+    duration: t.duration_ms,
+    spans: 0,
+    status: (t.status === "error" ? "error" : "ok") as "ok" | "error",
+    timestamp: formatTimestamp(t.timestamp),
+  }));
+  return { items, total: data.total ?? items.length };
+}
+
 export async function fetchTraces(params?: {
   service?: string;
   status?: string;

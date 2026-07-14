@@ -9,7 +9,7 @@ import { useGlobalTimeRange } from "@/lib/timeRange";
 import AutoRefreshPicker from "@/components/AutoRefreshPicker";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import type { Trace } from "@/lib/mockData";
-import { fetchTraces } from "@/lib/api";
+import { fetchTracesPage } from "@/lib/api";
 import { chart as chartColors } from "@/lib/colors";
 
 function buildDurationBuckets(traces: Trace[]) {
@@ -39,10 +39,27 @@ export default function Traces() {
   const [searchParams, setSearchParams] = useSearchParams();
   const view = searchParams.get("view") === "analytics" ? "analytics" : "list";
   const [traces, setTraces] = useState<Trace[]>([]);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const { range, setRange } = useGlobalTimeRange();
   const [serviceFilter, setServiceFilter] = useState(searchParams.get("service") || "");
-  const [statusFilter, setStatusFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState(searchParams.get("status") || "");
+  const [textFilter, setTextFilter] = useState(searchParams.get("q") || "");
+  const [page, setPage] = useState(0);
+  const [sortKey, setSortKey] = useState<"time" | "duration">("time");
+  const PAGE_SIZE = 50;
+
+  // Keep filters shareable via the URL.
+  useEffect(() => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      for (const [k, v] of [["service", serviceFilter], ["status", statusFilter], ["q", textFilter]] as const) {
+        if (v) next.set(k, v);
+        else next.delete(k);
+      }
+      return next;
+    }, { replace: true });
+  }, [serviceFilter, statusFilter, textFilter, setSearchParams]);
 
   const setView = (v: "list" | "analytics") => {
     setSearchParams((prev) => {
@@ -53,28 +70,46 @@ export default function Traces() {
     });
   };
 
-  const load = useCallback((r: TimeRange, service?: string, status?: string) => {
+  const load = useCallback((r: TimeRange, service?: string, status?: string, text?: string, pageNum = 0) => {
     setLoading(true);
     const { start, end } = rangeToStartEnd(r);
-    fetchTraces({
+    fetchTracesPage({
       start,
       end,
       service: service || undefined,
       status: status || undefined,
+      q: text || undefined,
+      limit: PAGE_SIZE,
+      offset: pageNum * PAGE_SIZE,
     })
-      .then(setTraces)
+      .then(({ items, total: t }) => {
+        setTraces(items);
+        setTotal(t);
+      })
       .finally(() => setLoading(false));
   }, []);
 
   useEffect(() => {
-    load(range, serviceFilter, statusFilter);
-  }, [range, serviceFilter, statusFilter, load]);
+    setPage(0);
+    load(range, serviceFilter, statusFilter, textFilter, 0);
+  }, [range, serviceFilter, statusFilter, textFilter, load]);
 
-  const refresh = useAutoRefresh(() => load(range, serviceFilter, statusFilter));
+  const refresh = useAutoRefresh(() => load(range, serviceFilter, statusFilter, textFilter, page));
 
   const handleFilter = () => {
-    load(range, serviceFilter, statusFilter);
+    setPage(0);
+    load(range, serviceFilter, statusFilter, textFilter, 0);
   };
+
+  const goToPage = (p: number) => {
+    setPage(p);
+    load(range, serviceFilter, statusFilter, textFilter, p);
+  };
+
+  const sortedTraces = useMemo(() => {
+    if (sortKey === "duration") return [...traces].sort((a, b) => b.duration - a.duration);
+    return traces;
+  }, [traces, sortKey]);
 
   const durationBuckets = useMemo(() => buildDurationBuckets(traces), [traces]);
   const p50 = useMemo(() => {
@@ -120,6 +155,13 @@ export default function Traces() {
       {/* Filters */}
       <div className="flex gap-2">
         <input
+          value={textFilter}
+          onChange={e => setTextFilter(e.target.value)}
+          onKeyDown={e => e.key === "Enter" && handleFilter()}
+          placeholder="Search route or operation"
+          className="h-8 w-56 px-3 text-xs font-mono rounded bg-secondary border border-border focus:outline-none focus:border-ring placeholder:text-muted-foreground"
+        />
+        <input
           value={serviceFilter}
           onChange={e => setServiceFilter(e.target.value)}
           onKeyDown={e => e.key === "Enter" && handleFilter()}
@@ -143,7 +185,7 @@ export default function Traces() {
         <div className="panel p-4 relative overflow-hidden">
           <div className="absolute bottom-0 left-0 right-0 h-[2px]" style={{ background: chartColors.primary }} />
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Total traces</div>
-          <div className="text-2xl font-mono font-medium mt-1">{traces.length}</div>
+          <div className="text-2xl font-mono font-medium mt-1">{total.toLocaleString()}</div>
         </div>
         <div className="panel p-4 relative overflow-hidden">
           <div className="absolute bottom-0 left-0 right-0 h-[2px]" style={{ background: chartColors.secondary }} />
@@ -198,7 +240,12 @@ export default function Traces() {
               <th className="px-5 py-2 font-medium text-[10px] uppercase tracking-wider">Trace ID</th>
               <th className="px-5 py-2 font-medium text-[10px] uppercase tracking-wider">Operation</th>
               <th className="px-5 py-2 font-medium text-[10px] uppercase tracking-wider">Service</th>
-              <th className="px-5 py-2 font-medium text-[10px] uppercase tracking-wider text-right">Duration</th>
+              <th
+                onClick={() => setSortKey(sortKey === "duration" ? "time" : "duration")}
+                className={`px-5 py-2 font-medium text-[10px] uppercase tracking-wider text-right cursor-pointer select-none hover:text-foreground ${sortKey === "duration" ? "text-foreground" : ""}`}
+              >
+                Duration{sortKey === "duration" ? " ↓" : ""}
+              </th>
               <th className="px-5 py-2 font-medium text-[10px] uppercase tracking-wider">Status</th>
             </tr>
           </thead>
@@ -217,7 +264,7 @@ export default function Traces() {
                   />
                 </td>
               </tr>
-            ) : traces.map(t => (
+            ) : sortedTraces.map(t => (
               <tr key={t.id} className="border-b border-border last:border-0 hover:bg-secondary/40 transition-colors">
                 <td className="px-5 py-2.5 font-mono text-muted-foreground">{t.timestamp}</td>
                 <td className="px-5 py-2.5 font-mono">
@@ -239,6 +286,29 @@ export default function Traces() {
             ))}
           </tbody>
         </table>
+        {total > PAGE_SIZE && (
+          <div className="px-5 py-3 border-t border-border flex items-center justify-between text-xs font-mono text-muted-foreground">
+            <span>
+              {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, total)} of {total.toLocaleString()}
+            </span>
+            <div className="flex gap-1.5">
+              <button
+                onClick={() => goToPage(page - 1)}
+                disabled={page === 0}
+                className="h-7 px-2.5 rounded border border-border hover:border-ring disabled:opacity-40 disabled:hover:border-border"
+              >
+                ← Prev
+              </button>
+              <button
+                onClick={() => goToPage(page + 1)}
+                disabled={(page + 1) * PAGE_SIZE >= total}
+                className="h-7 px-2.5 rounded border border-border hover:border-ring disabled:opacity-40 disabled:hover:border-border"
+              >
+                Next →
+              </button>
+            </div>
+          </div>
+        )}
       </div>
       </>)}
     </div>
