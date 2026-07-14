@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
-import { fetchServicesList, type ServiceSummary } from "@/lib/api";
-import TimeRangeSelector, { type TimeRange, rangeToMinutes, rangeToLabel, SHORT_RANGES } from "@/components/TimeRangeSelector";
+import { useMemo } from "react";
+import { fetchServicesList, fetchServicesTimeseries, type ServiceSummary, type TraceAnalyticsPoint } from "@/lib/api";
+import { ResponsiveContainer, AreaChart, Area } from "recharts";
+import TimeRangeSelector, { rangeToMinutes, rangeToLabel, rangeToInterval, SHORT_RANGES } from "@/components/TimeRangeSelector";
 import { useGlobalTimeRange } from "@/lib/timeRange";
 import AutoRefreshPicker from "@/components/AutoRefreshPicker";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
@@ -9,13 +11,18 @@ import { serviceColor, status as statusColors } from "@/lib/colors";
 
 export default function Services() {
   const [services, setServices] = useState<ServiceSummary[]>([]);
+  const [series, setSeries] = useState<TraceAnalyticsPoint[]>([]);
   const [loading, setLoading] = useState(true);
+  const [sortKey, setSortKey] = useState<"trace_count" | "p99_duration_ms" | "error_rate">("trace_count");
+  const [nameFilter, setNameFilter] = useState("");
   const { range, setRange } = useGlobalTimeRange();
 
   const load = useCallback(() => {
-    fetchServicesList(rangeToMinutes(range))
-      .then(setServices)
-      .finally(() => setLoading(false));
+    const minutes = rangeToMinutes(range);
+    Promise.all([
+      fetchServicesList(minutes).then(setServices),
+      fetchServicesTimeseries(minutes, rangeToInterval(range)).then(setSeries),
+    ]).finally(() => setLoading(false));
   }, [range]);
 
   useEffect(() => {
@@ -23,6 +30,22 @@ export default function Services() {
   }, [load]);
 
   const refresh = useAutoRefresh(load);
+
+  const sparklines = useMemo(() => {
+    const byService = new Map<string, { v: number }[]>();
+    for (const p of series) {
+      if (!byService.has(p.group)) byService.set(p.group, []);
+      byService.get(p.group)!.push({ v: p.value });
+    }
+    return byService;
+  }, [series]);
+
+  const visibleServices = useMemo(() => {
+    const filtered = nameFilter
+      ? services.filter(s => s.service.toLowerCase().includes(nameFilter.toLowerCase()))
+      : services;
+    return [...filtered].sort((a, b) => (b[sortKey] as number) - (a[sortKey] as number));
+  }, [services, sortKey, nameFilter]);
 
   function healthStatus(errRate: number): { label: string; color: string; cls: string } {
     if (errRate > 5) return { label: "CRITICAL", color: statusColors.error, cls: "border-status-error/40 text-status-error" };
@@ -44,13 +67,34 @@ export default function Services() {
         </div>
       </div>
 
+      <div className="flex items-center gap-2">
+        <input
+          value={nameFilter}
+          onChange={e => setNameFilter(e.target.value)}
+          placeholder="Filter services"
+          className="h-8 w-56 px-3 text-xs font-mono rounded bg-secondary border border-border focus:outline-none focus:border-ring placeholder:text-muted-foreground"
+        />
+        <span className="data-label ml-2">Sort by</span>
+        {([["trace_count", "Requests"], ["p99_duration_ms", "p99"], ["error_rate", "Error rate"]] as const).map(([k, label]) => (
+          <button
+            key={k}
+            onClick={() => setSortKey(k)}
+            className={`h-7 px-2.5 text-xs rounded border transition-colors ${
+              sortKey === k ? "border-ring bg-secondary text-foreground" : "border-border text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
       {loading ? (
         <div className="text-sm text-muted-foreground">Loading services...</div>
       ) : services.length === 0 ? (
         <div className="panel p-8 text-center text-sm text-muted-foreground">No services found. Send telemetry data to get started.</div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-          {services.map((s) => {
+          {visibleServices.map((s) => {
             const health = healthStatus(s.error_rate);
             const svcColor = serviceColor(s.service);
             const lastSeen = s.last_seen
@@ -74,6 +118,16 @@ export default function Services() {
                     {health.label}
                   </span>
                 </div>
+
+                {(sparklines.get(s.service)?.length ?? 0) > 1 && (
+                  <div className="h-8 mb-2 pl-2 opacity-80">
+                    <ResponsiveContainer>
+                      <AreaChart data={sparklines.get(s.service)}>
+                        <Area type="monotone" dataKey="v" stroke={svcColor} fill={svcColor} fillOpacity={0.15} strokeWidth={1.25} isAnimationActive={false} />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
 
                 {/* Stats grid */}
                 <div className="grid grid-cols-3 gap-3 pl-2">

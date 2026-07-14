@@ -878,3 +878,13 @@ export async function fetchLogsHistogram(params?: {
   const data: { points: LogHistogramPoint[] } = await res.json();
   return data.points || [];
 }
+
+// ── Services timeseries ─────────────────────────────────────────────────
+
+export async function fetchServicesTimeseries(minutes = 15, interval = 1, top = 12): Promise<TraceAnalyticsPoint[]> {
+  const q = new URLSearchParams({ minutes: String(minutes), interval: String(interval), top: String(top) });
+  const res = await fetch(`${API_BASE}/services/timeseries?${q}`, { headers: authHeaders() });
+  if (!res.ok) return [];
+  const data: { points: TraceAnalyticsPoint[] } = await res.json();
+  return data.points || [];
+}
