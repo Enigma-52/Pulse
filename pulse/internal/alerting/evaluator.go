@@ -26,6 +26,8 @@ type Evaluator struct {
 type instanceState struct {
 	alertID string
 	firedAt time.Time
+	rule    model.AlertRule
+	service string
 }
 
 func New(s *store.Store, interval time.Duration) *Evaluator {
@@ -76,12 +78,28 @@ func (e *Evaluator) tick(ctx context.Context) {
 		}
 	}
 
-	// Instances whose rule no longer produced a result (e.g. service went
-	// quiet on a group-by rule, or rule deleted/disabled) resolve silently.
-	for key := range e.state {
-		if _, ok := seen[key]; !ok {
-			delete(e.state, key)
+	// Instances whose rule no longer produced a result (service went quiet on
+	// a group-by rule, or rule deleted/disabled) must still be resolved —
+	// otherwise their pulse_alerts rows stay "firing" forever.
+	for key, st := range e.state {
+		if _, ok := seen[key]; ok {
+			continue
 		}
+		alert := model.Alert{
+			ID: st.alertID, RuleID: st.rule.ID, RuleName: st.rule.Name, Service: st.service,
+			Status: "resolved", Value: 0, Threshold: st.rule.Threshold,
+			Message: st.rule.Name + ": no longer evaluated (rule removed, disabled, or instance went quiet)",
+			FiredAt: st.firedAt, ResolvedAt: time.Now().UTC(),
+		}
+		if err := e.Store.InsertAlert(ctx, alert); err != nil {
+			log.Printf("alert evaluator: resolve stale alert: %v", err)
+			continue // keep state so we retry next tick
+		}
+		log.Printf("alert resolved (stale): %s", st.rule.Name)
+		if e.Notify != nil {
+			e.Notify(ctx, st.rule, alert)
+		}
+		delete(e.state, key)
 	}
 }
 
@@ -113,7 +131,7 @@ func (e *Evaluator) fire(ctx context.Context, rule model.AlertRule, service stri
 		log.Printf("alert evaluator: insert alert: %v", err)
 		return
 	}
-	e.state[key] = &instanceState{alertID: alert.ID, firedAt: now}
+	e.state[key] = &instanceState{alertID: alert.ID, firedAt: now, rule: rule, service: service}
 	log.Printf("alert firing: %s", alert.Message)
 	if e.Notify != nil {
 		e.Notify(ctx, rule, alert)
