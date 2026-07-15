@@ -112,18 +112,18 @@ SigNoz has a powerful flexible query engine. Pulse has basic text search and fix
 - [ ] Formula-based derived metrics (rate, ratio, arithmetic between queries)
 - [ ] Time comparisons (compare current window to previous period)
 - [ ] Multi-query panels (overlay multiple series)
-- [ ] Ad hoc analysis mode (explore without saving)
+- [x] Ad hoc analysis mode (Explore page, read-only SQL)
 - [ ] High-cardinality querying (efficient filtering on high-unique-value fields)
 - [ ] Saved queries and query history
 
 #### Correlated Observability
 SigNoz's strongest capability — seamless navigation between all signals. Pulse has basic trace-log linking only.
-- [ ] Trace → Logs (view logs emitted during a trace, already partial)
+- [x] Trace → Logs (view logs emitted during a trace)
 - [ ] Trace → Metrics (jump from a slow trace to related metric charts)
-- [ ] Exception → Trace (click from exception to originating trace)
+- [x] Exception → Trace (click from exception to originating trace)
 - [ ] Log → Trace (click from log entry to parent trace, already partial)
 - [ ] Service → Traces (view all traces for a service, already partial)
-- [ ] Endpoint → Metrics (view latency/error metrics for a specific route)
+- [x] Endpoint → Metrics (per-route latency/error breakdown on service detail)
 - [ ] Metric → Trace exemplars (click a metric data point to see example traces)
 - [x] Unified cross-signal search (header search bar across traces, logs, metrics, services, exceptions)
 
@@ -145,7 +145,7 @@ SigNoz has dedicated AI/LLM monitoring. Pulse has no AI-specific features.
 - [ ] Log parsing rules (grok, regex, JSON auto-parse)
 - [ ] Field extraction and indexing
 - [ ] Log-to-metric conversion (e.g. count errors matching pattern)
-- [ ] Log analytics / aggregation charts
+- [x] Log analytics / aggregation charts (level histogram on logs page)
 - [ ] Saved log queries / views
 - [ ] High-cardinality field indexing
 
@@ -153,12 +153,12 @@ SigNoz has dedicated AI/LLM monitoring. Pulse has no AI-specific features.
 - [ ] Prometheus remote write receiver
 - [ ] PromQL-compatible query language
 - [ ] Histogram visualization (heatmaps)
-- [ ] Label-based filtering in UI
+- [x] Label-based filtering in UI (metric attribute filter on detail page)
 - [ ] Multi-dimensional metric exploration
 - [ ] Metric-to-trace exemplar linking
 
 #### APM Enhancements
-- [ ] External API call monitoring (outbound HTTP latency/errors)
+- [x] External API call monitoring (outbound HTTP latency/errors, per-host breakdown)
 - [ ] Deployment comparison (before/after release markers)
 - [ ] Release markers on charts
 - [ ] Performance regression detection (baseline comparison)
@@ -197,9 +197,9 @@ Pulse accepts OTLP/HTTP — all languages with an OTel SDK work out of the box.
 - [ ] Add DLQ topic and poison-message handling strategy
 - [ ] Add worker retry/backoff policy with observability
 - [ ] Add internal service metrics and structured logs
-- [ ] Add readiness checks for redpanda/clickhouse dependencies
+- [x] Add readiness checks for clickhouse dependency (/readyz)
 
 ### P2 - Developer experience
 - [ ] Refresh docs to match current runtime wiring
 - [ ] Add end-to-end smoke test script (ingest -> query assertion)
-- [ ] Add CI checks for Go services and frontend builds
+- [x] Add CI checks for Go services and frontend builds

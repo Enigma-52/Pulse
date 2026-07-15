@@ -25,6 +25,9 @@ Pulse is a self-hosted observability platform: single Go binary (`pulse/`, goril
 
 ---
 
+## Status (2026-07-16)
+Phases 0–8 delivered: ops hardening, alerting end-to-end, exception monitoring, retention/usage, trace analytics, unified search + SQL explore, external calls, global time range/env selectors, logs histogram, traces pagination/search, service sparklines, metric attribute filters, landing refresh, CI. Deferred: OTLP/gRPC receiver, email delivery, alert silencing/routing, duration histogram brush.
+
 ## Increments (one commit each, in order)
 
 ### Phase 0 — Ops/security quick wins
