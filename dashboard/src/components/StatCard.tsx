@@ -1,5 +1,6 @@
 import { ArrowDownRight, ArrowUpRight } from "lucide-react";
 import { ResponsiveContainer, AreaChart, Area } from "recharts";
+import { chart } from "@/lib/colors";
 
 type Props = {
   label: string;
@@ -35,11 +36,11 @@ export default function StatCard({ label, value, unit, delta, series, inverse }:
               <AreaChart data={series} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
                 <defs>
                   <linearGradient id={`g-${label}`} x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="hsl(var(--chart-1))" stopOpacity={0.4} />
-                    <stop offset="100%" stopColor="hsl(var(--chart-1))" stopOpacity={0} />
+                    <stop offset="0%" stopColor={chart.primary} stopOpacity={0.4} />
+                    <stop offset="100%" stopColor={chart.primary} stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <Area type="monotone" dataKey="value" stroke="hsl(var(--chart-1))" strokeWidth={1.25} fill={`url(#g-${label})`} />
+                <Area type="monotone" dataKey="value" stroke={chart.primary} strokeWidth={1.25} fill={`url(#g-${label})`} />
               </AreaChart>
             </ResponsiveContainer>
           </div>
