@@ -209,12 +209,17 @@ GROUP BY name
 	return metrics, nil
 }
 
-func (s *Store) GetMetricSeries(ctx context.Context, name string, minutes int, intervalSeconds int) ([]model.MetricSeriesPoint, error) {
-	rows, err := s.conn.Query(ctx, `
+func (s *Store) GetMetricSeries(ctx context.Context, name string, minutes int, intervalSeconds int, attrKey, attrValue string) ([]model.MetricSeriesPoint, error) {
+	query := `
 SELECT toStartOfInterval(timestamp, INTERVAL ? SECOND) as ts, avg(value) as value
-FROM metrics WHERE name = ? AND timestamp >= now() - INTERVAL ? MINUTE
-GROUP BY ts ORDER BY ts
-`, intervalSeconds, name, minutes)
+FROM metrics WHERE name = ? AND timestamp >= now() - INTERVAL ? MINUTE`
+	args := []any{intervalSeconds, name, minutes}
+	if attrKey != "" && attrValue != "" {
+		query += " AND JSONExtractString(attributes_json, ?) = ?"
+		args = append(args, attrKey, attrValue)
+	}
+	query += " GROUP BY ts ORDER BY ts"
+	rows, err := s.conn.Query(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -543,4 +548,37 @@ func (s *Store) GetLogsHistogram(ctx context.Context, filters model.LogFilters, 
 		points = append(points, p)
 	}
 	return points, nil
+}
+
+// GetMetricAttributes returns the most common attribute key/value pairs
+// seen on a metric's data points in the window.
+func (s *Store) GetMetricAttributes(ctx context.Context, name string, minutes int) ([]model.MetricAttribute, error) {
+	if minutes <= 0 {
+		minutes = 60
+	}
+	rows, err := s.conn.Query(ctx, `
+SELECT kv.1 AS key, kv.2 AS value, count() AS c
+FROM (
+  SELECT arrayJoin(JSONExtractKeysAndValues(attributes_json, 'String')) AS kv
+  FROM metrics
+  WHERE name = ? AND timestamp >= now() - INTERVAL ? MINUTE
+)
+GROUP BY key, value
+ORDER BY c DESC
+LIMIT 100
+`, name, minutes)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var attrs []model.MetricAttribute
+	for rows.Next() {
+		var a model.MetricAttribute
+		if err := rows.Scan(&a.Key, &a.Value, &a.Count); err != nil {
+			return nil, err
+		}
+		attrs = append(attrs, a)
+	}
+	return attrs, nil
 }

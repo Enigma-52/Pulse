@@ -120,6 +120,12 @@ type MetricSeriesPoint struct {
 	Value     float64   `json:"value"`
 }
 
+type MetricAttribute struct {
+	Key   string `json:"key"`
+	Value string `json:"value"`
+	Count uint64 `json:"count"`
+}
+
 type MetricsListResponse struct {
 	Items []MetricMeta `json:"items"`
 }

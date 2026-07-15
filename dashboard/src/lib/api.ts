@@ -358,10 +358,16 @@ export async function fetchMetrics(): Promise<Metric[]> {
 export async function fetchMetricSeries(
   name: string,
   minutes = 15,
-  interval = 30
+  interval = 30,
+  attr?: { key: string; value: string }
 ): Promise<{ t: string; value: number }[]> {
+  const q = new URLSearchParams({ minutes: String(minutes), interval: String(interval) });
+  if (attr) {
+    q.set("attr_key", attr.key);
+    q.set("attr_value", attr.value);
+  }
   const res = await fetch(
-    `${API_BASE}/metrics/${encodeURIComponent(name)}/series?minutes=${minutes}&interval=${interval}`,
+    `${API_BASE}/metrics/${encodeURIComponent(name)}/series?${q}`,
     { headers: authHeaders() }
   );
   if (!res.ok) return [];
@@ -887,4 +893,20 @@ export async function fetchServicesTimeseries(minutes = 15, interval = 1, top = 
   if (!res.ok) return [];
   const data: { points: TraceAnalyticsPoint[] } = await res.json();
   return data.points || [];
+}
+
+export interface MetricAttribute {
+  key: string;
+  value: string;
+  count: number;
+}
+
+export async function fetchMetricAttributes(name: string, minutes = 60): Promise<MetricAttribute[]> {
+  const res = await fetch(
+    `${API_BASE}/metrics/${encodeURIComponent(name)}/attributes?minutes=${minutes}`,
+    { headers: authHeaders() }
+  );
+  if (!res.ok) return [];
+  const data: { items: MetricAttribute[] } = await res.json();
+  return data.items || [];
 }

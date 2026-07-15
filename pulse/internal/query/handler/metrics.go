@@ -50,7 +50,7 @@ func (h *Handler) HandleMetricSeries(w http.ResponseWriter, r *http.Request) {
 		interval = n
 	}
 
-	points, err := h.Store.GetMetricSeries(ctx, name, minutes, interval)
+	points, err := h.Store.GetMetricSeries(ctx, name, minutes, interval, q.Get("attr_key"), q.Get("attr_value"))
 	if err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "failed to query metric series")
 		return
@@ -125,4 +125,22 @@ func (h *Handler) HandleMetricsQuery(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, model.MetricQueryResponse{Series: series})
+}
+
+func (h *Handler) HandleMetricAttributes(w http.ResponseWriter, r *http.Request) {
+	name := mux.Vars(r)["name"]
+	if name == "" {
+		writeJSONError(w, http.StatusBadRequest, "metric name is required")
+		return
+	}
+
+	attrs, err := h.Store.GetMetricAttributes(context.Background(), name, parseMinutes(r, 60))
+	if err != nil {
+		writeJSONError(w, http.StatusInternalServerError, "failed to query metric attributes")
+		return
+	}
+	if attrs == nil {
+		attrs = []model.MetricAttribute{}
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"items": attrs})
 }

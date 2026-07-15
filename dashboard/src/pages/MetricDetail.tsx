@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
-import { fetchMetrics, fetchMetricSeries } from "@/lib/api";
+import { fetchMetrics, fetchMetricSeries, fetchMetricAttributes, type MetricAttribute } from "@/lib/api";
 import type { Metric } from "@/lib/mockData";
 import TimeRangeSelector, { type TimeRange, TIME_RANGES, rangeToMinutes, rangeToInterval, rangeToLabel } from "@/components/TimeRangeSelector";
 import { useGlobalTimeRange } from "@/lib/timeRange";
@@ -21,14 +21,20 @@ export default function MetricDetail() {
   const { id } = useParams();
   const [metric, setMetric] = useState<Metric | null>(null);
   const [series, setSeries] = useState<{ t: string; value: number }[]>([]);
+  const [attributes, setAttributes] = useState<MetricAttribute[]>([]);
+  const [attrFilter, setAttrFilter] = useState(""); // "key=value" or ""
   const [loading, setLoading] = useState(true);
   const { range, setRange } = useGlobalTimeRange();
 
-  const loadSeries = useCallback((m: Metric, r: TimeRange) => {
+  const loadSeries = useCallback((m: Metric, r: TimeRange, filter?: string) => {
     const minutes = rangeToMinutes(r);
     const interval = rangeToInterval(r);
-    fetchMetricSeries(m.name, minutes, interval).then(setSeries);
-  }, []);
+    const f = filter ?? attrFilter;
+    const [key, ...rest] = f.split("=");
+    const attr = f && rest.length > 0 ? { key, value: rest.join("=") } : undefined;
+    fetchMetricSeries(m.name, minutes, interval, attr).then(setSeries);
+    fetchMetricAttributes(m.name, minutes).then(setAttributes);
+  }, [attrFilter]);
 
   useEffect(() => {
     fetchMetrics().then((all) => {
@@ -127,9 +133,28 @@ export default function MetricDetail() {
               {unit} · {rangeToLabel(range)} · {series.length} data points
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full" style={{ background: chartColors.primary }} />
-            <span className="text-[10px] font-mono text-muted-foreground">{metric.name}</span>
+          <div className="flex items-center gap-3">
+            {attributes.length > 0 && (
+              <select
+                value={attrFilter}
+                onChange={(e) => {
+                  setAttrFilter(e.target.value);
+                  if (metric) loadSeries(metric, range, e.target.value);
+                }}
+                className="h-7 px-2 text-[11px] font-mono rounded bg-secondary border border-border focus:outline-none focus:border-ring text-foreground max-w-[240px]"
+              >
+                <option value="">All attributes</option>
+                {attributes.slice(0, 30).map((a) => (
+                  <option key={`${a.key}=${a.value}`} value={`${a.key}=${a.value}`}>
+                    {a.key}={a.value} ({a.count})
+                  </option>
+                ))}
+              </select>
+            )}
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full" style={{ background: chartColors.primary }} />
+              <span className="text-[10px] font-mono text-muted-foreground">{metric.name}</span>
+            </div>
           </div>
         </div>
         <div className="h-80">

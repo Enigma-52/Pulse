@@ -43,6 +43,7 @@ func New(ih *ingest.Handler, qh *handler.Handler) http.Handler {
 	protected.HandleFunc("/metrics", qh.HandleMetricsList).Methods(http.MethodGet, http.MethodOptions)
 	protected.HandleFunc("/metrics/query", qh.HandleMetricsQuery).Methods(http.MethodGet, http.MethodOptions)
 	protected.HandleFunc("/metrics/{name}/series", qh.HandleMetricSeries).Methods(http.MethodGet, http.MethodOptions)
+	protected.HandleFunc("/metrics/{name}/attributes", qh.HandleMetricAttributes).Methods(http.MethodGet, http.MethodOptions)
 	protected.HandleFunc("/databases", qh.HandleDatabasesList).Methods(http.MethodGet, http.MethodOptions)
 	protected.HandleFunc("/databases/{system}/overview", qh.HandleDatabaseOverview).Methods(http.MethodGet, http.MethodOptions)
 	protected.HandleFunc("/databases/{system}/queries", qh.HandleDatabaseQueries).Methods(http.MethodGet, http.MethodOptions)
