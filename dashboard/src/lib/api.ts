@@ -202,6 +202,7 @@ export async function fetchTracesPage(params?: {
   service?: string;
   status?: string;
   q?: string;
+  environment?: string;
   start?: string;
   end?: string;
   limit?: number;
@@ -210,6 +211,7 @@ export async function fetchTracesPage(params?: {
   const q = new URLSearchParams();
   q.set("limit", String(params?.limit ?? 50));
   if (params?.offset) q.set("offset", String(params.offset));
+  if (params?.environment) q.set("environment", params.environment);
   if (params?.service) q.set("service", params.service);
   if (params?.status) q.set("status", params.status);
   if (params?.q) q.set("q", params.q);
@@ -908,5 +910,14 @@ export async function fetchMetricAttributes(name: string, minutes = 60): Promise
   );
   if (!res.ok) return [];
   const data: { items: MetricAttribute[] } = await res.json();
+  return data.items || [];
+}
+
+// ── Environments ────────────────────────────────────────────────────────
+
+export async function fetchEnvironments(minutes = 1440): Promise<string[]> {
+  const res = await fetch(`${API_BASE}/environments?minutes=${minutes}`, { headers: authHeaders() });
+  if (!res.ok) return [];
+  const data: { items: string[] } = await res.json();
   return data.items || [];
 }

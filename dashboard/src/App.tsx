@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/lib/auth";
 import { TimeRangeProvider } from "@/lib/timeRange";
+import { EnvironmentProvider } from "@/lib/environment";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Index from "./pages/Index.tsx";
 import NotFound from "./pages/NotFound.tsx";
@@ -37,6 +38,7 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
       <TimeRangeProvider>
+      <EnvironmentProvider>
       <TooltipProvider>
         <Toaster />
         <Sonner />
@@ -78,6 +80,7 @@ const App = () => (
           </Routes>
         </BrowserRouter>
       </TooltipProvider>
+      </EnvironmentProvider>
       </TimeRangeProvider>
     </AuthProvider>
   </QueryClientProvider>

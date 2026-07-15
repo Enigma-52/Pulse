@@ -25,3 +25,15 @@ func (h *Handler) HandleSearch(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"results": results})
 }
+
+func (h *Handler) HandleEnvironments(w http.ResponseWriter, r *http.Request) {
+	envs, err := h.Store.ListEnvironments(context.Background(), parseMinutes(r, 1440))
+	if err != nil {
+		writeJSONError(w, http.StatusInternalServerError, "failed to query environments")
+		return
+	}
+	if envs == nil {
+		envs = []string{}
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"items": envs})
+}

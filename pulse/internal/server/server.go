@@ -59,6 +59,7 @@ func New(ih *ingest.Handler, qh *handler.Handler) http.Handler {
 	protected.HandleFunc("/alerts/channels/{id}", qh.HandleChannelDelete).Methods(http.MethodDelete)
 	protected.HandleFunc("/usage", qh.HandleUsage).Methods(http.MethodGet, http.MethodOptions)
 	protected.HandleFunc("/search", qh.HandleSearch).Methods(http.MethodGet, http.MethodOptions)
+	protected.HandleFunc("/environments", qh.HandleEnvironments).Methods(http.MethodGet, http.MethodOptions)
 	protected.HandleFunc("/query/sql", qh.HandleRawSQL).Methods(http.MethodPost, http.MethodOptions)
 	protected.HandleFunc("/exceptions", qh.HandleExceptionsList).Methods(http.MethodGet, http.MethodOptions)
 	protected.HandleFunc("/exceptions/{fingerprint}", qh.HandleExceptionDetail).Methods(http.MethodGet, http.MethodOptions)

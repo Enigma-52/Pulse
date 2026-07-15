@@ -133,3 +133,31 @@ GROUP BY fingerprint ORDER BY max(timestamp) DESC LIMIT 5
 
 	return results, nil
 }
+
+// ListEnvironments returns distinct deployment environments seen recently.
+func (s *Store) ListEnvironments(ctx context.Context, minutes int) ([]string, error) {
+	if minutes <= 0 {
+		minutes = 1440
+	}
+	rows, err := s.conn.Query(ctx, `
+SELECT DISTINCT environment
+FROM traces
+WHERE start_time >= now() - INTERVAL ? MINUTE AND environment != ''
+ORDER BY environment
+LIMIT 50
+`, minutes)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var envs []string
+	for rows.Next() {
+		var e string
+		if err := rows.Scan(&e); err != nil {
+			return nil, err
+		}
+		envs = append(envs, e)
+	}
+	return envs, nil
+}

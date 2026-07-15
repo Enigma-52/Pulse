@@ -4,6 +4,7 @@ import { useAuth } from "@/lib/auth";
 import GlobalSearch from "@/components/GlobalSearch";
 import TimeRangeSelector, { SHORT_RANGES } from "@/components/TimeRangeSelector";
 import { useGlobalTimeRange } from "@/lib/timeRange";
+import { useEnvironment } from "@/lib/environment";
 
 const nav = [
   { to: "/app", label: "Overview", icon: Home, end: true },
@@ -24,6 +25,7 @@ export default function AppLayout() {
   const navigate = useNavigate();
   const { logout } = useAuth();
   const { range, setRange } = useGlobalTimeRange();
+  const { environment, environments, setEnvironment } = useEnvironment();
   const crumb = location.pathname.split("/").filter(Boolean).slice(1);
 
   return (
@@ -99,6 +101,18 @@ export default function AppLayout() {
 
           <div className="ml-auto flex items-center gap-3">
             <GlobalSearch />
+            {environments.length > 0 && (
+              <select
+                value={environment}
+                onChange={(e) => setEnvironment(e.target.value)}
+                className="h-8 px-2 text-xs font-mono rounded bg-secondary border border-border focus:outline-none focus:border-ring text-foreground"
+              >
+                <option value="">all envs</option>
+                {environments.map((env) => (
+                  <option key={env} value={env}>{env}</option>
+                ))}
+              </select>
+            )}
             <TimeRangeSelector value={range} onChange={setRange} ranges={SHORT_RANGES} />
             <div className="w-7 h-7 rounded-full bg-accent border border-border flex items-center justify-center text-xs font-medium">
               EM

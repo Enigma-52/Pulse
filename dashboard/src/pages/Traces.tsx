@@ -6,6 +6,7 @@ import { GitBranch } from "lucide-react";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Cell } from "recharts";
 import TimeRangeSelector, { type TimeRange, rangeToStartEnd, rangeToLabel, SHORT_RANGES } from "@/components/TimeRangeSelector";
 import { useGlobalTimeRange } from "@/lib/timeRange";
+import { useEnvironment } from "@/lib/environment";
 import AutoRefreshPicker from "@/components/AutoRefreshPicker";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import type { Trace } from "@/lib/mockData";
@@ -42,6 +43,7 @@ export default function Traces() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const { range, setRange } = useGlobalTimeRange();
+  const { environment } = useEnvironment();
   const [serviceFilter, setServiceFilter] = useState(searchParams.get("service") || "");
   const [statusFilter, setStatusFilter] = useState(searchParams.get("status") || "");
   const [textFilter, setTextFilter] = useState(searchParams.get("q") || "");
@@ -78,6 +80,7 @@ export default function Traces() {
       end,
       service: service || undefined,
       status: status || undefined,
+      environment: environment || undefined,
       q: text || undefined,
       limit: PAGE_SIZE,
       offset: pageNum * PAGE_SIZE,
@@ -87,7 +90,7 @@ export default function Traces() {
         setTotal(t);
       })
       .finally(() => setLoading(false));
-  }, []);
+  }, [environment]);
 
   useEffect(() => {
     setPage(0);
