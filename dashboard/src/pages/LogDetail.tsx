@@ -17,8 +17,19 @@ export default function LogDetail() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchLogs({ limit: 200 }).then((logs) => {
-      const found = logs.find(l => l.id === id);
+    // The id encodes "<trace_id>~<raw timestamp>", so we can query the exact
+    // log directly instead of hoping it is still in the latest page.
+    const decoded = decodeURIComponent(id ?? "");
+    const sep = decoded.indexOf("~");
+    const traceId = sep >= 0 ? decoded.slice(0, sep) : "";
+    const ts = sep >= 0 ? decoded.slice(sep + 1) : "";
+
+    const lookup = ts
+      ? fetchLogs({ traceId: traceId || undefined, start: ts, end: ts, limit: 10 })
+      : fetchLogs({ limit: 200 });
+
+    lookup.then((logs) => {
+      const found = logs.find(l => l.id === decoded) ?? (ts ? logs[0] : undefined);
       setLog(found ?? null);
       setLoading(false);
     }).catch(() => {

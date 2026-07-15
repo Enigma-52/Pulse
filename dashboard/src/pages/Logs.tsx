@@ -233,7 +233,7 @@ export default function Logs() {
                       {g.logs.map(l => (
                         <Link
                           key={l.id}
-                          to={`/app/logs/${l.id}`}
+                          to={`/app/logs/${encodeURIComponent(l.id)}`}
                           className="grid grid-cols-12 px-4 py-1.5 hover:bg-secondary/40 text-[11px]"
                         >
                           <div className="col-span-2 text-muted-foreground">{l.timestamp}</div>

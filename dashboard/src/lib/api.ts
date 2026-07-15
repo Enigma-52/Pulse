@@ -312,6 +312,7 @@ export async function fetchLogs(params?: {
   service?: string;
   level?: string;
   search?: string;
+  traceId?: string;
   start?: string;
   end?: string;
   limit?: number;
@@ -320,6 +321,7 @@ export async function fetchLogs(params?: {
   if (params?.service) q.set("service", params.service);
   if (params?.level) q.set("level", params.level);
   if (params?.search) q.set("search", params.search);
+  if (params?.traceId) q.set("trace_id", params.traceId);
   if (params?.start) q.set("start", params.start);
   if (params?.end) q.set("end", params.end);
   q.set("limit", String(params?.limit ?? 100));
@@ -329,7 +331,9 @@ export async function fetchLogs(params?: {
   const data: { items: APILogEntry[] } = await res.json();
   if (!data.items) return [];
   return data.items.map((l) => ({
-    id: `${l.trace_id || "no-trace"}-${l.timestamp}`,
+    // id encodes trace_id + raw timestamp so the detail page can re-query
+    // the exact log after a refresh instead of matching a transient list.
+    id: `${l.trace_id}~${l.timestamp}`,
     timestamp: formatTimestamp(l.timestamp),
     level: l.level as Log["level"],
     service: l.service,
