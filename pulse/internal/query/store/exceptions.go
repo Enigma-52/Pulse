@@ -105,12 +105,13 @@ LIMIT 1
 		}
 	}
 
-	// Recent distinct traces containing this exception.
+	// Recent distinct traces containing this exception, newest first.
 	traces, err := s.conn.Query(ctx, `
-SELECT DISTINCT trace_id
+SELECT trace_id
 FROM exceptions
 WHERE fingerprint = ? AND trace_id != ''
-ORDER BY trace_id
+GROUP BY trace_id
+ORDER BY max(timestamp) DESC
 LIMIT 20
 `, fingerprint)
 	if err != nil {
