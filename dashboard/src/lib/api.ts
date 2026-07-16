@@ -97,6 +97,18 @@ function authHeaders(): HeadersInit {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
+// apiFetch wraps fetch for all query-API calls: a 401 means the stored token
+// is missing/expired, so clear it and send the user back to login instead of
+// silently rendering empty data everywhere.
+async function apiFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  const res = await fetch(input, init);
+  if (res.status === 401 && !window.location.pathname.startsWith("/login")) {
+    localStorage.removeItem("pulse_token");
+    window.location.assign("/login");
+  }
+  return res;
+}
+
 function computeDepth(
   spanId: string,
   parentMap: Map<string, string>,
@@ -218,7 +230,7 @@ export async function fetchTracesPage(params?: {
   if (params?.start) q.set("start", params.start);
   if (params?.end) q.set("end", params.end);
 
-  const res = await fetch(`${API_BASE}/traces?${q}`, { headers: authHeaders() });
+  const res = await apiFetch(`${API_BASE}/traces?${q}`, { headers: authHeaders() });
   if (!res.ok) return { items: [], total: 0 };
   const data: { items: APITrace[]; total?: number } = await res.json();
   const items = (data.items || []).map((t) => ({
@@ -247,7 +259,7 @@ export async function fetchTraces(params?: {
   if (params?.start) q.set("start", params.start);
   if (params?.end) q.set("end", params.end);
 
-  const res = await fetch(`${API_BASE}/traces?${q}`, { headers: authHeaders() });
+  const res = await apiFetch(`${API_BASE}/traces?${q}`, { headers: authHeaders() });
   if (!res.ok) return [];
   const data: { items: APITrace[] } = await res.json();
   if (!data.items) return [];
@@ -266,8 +278,8 @@ export async function fetchTraceDetail(
   traceId: string
 ): Promise<TraceDetail | null> {
   const [traceRes, logsRes] = await Promise.all([
-    fetch(`${API_BASE}/traces/${traceId}`, { headers: authHeaders() }),
-    fetch(`${API_BASE}/logs?trace_id=${traceId}&limit=100`, { headers: authHeaders() }),
+    apiFetch(`${API_BASE}/traces/${traceId}`, { headers: authHeaders() }),
+    apiFetch(`${API_BASE}/logs?trace_id=${traceId}&limit=100`, { headers: authHeaders() }),
   ]);
   if (!traceRes.ok) return null;
 
@@ -326,7 +338,7 @@ export async function fetchLogs(params?: {
   if (params?.end) q.set("end", params.end);
   q.set("limit", String(params?.limit ?? 100));
 
-  const res = await fetch(`${API_BASE}/logs?${q}`, { headers: authHeaders() });
+  const res = await apiFetch(`${API_BASE}/logs?${q}`, { headers: authHeaders() });
   if (!res.ok) return [];
   const data: { items: APILogEntry[] } = await res.json();
   if (!data.items) return [];
@@ -347,7 +359,7 @@ export async function fetchLogs(params?: {
 // ── Metrics ─────────────────────────────────────────────────────────────
 
 export async function fetchMetrics(): Promise<Metric[]> {
-  const res = await fetch(`${API_BASE}/metrics`, { headers: authHeaders() });
+  const res = await apiFetch(`${API_BASE}/metrics`, { headers: authHeaders() });
   if (!res.ok) return [];
   const data: { items: APIMetricMeta[] } = await res.json();
   if (!data.items) return [];
@@ -372,7 +384,7 @@ export async function fetchMetricSeries(
     q.set("attr_key", attr.key);
     q.set("attr_value", attr.value);
   }
-  const res = await fetch(
+  const res = await apiFetch(
     `${API_BASE}/metrics/${encodeURIComponent(name)}/series?${q}`,
     { headers: authHeaders() }
   );
@@ -401,7 +413,7 @@ export async function queryMetrics(params: {
   q.set("minutes", String(params.minutes ?? 15));
   q.set("interval", String(params.interval ?? 30));
 
-  const res = await fetch(`${API_BASE}/metrics/query?${q}`, { headers: authHeaders() });
+  const res = await apiFetch(`${API_BASE}/metrics/query?${q}`, { headers: authHeaders() });
   if (!res.ok) return { series: [] };
   const data = await res.json();
   if (!data.series) return { series: [] };
@@ -432,7 +444,7 @@ export interface ServiceSummary {
 }
 
 export async function fetchServicesList(minutes = 15): Promise<ServiceSummary[]> {
-  const res = await fetch(`${API_BASE}/services?minutes=${minutes}`, { headers: authHeaders() });
+  const res = await apiFetch(`${API_BASE}/services?minutes=${minutes}`, { headers: authHeaders() });
   if (!res.ok) return [];
   const data: { items: ServiceSummary[] } = await res.json();
   return data.items || [];
@@ -487,20 +499,20 @@ export interface DatabaseOverviewData {
 }
 
 export async function fetchDatabasesList(minutes = 15): Promise<DatabaseSummary[]> {
-  const res = await fetch(`${API_BASE}/databases?minutes=${minutes}`, { headers: authHeaders() });
+  const res = await apiFetch(`${API_BASE}/databases?minutes=${minutes}`, { headers: authHeaders() });
   if (!res.ok) return [];
   const data: { items: DatabaseSummary[] } = await res.json();
   return data.items || [];
 }
 
 export async function fetchDatabaseOverview(system: string, minutes = 15): Promise<DatabaseOverviewData | null> {
-  const res = await fetch(`${API_BASE}/databases/${encodeURIComponent(system)}/overview?minutes=${minutes}`, { headers: authHeaders() });
+  const res = await apiFetch(`${API_BASE}/databases/${encodeURIComponent(system)}/overview?minutes=${minutes}`, { headers: authHeaders() });
   if (!res.ok) return null;
   return await res.json();
 }
 
 export async function fetchDatabaseQueries(system: string, minutes = 15, limit = 50): Promise<DatabaseOperation[]> {
-  const res = await fetch(`${API_BASE}/databases/${encodeURIComponent(system)}/queries?minutes=${minutes}&limit=${limit}`, { headers: authHeaders() });
+  const res = await apiFetch(`${API_BASE}/databases/${encodeURIComponent(system)}/queries?minutes=${minutes}&limit=${limit}`, { headers: authHeaders() });
   if (!res.ok) return [];
   const data: { items: DatabaseOperation[] } = await res.json();
   return data.items || [];
@@ -516,7 +528,7 @@ export interface DashboardData {
 }
 
 export async function fetchDashboardSummary(minutes = 15): Promise<DashboardData> {
-  const res = await fetch(`${API_BASE}/dashboard/summary?minutes=${minutes}`, { headers: authHeaders() });
+  const res = await apiFetch(`${API_BASE}/dashboard/summary?minutes=${minutes}`, { headers: authHeaders() });
   if (!res.ok) return { requestRate: 0, p99Latency: 0, errorRate: 0, traceCount: 0 };
   const data: APIDashboardSummary = await res.json();
   return {
@@ -571,20 +583,20 @@ export interface NotificationChannel {
 }
 
 export async function fetchAlertRules(): Promise<AlertRule[]> {
-  const res = await fetch(`${API_BASE}/alerts/rules`, { headers: authHeaders() });
+  const res = await apiFetch(`${API_BASE}/alerts/rules`, { headers: authHeaders() });
   if (!res.ok) return [];
   const data: { items: AlertRule[] } = await res.json();
   return data.items || [];
 }
 
 export async function fetchAlertRule(id: string): Promise<AlertRule | null> {
-  const res = await fetch(`${API_BASE}/alerts/rules/${encodeURIComponent(id)}`, { headers: authHeaders() });
+  const res = await apiFetch(`${API_BASE}/alerts/rules/${encodeURIComponent(id)}`, { headers: authHeaders() });
   if (!res.ok) return null;
   return await res.json();
 }
 
 export async function createAlertRule(payload: AlertRulePayload): Promise<AlertRule | null> {
-  const res = await fetch(`${API_BASE}/alerts/rules`, {
+  const res = await apiFetch(`${API_BASE}/alerts/rules`, {
     method: "POST",
     headers: { ...authHeaders(), "Content-Type": "application/json" },
     body: JSON.stringify(payload),
@@ -594,7 +606,7 @@ export async function createAlertRule(payload: AlertRulePayload): Promise<AlertR
 }
 
 export async function updateAlertRule(id: string, payload: AlertRulePayload): Promise<AlertRule | null> {
-  const res = await fetch(`${API_BASE}/alerts/rules/${encodeURIComponent(id)}`, {
+  const res = await apiFetch(`${API_BASE}/alerts/rules/${encodeURIComponent(id)}`, {
     method: "PUT",
     headers: { ...authHeaders(), "Content-Type": "application/json" },
     body: JSON.stringify(payload),
@@ -604,7 +616,7 @@ export async function updateAlertRule(id: string, payload: AlertRulePayload): Pr
 }
 
 export async function deleteAlertRule(id: string): Promise<boolean> {
-  const res = await fetch(`${API_BASE}/alerts/rules/${encodeURIComponent(id)}`, {
+  const res = await apiFetch(`${API_BASE}/alerts/rules/${encodeURIComponent(id)}`, {
     method: "DELETE",
     headers: authHeaders(),
   });
@@ -616,27 +628,27 @@ export async function fetchAlerts(params?: { status?: string; ruleId?: string; l
   if (params?.status) search.set("status", params.status);
   if (params?.ruleId) search.set("rule_id", params.ruleId);
   if (params?.limit) search.set("limit", String(params.limit));
-  const res = await fetch(`${API_BASE}/alerts?${search}`, { headers: authHeaders() });
+  const res = await apiFetch(`${API_BASE}/alerts?${search}`, { headers: authHeaders() });
   if (!res.ok) return [];
   const data: { items: Alert[] } = await res.json();
   return data.items || [];
 }
 
 export async function fetchAlert(id: string): Promise<Alert | null> {
-  const res = await fetch(`${API_BASE}/alerts/${encodeURIComponent(id)}`, { headers: authHeaders() });
+  const res = await apiFetch(`${API_BASE}/alerts/${encodeURIComponent(id)}`, { headers: authHeaders() });
   if (!res.ok) return null;
   return await res.json();
 }
 
 export async function fetchChannels(): Promise<NotificationChannel[]> {
-  const res = await fetch(`${API_BASE}/alerts/channels`, { headers: authHeaders() });
+  const res = await apiFetch(`${API_BASE}/alerts/channels`, { headers: authHeaders() });
   if (!res.ok) return [];
   const data: { items: NotificationChannel[] } = await res.json();
   return data.items || [];
 }
 
 export async function createChannel(payload: { name: string; type: string; config_json: string }): Promise<NotificationChannel | null> {
-  const res = await fetch(`${API_BASE}/alerts/channels`, {
+  const res = await apiFetch(`${API_BASE}/alerts/channels`, {
     method: "POST",
     headers: { ...authHeaders(), "Content-Type": "application/json" },
     body: JSON.stringify(payload),
@@ -646,7 +658,7 @@ export async function createChannel(payload: { name: string; type: string; confi
 }
 
 export async function updateChannel(id: string, payload: { name: string; type: string; config_json: string }): Promise<NotificationChannel | null> {
-  const res = await fetch(`${API_BASE}/alerts/channels/${encodeURIComponent(id)}`, {
+  const res = await apiFetch(`${API_BASE}/alerts/channels/${encodeURIComponent(id)}`, {
     method: "PUT",
     headers: { ...authHeaders(), "Content-Type": "application/json" },
     body: JSON.stringify(payload),
@@ -656,7 +668,7 @@ export async function updateChannel(id: string, payload: { name: string; type: s
 }
 
 export async function deleteChannel(id: string): Promise<boolean> {
-  const res = await fetch(`${API_BASE}/alerts/channels/${encodeURIComponent(id)}`, {
+  const res = await apiFetch(`${API_BASE}/alerts/channels/${encodeURIComponent(id)}`, {
     method: "DELETE",
     headers: authHeaders(),
   });
@@ -693,20 +705,20 @@ export async function fetchExceptions(params?: { minutes?: number; service?: str
   if (params?.service) search.set("service", params.service);
   if (params?.q) search.set("q", params.q);
   if (params?.limit) search.set("limit", String(params.limit));
-  const res = await fetch(`${API_BASE}/exceptions?${search}`, { headers: authHeaders() });
+  const res = await apiFetch(`${API_BASE}/exceptions?${search}`, { headers: authHeaders() });
   if (!res.ok) return [];
   const data: { items: ExceptionGroup[] } = await res.json();
   return data.items || [];
 }
 
 export async function fetchExceptionDetail(fingerprint: string, minutes = 15): Promise<ExceptionDetail | null> {
-  const res = await fetch(`${API_BASE}/exceptions/${encodeURIComponent(fingerprint)}?minutes=${minutes}`, { headers: authHeaders() });
+  const res = await apiFetch(`${API_BASE}/exceptions/${encodeURIComponent(fingerprint)}?minutes=${minutes}`, { headers: authHeaders() });
   if (!res.ok) return null;
   return await res.json();
 }
 
 export async function fetchExceptionTimeseries(fingerprint: string, minutes = 15, interval = 1): Promise<ExceptionBucket[]> {
-  const res = await fetch(
+  const res = await apiFetch(
     `${API_BASE}/exceptions/${encodeURIComponent(fingerprint)}/timeseries?minutes=${minutes}&interval=${interval}`,
     { headers: authHeaders() },
   );
@@ -727,7 +739,7 @@ export interface UsageStat {
 }
 
 export async function fetchUsage(): Promise<UsageStat[]> {
-  const res = await fetch(`${API_BASE}/usage`, { headers: authHeaders() });
+  const res = await apiFetch(`${API_BASE}/usage`, { headers: authHeaders() });
   if (!res.ok) return [];
   const data: { items: UsageStat[] } = await res.json();
   return data.items || [];
@@ -765,7 +777,7 @@ export async function fetchTraceAnalytics(params: { groupBy: string; service?: s
   const search = new URLSearchParams({ group_by: params.groupBy });
   if (params.service) search.set("service", params.service);
   if (params.minutes) search.set("minutes", String(params.minutes));
-  const res = await fetch(`${API_BASE}/traces/analytics?${search}`, { headers: authHeaders() });
+  const res = await apiFetch(`${API_BASE}/traces/analytics?${search}`, { headers: authHeaders() });
   if (!res.ok) return [];
   const data: { items: TraceAnalyticsRow[] } = await res.json();
   return data.items || [];
@@ -782,7 +794,7 @@ export async function fetchTraceAnalyticsTimeseries(params: {
   if (params.service) search.set("service", params.service);
   if (params.minutes) search.set("minutes", String(params.minutes));
   if (params.interval) search.set("interval", String(params.interval));
-  const res = await fetch(`${API_BASE}/traces/analytics/timeseries?${search}`, { headers: authHeaders() });
+  const res = await apiFetch(`${API_BASE}/traces/analytics/timeseries?${search}`, { headers: authHeaders() });
   if (!res.ok) return [];
   const data: { points: TraceAnalyticsPoint[] } = await res.json();
   return data.points || [];
@@ -793,7 +805,7 @@ export async function fetchSlowestTraces(params?: { service?: string; minutes?: 
   if (params?.service) search.set("service", params.service);
   if (params?.minutes) search.set("minutes", String(params.minutes));
   if (params?.limit) search.set("limit", String(params.limit));
-  const res = await fetch(`${API_BASE}/traces/slowest?${search}`, { headers: authHeaders() });
+  const res = await apiFetch(`${API_BASE}/traces/slowest?${search}`, { headers: authHeaders() });
   if (!res.ok) return [];
   const data: { items: SlowTrace[] } = await res.json();
   return data.items || [];
@@ -811,7 +823,7 @@ export interface SearchResult {
 
 export async function searchAll(q: string, minutes = 60): Promise<SearchResult[]> {
   const search = new URLSearchParams({ q, minutes: String(minutes) });
-  const res = await fetch(`${API_BASE}/search?${search}`, { headers: authHeaders() });
+  const res = await apiFetch(`${API_BASE}/search?${search}`, { headers: authHeaders() });
   if (!res.ok) return [];
   const data: { results: SearchResult[] } = await res.json();
   return data.results || [];
@@ -826,7 +838,7 @@ export interface RawQueryResult {
 }
 
 export async function runSQL(query: string): Promise<{ result?: RawQueryResult; error?: string }> {
-  const res = await fetch(`${API_BASE}/query/sql`, {
+  const res = await apiFetch(`${API_BASE}/query/sql`, {
     method: "POST",
     headers: { ...authHeaders(), "Content-Type": "application/json" },
     body: JSON.stringify({ query }),
@@ -854,7 +866,7 @@ export async function fetchExternalCalls(params?: { service?: string; minutes?: 
   const base = params?.service
     ? `${API_BASE}/services/${encodeURIComponent(params.service)}/external`
     : `${API_BASE}/external`;
-  const res = await fetch(`${base}?${search}`, { headers: authHeaders() });
+  const res = await apiFetch(`${base}?${search}`, { headers: authHeaders() });
   if (!res.ok) return [];
   const data: { items: ExternalCallSummary[] } = await res.json();
   return data.items || [];
@@ -885,7 +897,7 @@ export async function fetchLogsHistogram(params?: {
   if (params?.start) q.set("start", params.start);
   if (params?.end) q.set("end", params.end);
   if (params?.interval) q.set("interval", String(params.interval));
-  const res = await fetch(`${API_BASE}/logs/histogram?${q}`, { headers: authHeaders() });
+  const res = await apiFetch(`${API_BASE}/logs/histogram?${q}`, { headers: authHeaders() });
   if (!res.ok) return [];
   const data: { points: LogHistogramPoint[] } = await res.json();
   return data.points || [];
@@ -895,7 +907,7 @@ export async function fetchLogsHistogram(params?: {
 
 export async function fetchServicesTimeseries(minutes = 15, interval = 1, top = 12): Promise<TraceAnalyticsPoint[]> {
   const q = new URLSearchParams({ minutes: String(minutes), interval: String(interval), top: String(top) });
-  const res = await fetch(`${API_BASE}/services/timeseries?${q}`, { headers: authHeaders() });
+  const res = await apiFetch(`${API_BASE}/services/timeseries?${q}`, { headers: authHeaders() });
   if (!res.ok) return [];
   const data: { points: TraceAnalyticsPoint[] } = await res.json();
   return data.points || [];
@@ -908,7 +920,7 @@ export interface MetricAttribute {
 }
 
 export async function fetchMetricAttributes(name: string, minutes = 60): Promise<MetricAttribute[]> {
-  const res = await fetch(
+  const res = await apiFetch(
     `${API_BASE}/metrics/${encodeURIComponent(name)}/attributes?minutes=${minutes}`,
     { headers: authHeaders() }
   );
@@ -920,7 +932,7 @@ export async function fetchMetricAttributes(name: string, minutes = 60): Promise
 // ── Environments ────────────────────────────────────────────────────────
 
 export async function fetchEnvironments(minutes = 1440): Promise<string[]> {
-  const res = await fetch(`${API_BASE}/environments?minutes=${minutes}`, { headers: authHeaders() });
+  const res = await apiFetch(`${API_BASE}/environments?minutes=${minutes}`, { headers: authHeaders() });
   if (!res.ok) return [];
   const data: { items: string[] } = await res.json();
   return data.items || [];
