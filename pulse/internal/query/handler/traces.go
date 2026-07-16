@@ -88,9 +88,9 @@ func (h *Handler) HandleTraceDetail(w http.ResponseWriter, r *http.Request) {
 func ParseTraceFilters(r *http.Request) (model.TraceFilters, error) {
 	q := r.URL.Query()
 	filters := model.TraceFilters{
-		Service: q.Get("service"), Route: q.Get("route"), Status: q.Get("status"),
-		Environment: q.Get("environment"), Kind: q.Get("kind"), Query: q.Get("q"),
-		TagKey: q.Get("tag_key"), TagValue: q.Get("tag_value"),
+		Service: cleanFilter(q.Get("service")), Route: cleanFilter(q.Get("route")), Status: cleanFilter(q.Get("status")),
+		Environment: cleanFilter(q.Get("environment")), Kind: cleanFilter(q.Get("kind")), Query: cleanFilter(q.Get("q")),
+		TagKey: cleanFilter(q.Get("tag_key")), TagValue: cleanFilter(q.Get("tag_value")),
 		Limit: model.DefaultLimit, Offset: 0,
 	}
 	if filters.Kind != "" {

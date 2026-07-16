@@ -31,8 +31,8 @@ func (h *Handler) HandleLogs(w http.ResponseWriter, r *http.Request) {
 func parseLogFilters(r *http.Request) (model.LogFilters, error) {
 	q := r.URL.Query()
 	filters := model.LogFilters{
-		Service: q.Get("service"), Environment: q.Get("environment"),
-		Search: q.Get("search"), TraceID: q.Get("trace_id"),
+		Service: cleanFilter(q.Get("service")), Environment: cleanFilter(q.Get("environment")),
+		Search: cleanFilter(q.Get("search")), TraceID: cleanFilter(q.Get("trace_id")),
 		Limit: model.DefaultLimit, Offset: 0,
 	}
 

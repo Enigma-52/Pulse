@@ -3,18 +3,35 @@ package handler
 import (
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gorilla/mux"
 	"github.com/pulse-observability/pulse/pulse/internal/query/model"
 )
 
+// maxWindowMinutes caps lookback windows at 30 days to avoid unbounded scans.
+const maxWindowMinutes = 43200
+
 func parseMinutes(r *http.Request, def int) int {
 	if v := r.URL.Query().Get("minutes"); v != "" {
 		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			if n > maxWindowMinutes {
+				return maxWindowMinutes
+			}
 			return n
 		}
 	}
 	return def
+}
+
+// cleanFilter trims a string filter param and caps its length so absurd
+// values never reach the query layer.
+func cleanFilter(v string) string {
+	v = strings.TrimSpace(v)
+	if len(v) > 256 {
+		v = v[:256]
+	}
+	return v
 }
 
 func (h *Handler) HandleExceptionsList(w http.ResponseWriter, r *http.Request) {
