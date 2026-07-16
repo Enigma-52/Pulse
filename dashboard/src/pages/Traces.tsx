@@ -11,7 +11,7 @@ import AutoRefreshPicker from "@/components/AutoRefreshPicker";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import type { Trace } from "@/lib/mockData";
 import { fetchTracesPage } from "@/lib/api";
-import { chart as chartColors } from "@/lib/colors";
+import { chart as chartColors, status as statusColors } from "@/lib/colors";
 
 function buildDurationBuckets(traces: Trace[]) {
   if (traces.length === 0) return [];
@@ -192,12 +192,12 @@ export default function Traces() {
         </div>
         <div className="panel p-4 relative overflow-hidden">
           <div className="absolute bottom-0 left-0 right-0 h-[2px]" style={{ background: chartColors.secondary }} />
-          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">p50 duration</div>
+          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">p50 duration (page)</div>
           <div className="text-2xl font-mono font-medium mt-1">{p50}<span className="text-xs text-muted-foreground ml-1">ms</span></div>
         </div>
         <div className="panel p-4 relative overflow-hidden">
-          <div className="absolute bottom-0 left-0 right-0 h-[2px]" style={{ background: errorCount > 0 ? "#EF5350" : chartColors.primary }} />
-          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Errors</div>
+          <div className="absolute bottom-0 left-0 right-0 h-[2px]" style={{ background: errorCount > 0 ? statusColors.error : chartColors.primary }} />
+          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Errors (page)</div>
           <div className={`text-2xl font-mono font-medium mt-1 ${errorCount > 0 ? "text-status-error" : ""}`}>{errorCount}</div>
         </div>
       </div>
