@@ -2,7 +2,7 @@ import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { Activity, BarChart3, Bell, Bug, Database, GitBranch, Globe, Home, LogOut, ScrollText, Settings, Server, Terminal } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import GlobalSearch from "@/components/GlobalSearch";
-import TimeRangeSelector, { SHORT_RANGES } from "@/components/TimeRangeSelector";
+import TimeRangeSelector, { TIME_RANGES } from "@/components/TimeRangeSelector";
 import { useGlobalTimeRange } from "@/lib/timeRange";
 import { useEnvironment } from "@/lib/environment";
 
@@ -113,7 +113,7 @@ export default function AppLayout() {
                 ))}
               </select>
             )}
-            <TimeRangeSelector value={range} onChange={setRange} ranges={SHORT_RANGES} />
+            <TimeRangeSelector value={range} onChange={setRange} ranges={TIME_RANGES} />
             <div className="w-7 h-7 rounded-full bg-accent border border-border flex items-center justify-center text-xs font-medium">
               EM
             </div>
