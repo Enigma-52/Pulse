@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 	"os"
 	"time"
@@ -16,6 +17,7 @@ func getJWTSecret() string {
 	if s := os.Getenv("PULSE_JWT_SECRET"); s != "" {
 		return s
 	}
+	log.Printf("WARNING: PULSE_JWT_SECRET is not set — using an insecure built-in secret. Set it before running in production.")
 	return "pulse-default-secret-change-me"
 }
 
