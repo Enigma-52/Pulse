@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"context"
 	"encoding/json"
 	"net/http"
 )
@@ -15,7 +14,7 @@ func (h *Handler) HandleRawSQL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result, err := h.Store.RunReadOnlySQL(context.Background(), body.Query)
+	result, err := h.Store.RunReadOnlySQL(r.Context(), body.Query)
 	if err != nil {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return

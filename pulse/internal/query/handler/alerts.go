@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
@@ -88,8 +87,8 @@ func (p alertRulePayload) toRule(id string, createdAt time.Time) model.AlertRule
 	}
 }
 
-func (h *Handler) HandleAlertRulesList(w http.ResponseWriter, _ *http.Request) {
-	rules, err := h.Store.ListAlertRules(context.Background())
+func (h *Handler) HandleAlertRulesList(w http.ResponseWriter, r *http.Request) {
+	rules, err := h.Store.ListAlertRules(r.Context())
 	if err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "failed to query alert rules")
 		return
@@ -111,7 +110,7 @@ func (h *Handler) HandleAlertRuleCreate(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	rule := p.toRule(newID(), time.Now().UTC())
-	if err := h.Store.UpsertAlertRule(context.Background(), rule); err != nil {
+	if err := h.Store.UpsertAlertRule(r.Context(), rule); err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "failed to create alert rule")
 		return
 	}
@@ -119,7 +118,7 @@ func (h *Handler) HandleAlertRuleCreate(w http.ResponseWriter, r *http.Request) 
 }
 
 func (h *Handler) HandleAlertRuleGet(w http.ResponseWriter, r *http.Request) {
-	rule, err := h.Store.GetAlertRule(context.Background(), mux.Vars(r)["id"])
+	rule, err := h.Store.GetAlertRule(r.Context(), mux.Vars(r)["id"])
 	if err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "failed to query alert rule")
 		return
@@ -132,7 +131,7 @@ func (h *Handler) HandleAlertRuleGet(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) HandleAlertRuleUpdate(w http.ResponseWriter, r *http.Request) {
-	ctx := context.Background()
+	ctx := r.Context()
 	existing, err := h.Store.GetAlertRule(ctx, mux.Vars(r)["id"])
 	if err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "failed to query alert rule")
@@ -209,7 +208,7 @@ func (h *Handler) HandleAlertsList(w http.ResponseWriter, r *http.Request) {
 		f.Offset = n
 	}
 
-	alerts, err := h.Store.ListAlerts(context.Background(), f)
+	alerts, err := h.Store.ListAlerts(r.Context(), f)
 	if err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "failed to query alerts")
 		return
@@ -221,7 +220,7 @@ func (h *Handler) HandleAlertsList(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) HandleAlertGet(w http.ResponseWriter, r *http.Request) {
-	alert, err := h.Store.GetAlert(context.Background(), mux.Vars(r)["id"])
+	alert, err := h.Store.GetAlert(r.Context(), mux.Vars(r)["id"])
 	if err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "failed to query alert")
 		return
@@ -261,8 +260,8 @@ func (p channelPayload) validate() string {
 	return ""
 }
 
-func (h *Handler) HandleChannelsList(w http.ResponseWriter, _ *http.Request) {
-	channels, err := h.Store.ListChannels(context.Background())
+func (h *Handler) HandleChannelsList(w http.ResponseWriter, r *http.Request) {
+	channels, err := h.Store.ListChannels(r.Context())
 	if err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "failed to query channels")
 		return
@@ -287,7 +286,7 @@ func (h *Handler) HandleChannelCreate(w http.ResponseWriter, r *http.Request) {
 		ID: newID(), Name: strings.TrimSpace(p.Name), Type: p.Type,
 		ConfigJSON: p.ConfigJSON, CreatedAt: time.Now().UTC(),
 	}
-	if err := h.Store.UpsertChannel(context.Background(), c); err != nil {
+	if err := h.Store.UpsertChannel(r.Context(), c); err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "failed to create channel")
 		return
 	}
@@ -295,7 +294,7 @@ func (h *Handler) HandleChannelCreate(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) HandleChannelUpdate(w http.ResponseWriter, r *http.Request) {
-	ctx := context.Background()
+	ctx := r.Context()
 	existing, err := h.Store.GetChannel(ctx, mux.Vars(r)["id"])
 	if err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "failed to query channel")
@@ -327,7 +326,7 @@ func (h *Handler) HandleChannelUpdate(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) HandleChannelDelete(w http.ResponseWriter, r *http.Request) {
-	ctx := context.Background()
+	ctx := r.Context()
 	existing, err := h.Store.GetChannel(ctx, mux.Vars(r)["id"])
 	if err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "failed to query channel")
@@ -345,7 +344,7 @@ func (h *Handler) HandleChannelDelete(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) HandleAlertRuleDelete(w http.ResponseWriter, r *http.Request) {
-	ctx := context.Background()
+	ctx := r.Context()
 	existing, err := h.Store.GetAlertRule(ctx, mux.Vars(r)["id"])
 	if err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "failed to query alert rule")

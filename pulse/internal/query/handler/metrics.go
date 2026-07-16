@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"context"
 	"net/http"
 	"strconv"
 
@@ -10,7 +9,7 @@ import (
 )
 
 func (h *Handler) HandleMetricsList(w http.ResponseWriter, r *http.Request) {
-	ctx := context.Background()
+	ctx := r.Context()
 	metrics, err := h.Store.GetMetricsList(ctx)
 	if err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "failed to query metrics")
@@ -23,7 +22,7 @@ func (h *Handler) HandleMetricsList(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) HandleMetricSeries(w http.ResponseWriter, r *http.Request) {
-	ctx := context.Background()
+	ctx := r.Context()
 	name := mux.Vars(r)["name"]
 	if name == "" {
 		writeJSONError(w, http.StatusBadRequest, "metric name is required")
@@ -74,7 +73,7 @@ func (h *Handler) HandleMetricSeries(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) HandleDashboardSummary(w http.ResponseWriter, r *http.Request) {
-	ctx := context.Background()
+	ctx := r.Context()
 	minutes := 15
 	if v := r.URL.Query().Get("minutes"); v != "" {
 		n, err := strconv.Atoi(v)
@@ -94,7 +93,7 @@ func (h *Handler) HandleDashboardSummary(w http.ResponseWriter, r *http.Request)
 }
 
 func (h *Handler) HandleMetricsQuery(w http.ResponseWriter, r *http.Request) {
-	ctx := context.Background()
+	ctx := r.Context()
 	q := r.URL.Query()
 
 	minutes := 15
@@ -134,7 +133,7 @@ func (h *Handler) HandleMetricAttributes(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	attrs, err := h.Store.GetMetricAttributes(context.Background(), name, parseMinutes(r, 60))
+	attrs, err := h.Store.GetMetricAttributes(r.Context(), name, parseMinutes(r, 60))
 	if err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "failed to query metric attributes")
 		return

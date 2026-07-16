@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"context"
 	"net/http"
 	"strconv"
 
@@ -9,7 +8,7 @@ import (
 )
 
 func (h *Handler) HandleServicesList(w http.ResponseWriter, r *http.Request) {
-	ctx := context.Background()
+	ctx := r.Context()
 	minutes := 15
 	if v := r.URL.Query().Get("minutes"); v != "" {
 		n, err := strconv.Atoi(v)
@@ -46,7 +45,7 @@ func (h *Handler) HandleServicesTimeseries(w http.ResponseWriter, r *http.Reques
 		}
 	}
 
-	points, err := h.Store.GetServicesTimeseries(context.Background(), parseMinutes(r, 15), interval, topN)
+	points, err := h.Store.GetServicesTimeseries(r.Context(), parseMinutes(r, 15), interval, topN)
 	if err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "failed to query services timeseries")
 		return

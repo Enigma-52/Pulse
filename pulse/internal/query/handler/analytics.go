@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"context"
 	"net/http"
 	"strconv"
 
@@ -20,7 +19,7 @@ func (h *Handler) HandleTraceAnalytics(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	rows, err := h.Store.GetTraceAnalytics(context.Background(), groupBy, q.Get("service"), parseMinutes(r, 15))
+	rows, err := h.Store.GetTraceAnalytics(r.Context(), groupBy, q.Get("service"), parseMinutes(r, 15))
 	if err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "failed to query trace analytics")
 		return
@@ -56,7 +55,7 @@ func (h *Handler) HandleTraceAnalyticsTimeseries(w http.ResponseWriter, r *http.
 		}
 	}
 
-	points, err := h.Store.GetTraceAnalyticsTimeseries(context.Background(), metric, groupBy, q.Get("service"), parseMinutes(r, 15), interval)
+	points, err := h.Store.GetTraceAnalyticsTimeseries(r.Context(), metric, groupBy, q.Get("service"), parseMinutes(r, 15), interval)
 	if err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "failed to query analytics timeseries")
 		return
@@ -76,7 +75,7 @@ func (h *Handler) HandleSlowestTraces(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	traces, err := h.Store.GetSlowestTraces(context.Background(), q.Get("service"), parseMinutes(r, 15), limit)
+	traces, err := h.Store.GetSlowestTraces(r.Context(), q.Get("service"), parseMinutes(r, 15), limit)
 	if err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "failed to query slowest traces")
 		return

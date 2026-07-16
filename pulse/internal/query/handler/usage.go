@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"context"
 	"net/http"
 	"time"
 )
@@ -15,8 +14,8 @@ type usageItem struct {
 	RetentionDays int       `json:"retention_days"`
 }
 
-func (h *Handler) HandleUsage(w http.ResponseWriter, _ *http.Request) {
-	usage, err := h.Store.GetUsage(context.Background())
+func (h *Handler) HandleUsage(w http.ResponseWriter, r *http.Request) {
+	usage, err := h.Store.GetUsage(r.Context())
 	if err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "failed to query usage")
 		return

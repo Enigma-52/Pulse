@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"context"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -14,7 +13,7 @@ func (h *Handler) HandleExternalCalls(w http.ResponseWriter, r *http.Request) {
 		service = v
 	}
 
-	calls, err := h.Store.GetExternalCalls(context.Background(), service, parseMinutes(r, 15))
+	calls, err := h.Store.GetExternalCalls(r.Context(), service, parseMinutes(r, 15))
 	if err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "failed to query external calls")
 		return

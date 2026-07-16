@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -12,7 +11,7 @@ import (
 )
 
 func (h *Handler) HandleDatabasesList(w http.ResponseWriter, r *http.Request) {
-	ctx := context.Background()
+	ctx := r.Context()
 	minutes := 15
 	if v := r.URL.Query().Get("minutes"); v != "" {
 		if n, err := strconv.Atoi(v); err == nil && n > 0 {
@@ -32,7 +31,7 @@ func (h *Handler) HandleDatabasesList(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) HandleDatabaseOverview(w http.ResponseWriter, r *http.Request) {
-	ctx := context.Background()
+	ctx := r.Context()
 	system := mux.Vars(r)["system"]
 	if strings.TrimSpace(system) == "" {
 		writeJSONError(w, http.StatusBadRequest, "system is required")
@@ -59,7 +58,7 @@ func (h *Handler) HandleDatabaseOverview(w http.ResponseWriter, r *http.Request)
 }
 
 func (h *Handler) HandleDatabaseQueries(w http.ResponseWriter, r *http.Request) {
-	ctx := context.Background()
+	ctx := r.Context()
 	system := mux.Vars(r)["system"]
 	if strings.TrimSpace(system) == "" {
 		writeJSONError(w, http.StatusBadRequest, "system is required")

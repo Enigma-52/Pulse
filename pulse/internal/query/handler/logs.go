@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"context"
 	"errors"
 	"net/http"
 	"strconv"
@@ -11,7 +10,7 @@ import (
 )
 
 func (h *Handler) HandleLogs(w http.ResponseWriter, r *http.Request) {
-	ctx := context.Background()
+	ctx := r.Context()
 	filters, err := parseLogFilters(r)
 	if err != nil {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
@@ -103,7 +102,7 @@ func (h *Handler) HandleLogsHistogram(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	points, err := h.Store.GetLogsHistogram(context.Background(), filters, interval)
+	points, err := h.Store.GetLogsHistogram(r.Context(), filters, interval)
 	if err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "failed to query logs histogram")
 		return

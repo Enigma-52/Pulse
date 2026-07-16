@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"strings"
@@ -11,7 +10,7 @@ import (
 )
 
 func (h *Handler) HandleServiceOverview(w http.ResponseWriter, r *http.Request) {
-	ctx := context.Background()
+	ctx := r.Context()
 	service := mux.Vars(r)["service"]
 	if strings.TrimSpace(service) == "" {
 		writeJSONError(w, http.StatusBadRequest, "service is required")

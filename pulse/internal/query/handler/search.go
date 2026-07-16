@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"context"
 	"net/http"
 	"strings"
 
@@ -15,7 +14,7 @@ func (h *Handler) HandleSearch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	results, err := h.Store.Search(context.Background(), q, parseMinutes(r, 60))
+	results, err := h.Store.Search(r.Context(), q, parseMinutes(r, 60))
 	if err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "search failed")
 		return
@@ -27,7 +26,7 @@ func (h *Handler) HandleSearch(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) HandleEnvironments(w http.ResponseWriter, r *http.Request) {
-	envs, err := h.Store.ListEnvironments(context.Background(), parseMinutes(r, 1440))
+	envs, err := h.Store.ListEnvironments(r.Context(), parseMinutes(r, 1440))
 	if err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "failed to query environments")
 		return

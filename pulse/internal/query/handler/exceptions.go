@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"context"
 	"net/http"
 	"strconv"
 
@@ -46,7 +45,7 @@ func (h *Handler) HandleExceptionsList(w http.ResponseWriter, r *http.Request) {
 		f.Offset = n
 	}
 
-	groups, err := h.Store.ListExceptionGroups(context.Background(), f)
+	groups, err := h.Store.ListExceptionGroups(r.Context(), f)
 	if err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "failed to query exceptions")
 		return
@@ -59,7 +58,7 @@ func (h *Handler) HandleExceptionsList(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) HandleExceptionDetail(w http.ResponseWriter, r *http.Request) {
 	fingerprint := mux.Vars(r)["fingerprint"]
-	detail, err := h.Store.GetExceptionGroup(context.Background(), fingerprint, parseMinutes(r, 15))
+	detail, err := h.Store.GetExceptionGroup(r.Context(), fingerprint, parseMinutes(r, 15))
 	if err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "failed to query exception")
 		return
@@ -81,7 +80,7 @@ func (h *Handler) HandleExceptionTimeseries(w http.ResponseWriter, r *http.Reque
 		}
 	}
 
-	buckets, err := h.Store.ExceptionFrequency(context.Background(), fingerprint, minutes, interval)
+	buckets, err := h.Store.ExceptionFrequency(r.Context(), fingerprint, minutes, interval)
 	if err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "failed to query exception timeseries")
 		return

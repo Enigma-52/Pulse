@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"context"
 	"errors"
 	"net/http"
 	"strconv"
@@ -13,7 +12,7 @@ import (
 )
 
 func (h *Handler) HandleTraces(w http.ResponseWriter, r *http.Request) {
-	ctx := context.Background()
+	ctx := r.Context()
 	filters, err := ParseTraceFilters(r)
 	if err != nil {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
@@ -33,7 +32,7 @@ func (h *Handler) HandleTraces(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) HandleTraceDetail(w http.ResponseWriter, r *http.Request) {
-	ctx := context.Background()
+	ctx := r.Context()
 	traceID := mux.Vars(r)["trace_id"]
 	if strings.TrimSpace(traceID) == "" {
 		writeJSONError(w, http.StatusBadRequest, "trace_id is required")
