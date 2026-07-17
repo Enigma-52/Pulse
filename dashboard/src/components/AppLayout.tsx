@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { Activity, BarChart3, Bell, Bug, Database, GitBranch, Globe, Home, LogOut, ScrollText, Settings, Server, Terminal } from "lucide-react";
 import { useAuth } from "@/lib/auth";
@@ -27,6 +28,27 @@ export default function AppLayout() {
   const { range, setRange } = useGlobalTimeRange();
   const { environment, environments, setEnvironment } = useEnvironment();
   const crumb = location.pathname.split("/").filter(Boolean).slice(1);
+  const [ready, setReady] = useState<boolean | null>(null);
+
+  // Poll backend readiness so the sidebar status dot reflects reality.
+  useEffect(() => {
+    let cancelled = false;
+    const check = () =>
+      fetch("/api/readyz")
+        .then((res) => !cancelled && setReady(res.ok))
+        .catch(() => !cancelled && setReady(false));
+    check();
+    const t = setInterval(check, 60_000);
+    return () => {
+      cancelled = true;
+      clearInterval(t);
+    };
+  }, []);
+
+  const email = localStorage.getItem("pulse_email") || "";
+  const initials = email
+    ? email.split("@")[0].split(/[._-]/).map((p) => p[0]).join("").slice(0, 2).toUpperCase()
+    : "•";
 
   return (
     <div className="min-h-screen flex bg-background text-foreground">
@@ -38,15 +60,6 @@ export default function AppLayout() {
           </div>
           <span className="text-sm font-semibold tracking-tight">Pulse</span>
           <span className="ml-auto text-[10px] font-mono text-muted-foreground border border-border px-1.5 py-0.5 rounded">v0.1</span>
-        </div>
-
-        <div className="px-3 pt-4 pb-2">
-          <div className="data-label px-2 mb-2">Workspace</div>
-          <button className="w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded hover:bg-sidebar-accent text-sidebar-foreground">
-            <div className="w-4 h-4 rounded-sm bg-accent border border-border" />
-            <span className="truncate">production</span>
-            <span className="ml-auto text-muted-foreground">⌘K</span>
-          </button>
         </div>
 
         <nav className="px-3 mt-2 space-y-0.5 flex-1">
@@ -79,8 +92,8 @@ export default function AppLayout() {
             Sign out
           </button>
           <div className="mt-3 flex items-center gap-2 px-2 text-xs text-muted-foreground">
-            <span className="w-1.5 h-1.5 rounded-full bg-status-ok animate-pulse-dot" />
-            All systems nominal
+            <span className={`w-1.5 h-1.5 rounded-full ${ready === false ? "bg-status-error" : "bg-status-ok animate-pulse-dot"}`} />
+            {ready === false ? "Backend unreachable" : "All systems nominal"}
           </div>
         </div>
       </aside>
@@ -114,8 +127,8 @@ export default function AppLayout() {
               </select>
             )}
             <TimeRangeSelector value={range} onChange={setRange} ranges={TIME_RANGES} />
-            <div className="w-7 h-7 rounded-full bg-accent border border-border flex items-center justify-center text-xs font-medium">
-              EM
+            <div title={email} className="w-7 h-7 rounded-full bg-accent border border-border flex items-center justify-center text-xs font-medium">
+              {initials}
             </div>
           </div>
         </header>

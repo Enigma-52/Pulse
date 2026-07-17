@@ -56,6 +56,7 @@ export async function setupAdmin(email: string, password: string): Promise<strin
     throw new Error(data.error || "Setup failed");
   }
   const data = await res.json();
+  localStorage.setItem("pulse_email", email);
   return data.token;
 }
 
@@ -70,5 +71,6 @@ export async function loginUser(email: string, password: string): Promise<string
     throw new Error(data.error || "Login failed");
   }
   const data = await res.json();
+  localStorage.setItem("pulse_email", email);
   return data.token;
 }
