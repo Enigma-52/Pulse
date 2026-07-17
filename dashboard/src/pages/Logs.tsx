@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import type { LogLevel, Log } from "@/lib/mockData";
 import { fetchLogs, fetchLogsHistogram, type LogHistogramPoint } from "@/lib/api";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from "recharts";
@@ -59,7 +59,8 @@ export default function Logs() {
   const [loading, setLoading] = useState(true);
   const [activeLevels, setActiveLevels] = useState<LogLevel[]>([]);
   const [histogram, setHistogram] = useState<LogHistogramPoint[]>([]);
-  const [search, setSearch] = useState("");
+  const [searchParams] = useSearchParams();
+  const [search, setSearch] = useState(searchParams.get("search") || "");
   const { range, setRange } = useGlobalTimeRange();
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("stream");
@@ -88,6 +89,7 @@ export default function Logs() {
 
   useEffect(() => {
     loadLogs(activeLevels, search, range);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [range]);
 
   const refresh = useAutoRefresh(() => loadLogs(activeLevels, search, range));

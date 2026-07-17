@@ -18,8 +18,9 @@ function resultPath(r: SearchResult): string {
     case "service":
       return `/app/services/${encodeURIComponent(r.id)}`;
     case "log":
-      // Log results carry their trace id; fall back to the logs page.
-      return r.id ? `/app/traces/${r.id}` : "/app/logs";
+      // Log results carry their trace id; otherwise open logs filtered by
+      // the matched message so the user lands on something relevant.
+      return r.id ? `/app/traces/${r.id}` : `/app/logs?search=${encodeURIComponent(r.title)}`;
     case "metric":
       return `/app/metrics/${encodeURIComponent(r.id)}`;
     case "exception":
