@@ -58,6 +58,7 @@ export default function AlertRuleForm() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
+  const [thresholdInput, setThresholdInput] = useState("0");
   const [form, setForm] = useState<AlertRulePayload>({
     name: "",
     signal: "traces",
@@ -90,6 +91,7 @@ export default function AlertRuleForm() {
             channel_ids: rule.channel_ids,
             enabled: rule.enabled,
           });
+          setThresholdInput(String(rule.threshold));
         }
         setLoading(false);
       });
@@ -119,9 +121,15 @@ export default function AlertRuleForm() {
       setError("Metric name is required for metrics rules");
       return;
     }
+    const threshold = Number(thresholdInput);
+    if (thresholdInput.trim() === "" || !Number.isFinite(threshold)) {
+      setError("Threshold must be a number");
+      return;
+    }
     setSaving(true);
     setError("");
-    const result = id ? await updateAlertRule(id, form) : await createAlertRule(form);
+    const payload = { ...form, threshold };
+    const result = id ? await updateAlertRule(id, payload) : await createAlertRule(payload);
     setSaving(false);
     if (result) {
       navigate("/app/alerts");
@@ -194,8 +202,8 @@ export default function AlertRuleForm() {
             <input
               type="number"
               className={inputClass}
-              value={form.threshold}
-              onChange={(e) => set("threshold", Number(e.target.value))}
+              value={thresholdInput}
+              onChange={(e) => setThresholdInput(e.target.value)}
             />
           </Field>
           <Field label="Window (minutes)">
