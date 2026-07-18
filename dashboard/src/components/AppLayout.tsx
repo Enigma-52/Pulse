@@ -27,7 +27,13 @@ export default function AppLayout() {
   const { logout } = useAuth();
   const { range, setRange } = useGlobalTimeRange();
   const { environment, environments, setEnvironment } = useEnvironment();
-  const crumb = location.pathname.split("/").filter(Boolean).slice(1);
+  // Truncate long path segments (trace ids, exception fingerprints) so the
+  // breadcrumb never shows 40-char hex strings.
+  const crumb = location.pathname
+    .split("/")
+    .filter(Boolean)
+    .slice(1)
+    .map((c) => (c.length > 14 ? `${c.slice(0, 12)}…` : c));
   const [ready, setReady] = useState<boolean | null>(null);
 
   // Poll backend readiness so the sidebar status dot reflects reality.
