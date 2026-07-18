@@ -1,4 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
+import { BarChart3 } from "lucide-react";
+import EmptyState from "@/components/EmptyState";
 import { Link } from "react-router-dom";
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid, LineChart, Line } from "recharts";
 import { fetchMetrics, fetchMetricSeries, queryMetrics } from "@/lib/api";
@@ -151,7 +153,7 @@ export default function Metrics() {
       {loading ? (
         <div className="text-sm text-muted-foreground">Loading metrics...</div>
       ) : metrics.length === 0 ? (
-        <div className="panel p-8 text-center text-sm text-muted-foreground">No metrics data. Send telemetry to get started.</div>
+        <div className="panel"><EmptyState icon={BarChart3} title="No metrics yet" hint="Point an OTel metrics exporter at http://<pulse-host>:4321/v1/metrics — counters, gauges, and histograms show up here." /></div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
           {metrics.map((m, idx) => {

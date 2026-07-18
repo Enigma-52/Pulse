@@ -1,4 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
+import { Server } from "lucide-react";
+import EmptyState from "@/components/EmptyState";
 import { Link } from "react-router-dom";
 import { useMemo } from "react";
 import { fetchServicesList, fetchServicesTimeseries, type ServiceSummary, type TraceAnalyticsPoint } from "@/lib/api";
@@ -91,7 +93,7 @@ export default function Services() {
       {loading ? (
         <div className="text-sm text-muted-foreground">Loading services...</div>
       ) : services.length === 0 ? (
-        <div className="panel p-8 text-center text-sm text-muted-foreground">No services found. Send telemetry data to get started.</div>
+        <div className="panel"><EmptyState icon={Server} title="No services yet" hint="Services appear automatically once any app sends traces with a service.name resource attribute to /v1/traces." /></div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
           {visibleServices.map((s) => {

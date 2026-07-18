@@ -1,4 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
+import { ScrollText } from "lucide-react";
+import EmptyState from "@/components/EmptyState";
 import { Link, useSearchParams } from "react-router-dom";
 import type { LogLevel, Log } from "@/lib/mockData";
 import { fetchLogs, fetchLogsHistogram, type LogHistogramPoint } from "@/lib/api";
@@ -256,7 +258,7 @@ export default function Logs() {
             {loading ? (
               <div className="px-4 py-8 text-center text-muted-foreground">Loading logs...</div>
             ) : logs.length === 0 ? (
-              <div className="px-4 py-8 text-center text-muted-foreground">No logs found</div>
+              <EmptyState icon={ScrollText} title="No logs in this time range" hint="Point any OpenTelemetry SDK's OTLP/HTTP exporter at http://<pulse-host>:4321/v1/logs to start streaming logs here." />
             ) : (
               logs.map(l => (
                 <div key={l.id}>
