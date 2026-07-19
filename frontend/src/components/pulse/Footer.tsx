@@ -1,8 +1,29 @@
 const cols = [
-  { h: "Product", items: ["Traces", "Logs", "Metrics", "Alerts", "Dashboards"] },
-  { h: "Platform", items: ["SDKs", "Ingestion API", "Query API", "ClickHouse", "Self-host"] },
-  { h: "Resources", items: ["Docs", "Quickstart", "Changelog", "Roadmap", "Blog"] },
-  { h: "Community", items: ["GitHub", "Discord", "Contributors", "Security", "Brand"] },
+  {
+    h: "Product",
+    items: [
+      { label: "Features", href: "#features" },
+      { label: "How it works", href: "#how-it-works" },
+      { label: "Deploy", href: "#deploy" },
+      { label: "Integrations", href: "#integrations" },
+    ],
+  },
+  {
+    h: "Resources",
+    items: [
+      { label: "Docs", href: "https://github.com/Enigma-52/Pulse/tree/main/docs" },
+      { label: "Roadmap", href: "https://github.com/Enigma-52/Pulse/blob/main/docs/roadmap.md" },
+      { label: "Architecture", href: "https://github.com/Enigma-52/Pulse/blob/main/docs/architecture.md" },
+    ],
+  },
+  {
+    h: "Community",
+    items: [
+      { label: "GitHub", href: "https://github.com/Enigma-52/Pulse" },
+      { label: "Issues", href: "https://github.com/Enigma-52/Pulse/issues" },
+      { label: "Contributing", href: "https://github.com/Enigma-52/Pulse/pulls" },
+    ],
+  },
 ];
 
 const Footer = () => (
@@ -18,7 +39,7 @@ const Footer = () => (
             Open-source, developer-first observability. Built so engineers can ship — and sleep.
           </p>
           <div className="mt-8 font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
-            MIT licensed · v0.4.2
+            MIT licensed · open source
           </div>
         </div>
         {cols.map((c) => (
@@ -26,7 +47,15 @@ const Footer = () => (
             <div className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground mb-5">{c.h}</div>
             <ul className="space-y-3 text-sm">
               {c.items.map((i) => (
-                <li key={i}><a href="#" className="text-foreground/80 hover:text-primary transition-colors">{i}</a></li>
+                <li key={i.label}>
+                  <a
+                    href={i.href}
+                    {...(i.href.startsWith("http") ? { target: "_blank", rel: "noopener" } : {})}
+                    className="text-foreground/80 hover:text-primary transition-colors"
+                  >
+                    {i.label}
+                  </a>
+                </li>
               ))}
             </ul>
           </div>

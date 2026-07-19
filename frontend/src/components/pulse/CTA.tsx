@@ -15,10 +15,10 @@ const CTA = () => (
         Open source. Self-hosted. Built for the engineers who carry the pager.
       </p>
       <div className="mt-12 flex flex-col sm:flex-row justify-center gap-3">
-        <a href="#" className="bg-primary text-primary-foreground px-8 py-4 rounded-sm font-medium hover:bg-primary-glow transition-colors">
+        <a href="https://github.com/Enigma-52/Pulse" target="_blank" rel="noopener" className="bg-primary text-primary-foreground px-8 py-4 rounded-sm font-medium hover:bg-primary-glow transition-colors">
           Deploy Pulse free →
         </a>
-        <a href="#" className="border border-border px-8 py-4 rounded-sm font-medium hover:bg-surface-2 transition-colors">
+        <a href="https://github.com/Enigma-52/Pulse" target="_blank" rel="noopener" className="border border-border px-8 py-4 rounded-sm font-medium hover:bg-surface-2 transition-colors">
           Star on GitHub ★
         </a>
       </div>
