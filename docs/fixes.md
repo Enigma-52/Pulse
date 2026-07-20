@@ -110,6 +110,9 @@ Small shared `Skeleton` rows for tables (Traces/Logs/Services/Exceptions/Alerts)
 
 ---
 
+## Status (2026-07-16)
+Delivered: A1–A5, B1–B7, C1, C3, C4, D1, D2, E1. E2 audited — nginx passes all methods, no change needed. Deferred: C2 (chart migration to TimeSeriesChart — visual-regression risk without runtime verification) and C5 (loading skeletons, cosmetic).
+
 ## Execution order
 A1 → B1 → B2 (highest user-facing impact), then A2–A5, B3–B7, C1–C4, D1–D2, E1–E2, C5 last (optional).
 
