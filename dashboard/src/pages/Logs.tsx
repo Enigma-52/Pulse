@@ -12,11 +12,17 @@ import AutoRefreshPicker from "@/components/AutoRefreshPicker";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 
 const levelStyle: Record<LogLevel, string> = {
+  trace: "text-muted-foreground border-border",
+  debug: "text-muted-foreground border-border",
   info: "text-status-info border-status-info/40",
   warn: "text-status-warn border-status-warn/40",
   error: "text-status-error border-status-error/40",
-  debug: "text-muted-foreground border-border",
+  fatal: "text-status-error border-status-error/40",
 };
+
+function styleForLevel(level: string): string {
+  return levelStyle[level as LogLevel] ?? levelStyle.debug;
+}
 
 type ViewMode = "stream" | "grouped";
 
@@ -112,11 +118,13 @@ export default function Logs() {
     setRange(r);
   };
 
-  const levelCounts = {
+  const levelCounts: Record<LogLevel, number> = {
+    trace: logs.filter(x => x.level === "trace").length,
+    debug: logs.filter(x => x.level === "debug").length,
     info: logs.filter(x => x.level === "info").length,
     warn: logs.filter(x => x.level === "warn").length,
     error: logs.filter(x => x.level === "error").length,
-    debug: logs.filter(x => x.level === "debug").length,
+    fatal: logs.filter(x => x.level === "fatal").length,
   };
 
   const errorGroups = useMemo(() => groupErrors(logs), [logs]);
@@ -183,7 +191,7 @@ export default function Logs() {
 
       <div className="flex items-center justify-between">
         <div className="flex gap-2 flex-wrap">
-          {(["info", "warn", "error", "debug"] as LogLevel[]).map(l => (
+          {(["info", "warn", "error", "fatal", "debug"] as LogLevel[]).map(l => (
             <button
               key={l}
               onClick={() => handleLevelClick(l)}
@@ -268,7 +276,7 @@ export default function Logs() {
                   >
                     <div className="col-span-2 text-muted-foreground">{l.timestamp}</div>
                     <div className="col-span-1">
-                      <span className={`px-1.5 py-0.5 rounded border text-[10px] ${levelStyle[l.level]}`}>
+                      <span className={`px-1.5 py-0.5 rounded border text-[10px] ${styleForLevel(l.level)}`}>
                         {l.level.toUpperCase()}
                       </span>
                     </div>

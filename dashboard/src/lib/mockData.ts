@@ -79,7 +79,7 @@ export const traces: Trace[] = [
   { id: "6f1b8d3a4e", name: "POST /api/orders", service: "orders-service", duration: 2104, spans: 18, status: "error", timestamp: "12:42:16.612" },
 ];
 
-export type LogLevel = "info" | "warn" | "error" | "debug";
+export type LogLevel = "trace" | "debug" | "info" | "warn" | "error" | "fatal";
 export type Log = {
   id: string;
   timestamp: string;

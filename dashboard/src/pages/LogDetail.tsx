@@ -5,10 +5,12 @@ import { fetchLogs } from "@/lib/api";
 import type { Log } from "@/lib/mockData";
 
 const levelColors: Record<string, string> = {
+  fatal: "text-status-error border-status-error/40",
   error: "text-status-error border-status-error/40",
   warn: "text-status-warn border-status-warn/40",
   info: "text-status-info border-status-info/40",
   debug: "text-muted-foreground border-border",
+  trace: "text-muted-foreground border-border",
 };
 
 export default function LogDetail() {
@@ -57,7 +59,7 @@ export default function LogDetail() {
     );
   }
 
-  const levelColor = levelColors[log.level] ?? "text-muted-foreground border-border";
+  const levelColor = (levelColors[log.level] ?? levelColors.debug) ?? "text-muted-foreground border-border";
 
   return (
     <div className="p-6 space-y-6 max-w-4xl">
