@@ -38,6 +38,20 @@ export function rangeToStartEnd(r: TimeRange): { start: string; end: string } {
   };
 }
 
+// Bucket size in MINUTES for endpoints using toStartOfInterval(... MINUTE).
+export function rangeToIntervalMinutes(r: TimeRange): number {
+  const map: Record<TimeRange, number> = {
+    "5m": 1,
+    "15m": 1,
+    "1h": 1,
+    "6h": 2,
+    "24h": 5,
+    "7d": 30,
+  };
+  return map[r];
+}
+
+// Bucket size in SECONDS for the metric series endpoint.
 export function rangeToInterval(r: TimeRange): number {
   const map: Record<TimeRange, number> = {
     "5m": 5,

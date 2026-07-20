@@ -6,7 +6,7 @@ import type { LogLevel, Log } from "@/lib/mockData";
 import { fetchLogs, fetchLogsHistogram, type LogHistogramPoint } from "@/lib/api";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from "recharts";
 import { logLevel as logLevelColors } from "@/lib/colors";
-import TimeRangeSelector, { type TimeRange, rangeToStartEnd, rangeToLabel, rangeToInterval, SHORT_RANGES } from "@/components/TimeRangeSelector";
+import TimeRangeSelector, { type TimeRange, rangeToStartEnd, rangeToLabel, rangeToInterval, SHORT_RANGES, rangeToIntervalMinutes } from "@/components/TimeRangeSelector";
 import { useGlobalTimeRange } from "@/lib/timeRange";
 import AutoRefreshPicker from "@/components/AutoRefreshPicker";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
@@ -77,7 +77,7 @@ export default function Logs() {
       const searchParam = searchQuery || undefined;
       const [data, hist] = await Promise.all([
         fetchLogs({ level: levelParam, search: searchParam, start, end }),
-        fetchLogsHistogram({ level: levelParam, search: searchParam, start, end, interval: rangeToInterval(r) }),
+        fetchLogsHistogram({ level: levelParam, search: searchParam, start, end, interval: rangeToIntervalMinutes(r) }),
       ]);
       setLogs(data);
       setHistogram(hist);

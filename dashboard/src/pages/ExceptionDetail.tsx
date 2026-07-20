@@ -8,7 +8,7 @@ import {
   type ExceptionDetail as ExceptionDetailData,
   type ExceptionBucket,
 } from "@/lib/api";
-import TimeRangeSelector, { type TimeRange, rangeToMinutes, rangeToInterval, SHORT_RANGES } from "@/components/TimeRangeSelector";
+import TimeRangeSelector, { type TimeRange, rangeToMinutes, rangeToInterval, SHORT_RANGES, rangeToIntervalMinutes } from "@/components/TimeRangeSelector";
 import { useGlobalTimeRange } from "@/lib/timeRange";
 import { status, serviceColor } from "@/lib/colors";
 
@@ -39,7 +39,7 @@ export default function ExceptionDetail() {
     const minutes = rangeToMinutes(range);
     Promise.all([
       fetchExceptionDetail(fingerprint, minutes).then(setDetail),
-      fetchExceptionTimeseries(fingerprint, minutes, rangeToInterval(range)).then(setBuckets),
+      fetchExceptionTimeseries(fingerprint, minutes, rangeToIntervalMinutes(range)).then(setBuckets),
     ]).finally(() => setLoading(false));
   }, [fingerprint, range]);
 

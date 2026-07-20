@@ -1,9 +1,9 @@
 import { useEffect, useState, useCallback } from "react";
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
-import TimeRangeSelector, { type TimeRange, rangeToMinutes, rangeToLabel, rangeToStartEnd, rangeToInterval } from "@/components/TimeRangeSelector";
+import TimeRangeSelector, { type TimeRange, rangeToMinutes, rangeToLabel, rangeToStartEnd, rangeToIntervalMinutes } from "@/components/TimeRangeSelector";
 import { useGlobalTimeRange } from "@/lib/timeRange";
 import type { Trace } from "@/lib/mockData";
-import { fetchTraces, fetchDashboardSummary, fetchMetricSeries, type DashboardData } from "@/lib/api";
+import { fetchTraces, fetchDashboardSummary, fetchServicesTimeseries, type DashboardData } from "@/lib/api";
 import { Link } from "react-router-dom";
 import AutoRefreshPicker from "@/components/AutoRefreshPicker";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
@@ -18,12 +18,23 @@ export default function Dashboard() {
   const load = useCallback((r: TimeRange) => {
     const minutes = rangeToMinutes(r);
     const { start, end } = rangeToStartEnd(r);
-    const interval = rangeToInterval(r);
 
     fetchDashboardSummary(minutes).then(setSummary);
     fetchTraces({ start, end, limit: 6 }).then(setTraces);
-    fetchMetricSeries("http.server.duration", minutes, interval).then((s) => {
-      if (s.length > 0) setReqSeries(s);
+    // Request volume from traces: sum per-service counts into one series.
+    fetchServicesTimeseries(minutes, rangeToIntervalMinutes(r)).then((points) => {
+      const byTime = new Map<string, number>();
+      for (const pt of points) {
+        byTime.set(pt.timestamp, (byTime.get(pt.timestamp) ?? 0) + pt.value);
+      }
+      setReqSeries(
+        Array.from(byTime.entries())
+          .sort(([a], [b]) => a.localeCompare(b))
+          .map(([ts, value]) => ({
+            t: new Date(ts).toLocaleTimeString("en-US", { hour12: false, hour: "2-digit", minute: "2-digit" }),
+            value,
+          })),
+      );
     });
   }, []);
 
@@ -85,7 +96,7 @@ export default function Dashboard() {
           </div>
           <div className="h-64">
             {reqSeries.length === 0 ? (
-              <div className="flex items-center justify-center h-full text-sm text-muted-foreground">No metric data yet</div>
+              <div className="flex items-center justify-center h-full text-sm text-muted-foreground">No requests in this time range</div>
             ) : (
               <ResponsiveContainer>
                 <AreaChart data={reqSeries}>

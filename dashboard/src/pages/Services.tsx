@@ -5,7 +5,7 @@ import { Link } from "react-router-dom";
 import { useMemo } from "react";
 import { fetchServicesList, fetchServicesTimeseries, type ServiceSummary, type TraceAnalyticsPoint } from "@/lib/api";
 import { ResponsiveContainer, AreaChart, Area } from "recharts";
-import TimeRangeSelector, { rangeToMinutes, rangeToLabel, rangeToInterval, SHORT_RANGES } from "@/components/TimeRangeSelector";
+import TimeRangeSelector, { rangeToMinutes, rangeToLabel, rangeToInterval, SHORT_RANGES, rangeToIntervalMinutes } from "@/components/TimeRangeSelector";
 import { useGlobalTimeRange } from "@/lib/timeRange";
 import AutoRefreshPicker from "@/components/AutoRefreshPicker";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
@@ -23,7 +23,7 @@ export default function Services() {
     const minutes = rangeToMinutes(range);
     Promise.all([
       fetchServicesList(minutes).then(setServices),
-      fetchServicesTimeseries(minutes, rangeToInterval(range)).then(setSeries),
+      fetchServicesTimeseries(minutes, rangeToIntervalMinutes(range)).then(setSeries),
     ]).finally(() => setLoading(false));
   }, [range]);
 

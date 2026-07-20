@@ -9,7 +9,7 @@ import {
   type TraceAnalyticsPoint,
   type SlowTrace,
 } from "@/lib/api";
-import { type TimeRange, rangeToMinutes, rangeToInterval } from "@/components/TimeRangeSelector";
+import { type TimeRange, rangeToMinutes, rangeToInterval, rangeToIntervalMinutes } from "@/components/TimeRangeSelector";
 import { serviceColor, chartPalette, fmtMs } from "@/lib/colors";
 
 type GroupBy = "service" | "route" | "name";
@@ -41,7 +41,7 @@ export default function TraceAnalytics({ range, service }: { range: TimeRange; s
     setLoading(true);
     Promise.all([
       fetchTraceAnalytics({ groupBy, service, minutes }).then(setRows),
-      fetchTraceAnalyticsTimeseries({ metric, groupBy, service, minutes, interval: rangeToInterval(range) }).then(setPoints),
+      fetchTraceAnalyticsTimeseries({ metric, groupBy, service, minutes, interval: rangeToIntervalMinutes(range) }).then(setPoints),
       fetchSlowestTraces({ service, minutes, limit: 10 }).then(setSlowest),
     ]).finally(() => setLoading(false));
   }, [range, service, groupBy, metric]);
