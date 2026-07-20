@@ -118,3 +118,33 @@ A1 → B1 → B2 (highest user-facing impact), then A2–A5, B3–B7, C1–C4, D
 
 ## Verification
 Compile-only per increment as before. B2/B1 additionally sanity-checked by reading the rendered route logic (no runtime available this session). Behavior fixes (A1, B1, B2) get a short note in `docs/todo.md` "Previously Tracked Items" if follow-up runtime verification is needed.
+
+---
+
+# Round 2 (2026-07-16) — plus deferred C2/C5
+
+### R2-1. `fix: cap otlp request body size`
+`pulse/internal/ingest/handler.go`
+- Bug: `readAndNormalize` uses `io.ReadAll` with no limit — a single oversized POST can exhaust memory.
+- Fix: wrap with `http.MaxBytesReader(w, r.Body, 32<<20)` (32 MB, generous for OTLP batches); return 413 on overflow.
+
+### R2-2. `fix: overview request volume chart plots latency metric`
+`dashboard/src/pages/Dashboard.tsx`
+- Bug: the "request volume" area chart fetches the `http.server.duration` **metric** (latency, and only if the app happens to emit that exact name), and `if (s.length > 0)` keeps stale data when the range has none.
+- Fix: derive request volume from traces via the existing `/services/timeseries` endpoint (sum across services per bucket); always set the series (clearing stale data).
+
+### R2-3. `fix: support trace and fatal log levels in the ui`
+`dashboard/src/lib/mockData.ts`, `dashboard/src/pages/Logs.tsx`, `LogDetail.tsx`
+- Bug: `LogLevel` union is `info|warn|error|debug`, but the backend emits `trace` and `fatal` too — `levelStyle[l.level]` yields `undefined` className and the fatal chip filter doesn't exist.
+- Fix: extend the union, add fatal (error-styled) and trace (muted) styles with a safe fallback, include fatal in the level chips.
+
+### R2-4 (deferred C2). `fix: migrate database detail and logs charts to shared timeseries chart`
+`dashboard/src/pages/DatabaseDetail.tsx`, `Logs.tsx`
+- Unify the two DatabaseDetail charts and the logs level histogram onto `TimeSeriesChart` so tooltip/axis/grid styling stops drifting per page. MetricDetail's gradient area chart stays custom (intentional visual).
+
+### R2-5 (deferred C5). `fix: add loading skeletons to table views`
+new `dashboard/src/components/TableSkeleton.tsx`; `Traces.tsx`, `Logs.tsx`, `Exceptions.tsx`, `Databases.tsx`, `Alerts.tsx`
+- Replace "Loading X..." text rows with shimmering skeleton rows so layout doesn't jump during refresh.
+
+## Round 2 status
+Pending execution.
