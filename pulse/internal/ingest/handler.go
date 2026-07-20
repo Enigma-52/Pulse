@@ -1,6 +1,7 @@
 package ingest
 
 import (
+	"errors"
 	"io"
 	"log"
 	"net/http"
@@ -42,9 +43,9 @@ func (h *Handler) HandleTraces(w http.ResponseWriter, r *http.Request) {
 	if h.throttled(w) {
 		return
 	}
-	data, err := readAndNormalize(r, &collectorTrace.ExportTraceServiceRequest{})
+	data, err := readAndNormalize(w, r, &collectorTrace.ExportTraceServiceRequest{})
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, err.Error(), payloadErrStatus(err))
 		return
 	}
 	if !h.send("traces", data) {
@@ -59,9 +60,9 @@ func (h *Handler) HandleLogs(w http.ResponseWriter, r *http.Request) {
 	if h.throttled(w) {
 		return
 	}
-	data, err := readAndNormalize(r, &collectorLogs.ExportLogsServiceRequest{})
+	data, err := readAndNormalize(w, r, &collectorLogs.ExportLogsServiceRequest{})
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, err.Error(), payloadErrStatus(err))
 		return
 	}
 	if !h.send("logs", data) {
@@ -76,9 +77,9 @@ func (h *Handler) HandleMetrics(w http.ResponseWriter, r *http.Request) {
 	if h.throttled(w) {
 		return
 	}
-	data, err := readAndNormalize(r, &collectorMetrics.ExportMetricsServiceRequest{})
+	data, err := readAndNormalize(w, r, &collectorMetrics.ExportMetricsServiceRequest{})
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, err.Error(), payloadErrStatus(err))
 		return
 	}
 	if !h.send("metrics", data) {
@@ -87,6 +88,14 @@ func (h *Handler) HandleMetrics(w http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write([]byte("{}"))
+}
+
+func payloadErrStatus(err error) int {
+	var tooLarge *http.MaxBytesError
+	if errors.As(err, &tooLarge) {
+		return http.StatusRequestEntityTooLarge
+	}
+	return http.StatusBadRequest
 }
 
 func (h *Handler) send(signal string, data []byte) bool {
@@ -99,8 +108,12 @@ func (h *Handler) send(signal string, data []byte) bool {
 	}
 }
 
-func readAndNormalize(r *http.Request, msg proto.Message) ([]byte, error) {
-	body, err := io.ReadAll(r.Body)
+// maxBodyBytes caps OTLP payloads (32 MB — generous for batched exports)
+// so a single oversized POST cannot exhaust memory.
+const maxBodyBytes = 32 << 20
+
+func readAndNormalize(w http.ResponseWriter, r *http.Request, msg proto.Message) ([]byte, error) {
+	body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, maxBodyBytes))
 	r.Body.Close()
 	if err != nil {
 		return nil, err
