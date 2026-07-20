@@ -1,7 +1,7 @@
 const items = [
   "OTLP native", "single binary", "port 4321", "traces", "logs", "metrics",
-  "database monitoring", "ClickHouse", "flamegraph", "service map",
-  "slow queries", "open source", "self-hosted", "MIT licensed",
+  "exceptions", "alerting", "database monitoring", "ClickHouse", "flamegraph",
+  "service map", "slow queries", "open source", "self-hosted", "MIT licensed",
 ];
 
 const Marquee = () => (
