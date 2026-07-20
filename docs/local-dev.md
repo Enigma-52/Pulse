@@ -27,8 +27,11 @@ In a new terminal:
 
 ```bash
 cd pulse
+export PULSE_CLICKHOUSE_PASSWORD=pulse   # compose starts ClickHouse with this password
 go run ./cmd/pulse
 ```
+
+Without the export, `go run` defaults to an empty ClickHouse password and fails to connect to the compose-started container.
 
 Pulse listens on `http://localhost:4321` and serves:
 
