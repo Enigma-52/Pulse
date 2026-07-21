@@ -245,8 +245,8 @@ func (s *Store) GetDashboardSummary(ctx context.Context, minutes int) (*model.Da
 	rows, err := s.conn.Query(ctx, fmt.Sprintf(`
 SELECT
 	count() / %f as request_rate,
-	quantile(0.99)(duration_ms) as p99_latency,
-	countIf(lower(status) = 'error' OR error != '') * 100.0 / count() as error_rate,
+	if(count() = 0, 0, quantile(0.99)(duration_ms)) as p99_latency,
+	if(count() = 0, 0, countIf(lower(status) = 'error' OR error != '') * 100.0 / count()) as error_rate,
 	count() as trace_count
 FROM traces
 WHERE parent_span_id = '' AND start_time >= now() - INTERVAL ? MINUTE
