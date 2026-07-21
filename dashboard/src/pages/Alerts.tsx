@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import TableSkeleton from "@/components/TableSkeleton";
 import { Link } from "react-router-dom";
 import { Plus } from "lucide-react";
 import {
@@ -117,9 +118,7 @@ export default function Alerts() {
             </thead>
             <tbody>
               {loading ? (
-                <tr>
-                  <td colSpan={7} className="px-5 py-10 text-center text-sm text-muted-foreground">Loading alert rules...</td>
-                </tr>
+                <TableSkeleton rows={4} cols={7} />
               ) : rules.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-5 py-10 text-center text-sm text-muted-foreground">
@@ -201,7 +200,7 @@ export default function Alerts() {
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={6} className="px-5 py-10 text-center text-sm text-muted-foreground">Loading alerts...</td></tr>
+                  <TableSkeleton rows={5} cols={6} />
                 ) : alerts.length === 0 ? (
                   <tr><td colSpan={6} className="px-5 py-10 text-center text-sm text-muted-foreground">No alerts recorded{statusFilter ? ` with status ${statusFilter}` : ""}.</td></tr>
                 ) : (

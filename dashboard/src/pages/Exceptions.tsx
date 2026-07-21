@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import TableSkeleton from "@/components/TableSkeleton";
 import { Link } from "react-router-dom";
 import { Search } from "lucide-react";
 import { fetchExceptions, type ExceptionGroup } from "@/lib/api";
@@ -76,7 +77,7 @@ export default function Exceptions() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={5} className="px-5 py-10 text-center text-sm text-muted-foreground">Loading exceptions...</td></tr>
+              <TableSkeleton rows={5} cols={5} />
             ) : groups.length === 0 ? (
               <tr>
                 <td colSpan={5} className="px-5 py-10 text-center text-sm text-muted-foreground">

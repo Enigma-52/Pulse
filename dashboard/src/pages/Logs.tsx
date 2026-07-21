@@ -265,7 +265,11 @@ export default function Logs() {
         <div className="panel font-mono text-xs">
           <div className="divide-y divide-border">
             {loading ? (
-              <div className="px-4 py-8 text-center text-muted-foreground">Loading logs...</div>
+              <div className="px-4 py-3 space-y-2.5">
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <div key={i} className="h-3 rounded bg-secondary animate-pulse" style={{ width: `${60 + ((i * 11) % 30)}%` }} />
+                ))}
+              </div>
             ) : logs.length === 0 ? (
               <EmptyState icon={ScrollText} title="No logs in this time range" hint="Point any OpenTelemetry SDK's OTLP/HTTP exporter at http://<pulse-host>:4321/v1/logs to start streaming logs here." />
             ) : (

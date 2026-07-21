@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import TableSkeleton from "@/components/TableSkeleton";
 import { Globe } from "lucide-react";
 import { fetchExternalCalls, type ExternalCallSummary } from "@/lib/api";
 import TimeRangeSelector, { type TimeRange, rangeToMinutes, rangeToLabel, SHORT_RANGES } from "@/components/TimeRangeSelector";
@@ -51,7 +52,7 @@ export default function External() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={6} className="px-5 py-10 text-center text-sm text-muted-foreground">Loading external calls...</td></tr>
+              <TableSkeleton rows={5} cols={6} />
             ) : calls.length === 0 ? (
               <tr>
                 <td colSpan={6} className="px-5 py-10 text-center text-sm text-muted-foreground">

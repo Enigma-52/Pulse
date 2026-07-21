@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
+import TableSkeleton from "@/components/TableSkeleton";
 import { Link, useSearchParams } from "react-router-dom";
 import TraceAnalytics from "@/components/TraceAnalytics";
 import EmptyState from "@/components/EmptyState";
@@ -254,9 +255,7 @@ export default function Traces() {
           </thead>
           <tbody>
             {loading ? (
-              <tr>
-                <td colSpan={6} className="px-5 py-10 text-center text-sm text-muted-foreground">Loading traces...</td>
-              </tr>
+              <TableSkeleton rows={8} cols={6} />
             ) : traces.length === 0 ? (
               <tr>
                 <td colSpan={6}>
