@@ -148,3 +148,39 @@ new `dashboard/src/components/TableSkeleton.tsx`; `Traces.tsx`, `Logs.tsx`, `Exc
 
 ## Round 2 status
 Delivered: R2-1 through R2-5 (including deferred C2 and C5). Bonus fix found during R2-2: `rangeToInterval` returns seconds, but the minute-based bucket endpoints (services/analytics/exceptions timeseries, logs histogram) were receiving it as minutes — added `rangeToIntervalMinutes` and fixed all callers.
+
+---
+
+# Round 3 — plan
+
+### R3-1. `fix: dashboard summary returns nan on an empty window`
+`pulse/internal/query/store/store.go` (`GetDashboardSummary`)
+- **Confirmed bug:** `error_rate` is `countIf(...) * 100.0 / count()` with **no zero guard** — on an empty window ClickHouse yields `nan` (0/0), and `p99_latency` (`quantile` over zero rows) is also `nan`. `encoding/json` cannot marshal NaN, so `writeJSON` fails after already writing the 200 header → the Overview page gets a broken/empty body on a fresh install (exactly when a first impression matters).
+- Fix: guard both like every other query already does — `if(count() = 0, 0, ...)` for error_rate and `if(count() = 0, 0, quantile(0.99)(duration_ms))` for p99. (Services/databases queries already have `if(trace_count = 0, ...)` guards — only this one was missed.)
+
+### R3-2. `fix: metrics list ignores the selected time range`
+`pulse/internal/query/store/store.go` (`GetMetricsList`), `handler/metrics.go`, `dashboard/src/lib/api.ts`, `Metrics.tsx`, `MetricDetail.tsx`
+- **Confirmed bug:** the metrics list is hardcoded to `now() - INTERVAL 5 MINUTE` (delta vs the 5m before that). With the range selector on 24h, a metric that stopped emitting 10 minutes ago vanishes from the list — and MetricDetail (which resolves metadata via the same list) shows "No metrics data".
+- Fix: `GetMetricsList(ctx, minutes)` — current window = `minutes`, delta compares the first vs second half of the window; handler reads `minutes` param (default 15); `fetchMetrics(minutes)` passes `rangeToMinutes(range)` from both pages.
+
+### R3-3. `fix: normalize log severity text to canonical levels`
+`pulse/internal/writer/writer.go` (`severityToLevel`)
+- **Confirmed bug:** the writer stores `strings.ToLower(SeverityText)` verbatim — SDKs commonly send `WARNING`, `ERR`, `CRITICAL`, `Information` etc., which the UI has no styles/filters for (they render unstyled and are invisible to `level=error,warn` filters and the `error_count` alert aggregation which only matches `error|fatal`).
+- Fix: map synonyms (`warning→warn`, `err→error`, `critical|emergency|alert→fatal`, `informational|information→info`, `verbose→debug`); anything unrecognized falls back to the severity-number mapping instead of raw text.
+
+### R3-4. `fix: list timestamps ambiguous beyond 24h ranges`
+`dashboard/src/lib/api.ts` (`formatTimestamp`)
+- Bug: traces/logs lists show time-of-day only (`14:33:02.120`) — on a 7d range, rows from different days are indistinguishable.
+- Fix: `formatTimestamp` prefixes `MMM dd` when the timestamp is not from today (e.g. `Jul 12 14:33:02`). One helper, all list views inherit it.
+
+### R3-5. `fix: not found page matches app styling and links back`
+`dashboard/src/pages/NotFound.tsx`
+- Minor: template 404 uses `bg-muted` (off-theme) and links to `/` (marketing gate) with a full page reload.
+- Fix: dark app styling (`bg-background` + `panel`), router `<Link>` to `/app`, keep it minimal.
+
+### R3-6. `docs: reflect rounds in readme troubleshooting note`
+`README.md`
+- Add a short "Troubleshooting" line: empty dashboard right after install is expected until telemetry arrives; link `/readyz` and the local-dev env vars. Keeps first-run users from assuming R3-1-style breakage.
+
+## Round 3 status
+Pending execution.
