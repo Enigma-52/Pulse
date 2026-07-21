@@ -147,4 +147,4 @@ new `dashboard/src/components/TableSkeleton.tsx`; `Traces.tsx`, `Logs.tsx`, `Exc
 - Replace "Loading X..." text rows with shimmering skeleton rows so layout doesn't jump during refresh.
 
 ## Round 2 status
-Pending execution.
+Delivered: R2-1 through R2-5 (including deferred C2 and C5). Bonus fix found during R2-2: `rangeToInterval` returns seconds, but the minute-based bucket endpoints (services/analytics/exceptions timeseries, logs histogram) were receiving it as minutes — added `rangeToIntervalMinutes` and fixed all callers.
