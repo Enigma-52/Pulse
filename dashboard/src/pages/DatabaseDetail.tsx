@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
-import { ResponsiveContainer, AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ComposedChart, Line } from "recharts";
+import TimeSeriesChart from "@/components/TimeSeriesChart";
 import { fetchDatabaseOverview, fetchDatabaseQueries, type DatabaseOverviewData, type DatabaseOperation } from "@/lib/api";
 import TimeRangeSelector, { type TimeRange, rangeToMinutes, rangeToLabel, SHORT_RANGES } from "@/components/TimeRangeSelector";
 import { useGlobalTimeRange } from "@/lib/timeRange";
@@ -52,7 +52,7 @@ export default function DatabaseDetail() {
   const { overview: ov, throughput } = overview;
 
   const chartData = throughput.map((p) => ({
-    t: new Date(p.timestamp).toLocaleTimeString("en-US", { hour12: false, hour: "2-digit", minute: "2-digit" }),
+    timestamp: p.timestamp,
     queries: p.count,
     errors: p.errors,
     avg_ms: Math.round(p.avg_ms),
@@ -105,39 +105,24 @@ export default function DatabaseDetail() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
         <div className="panel p-5">
           <div className="data-label mb-3">Query throughput & errors</div>
-          <div className="h-52">
-            <ResponsiveContainer>
-              <ComposedChart data={chartData}>
-                <CartesianGrid stroke="hsl(var(--border))" strokeDasharray="2 4" vertical={false} />
-                <XAxis dataKey="t" stroke="hsl(var(--muted-foreground))" fontSize={10} tickLine={false} axisLine={false} />
-                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={10} tickLine={false} axisLine={false} width={40} />
-                <Tooltip contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 4, fontSize: 11 }} />
-                <Bar dataKey="queries" fill={chartColors.primary} fillOpacity={0.5} name="Queries" />
-                <Bar dataKey="errors" fill={statusColors.error} fillOpacity={0.7} name="Errors" />
-              </ComposedChart>
-            </ResponsiveContainer>
-          </div>
+          <TimeSeriesChart
+            data={chartData}
+            series={["queries", "errors"]}
+            mode="bar"
+            height={208}
+            colors={{ queries: chartColors.primary, errors: statusColors.error }}
+          />
         </div>
 
         <div className="panel p-5">
           <div className="data-label mb-3">Average latency · ms</div>
-          <div className="h-52">
-            <ResponsiveContainer>
-              <AreaChart data={chartData}>
-                <defs>
-                  <linearGradient id="dbLatGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor={chartColors.secondary} stopOpacity={0.3} />
-                    <stop offset="100%" stopColor={chartColors.secondary} stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid stroke="hsl(var(--border))" strokeDasharray="2 4" vertical={false} />
-                <XAxis dataKey="t" stroke="hsl(var(--muted-foreground))" fontSize={10} tickLine={false} axisLine={false} />
-                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={10} tickLine={false} axisLine={false} width={40} />
-                <Tooltip contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 4, fontSize: 11 }} />
-                <Area type="monotone" dataKey="avg_ms" stroke={chartColors.secondary} strokeWidth={1.25} fill="url(#dbLatGrad)" name="Avg latency" />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
+          <TimeSeriesChart
+            data={chartData}
+            series={["avg_ms"]}
+            mode="area"
+            height={208}
+            colors={{ avg_ms: chartColors.secondary }}
+          />
         </div>
       </div>
 

@@ -4,7 +4,7 @@ import EmptyState from "@/components/EmptyState";
 import { Link, useSearchParams } from "react-router-dom";
 import type { LogLevel, Log } from "@/lib/mockData";
 import { fetchLogs, fetchLogsHistogram, type LogHistogramPoint } from "@/lib/api";
-import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from "recharts";
+import TimeSeriesChart from "@/components/TimeSeriesChart";
 import { logLevel as logLevelColors } from "@/lib/colors";
 import TimeRangeSelector, { type TimeRange, rangeToStartEnd, rangeToLabel, rangeToInterval, SHORT_RANGES, rangeToIntervalMinutes } from "@/components/TimeRangeSelector";
 import { useGlobalTimeRange } from "@/lib/timeRange";
@@ -134,14 +134,12 @@ export default function Logs() {
     for (const p of histogram) {
       const key = p.timestamp;
       if (!byTime.has(key)) {
-        byTime.set(key, {
-          time: new Date(p.timestamp).toLocaleTimeString("en-US", { hour12: false, hour: "2-digit", minute: "2-digit" }),
-        });
+        byTime.set(key, { timestamp: p.timestamp });
       }
       const row = byTime.get(key)!;
       row[p.level] = ((row[p.level] as number) || 0) + p.count;
     }
-    return Array.from(byTime.values());
+    return Array.from(byTime.values()) as { timestamp: string; [level: string]: string | number }[];
   }, [histogram]);
 
   return (
@@ -174,18 +172,21 @@ export default function Logs() {
       {histogramData.length > 0 && (
         <div className="panel p-4">
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2">Log volume by level</div>
-          <div className="h-24">
-            <ResponsiveContainer>
-              <BarChart data={histogramData}>
-                <XAxis dataKey="time" stroke="hsl(var(--muted-foreground))" fontSize={9} tickLine={false} axisLine={false} interval="preserveStartEnd" />
-                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={9} tickLine={false} axisLine={false} width={28} allowDecimals={false} />
-                <Tooltip contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 4, fontSize: 11 }} />
-                {(["debug", "info", "warn", "error"] as const).map(lv => (
-                  <Bar key={lv} dataKey={lv} stackId="levels" fill={logLevelColors[lv].dot} fillOpacity={0.85} />
-                ))}
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+          <TimeSeriesChart
+            data={histogramData}
+            series={["debug", "info", "warn", "error", "fatal"]}
+            mode="bar"
+            stacked
+            height={96}
+            yWidth={28}
+            colors={{
+              debug: logLevelColors.debug.dot,
+              info: logLevelColors.info.dot,
+              warn: logLevelColors.warn.dot,
+              error: logLevelColors.error.dot,
+              fatal: logLevelColors.error.dot,
+            }}
+          />
         </div>
       )}
 
