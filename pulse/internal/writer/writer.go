@@ -354,9 +354,22 @@ func spanStatus(s *tracepb.Status) (string, string) {
 	}
 }
 
+// canonicalLevels maps common SDK severity-text variants onto the six levels
+// the UI, filters, and alert aggregations understand. Unrecognized text falls
+// back to the severity number instead of being stored verbatim.
+var canonicalLevels = map[string]string{
+	"trace": "trace", "verbose": "debug", "debug": "debug",
+	"info": "info", "information": "info", "informational": "info",
+	"warn": "warn", "warning": "warn",
+	"error": "error", "err": "error",
+	"fatal": "fatal", "critical": "fatal", "emergency": "fatal", "alert": "fatal",
+}
+
 func severityToLevel(sn logspb.SeverityNumber, text string) string {
 	if text != "" {
-		return strings.ToLower(text)
+		if level, ok := canonicalLevels[strings.ToLower(text)]; ok {
+			return level
+		}
 	}
 	switch {
 	case sn >= logspb.SeverityNumber_SEVERITY_NUMBER_FATAL:
