@@ -358,8 +358,8 @@ export async function fetchLogs(params?: {
 
 // ── Metrics ─────────────────────────────────────────────────────────────
 
-export async function fetchMetrics(): Promise<Metric[]> {
-  const res = await apiFetch(`${API_BASE}/metrics`, { headers: authHeaders() });
+export async function fetchMetrics(minutes = 15): Promise<Metric[]> {
+  const res = await apiFetch(`${API_BASE}/metrics?minutes=${minutes}`, { headers: authHeaders() });
   if (!res.ok) return [];
   const data: { items: APIMetricMeta[] } = await res.json();
   if (!data.items) return [];

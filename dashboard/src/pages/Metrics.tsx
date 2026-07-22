@@ -26,7 +26,7 @@ export default function Metrics() {
   const load = useCallback(async (r: TimeRange) => {
     const minutes = rangeToMinutes(r);
     const interval = rangeToInterval(r);
-    const allMetrics = await fetchMetrics();
+    const allMetrics = await fetchMetrics(rangeToMinutes(range));
 
     // Fetch series for each metric in parallel
     const withSeries = await Promise.all(

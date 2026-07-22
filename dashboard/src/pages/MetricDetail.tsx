@@ -37,7 +37,7 @@ export default function MetricDetail() {
   }, [attrFilter]);
 
   useEffect(() => {
-    fetchMetrics().then((all) => {
+    fetchMetrics(rangeToMinutes(range)).then((all) => {
       const found = all.find((m) => m.id === id) ?? all[0] ?? null;
       setMetric(found);
       if (found) loadSeries(found, range);

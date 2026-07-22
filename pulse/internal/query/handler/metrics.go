@@ -10,7 +10,7 @@ import (
 
 func (h *Handler) HandleMetricsList(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	metrics, err := h.Store.GetMetricsList(ctx)
+	metrics, err := h.Store.GetMetricsList(ctx, parseMinutes(r, 15))
 	if err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "failed to query metrics")
 		return
@@ -59,7 +59,7 @@ func (h *Handler) HandleMetricSeries(w http.ResponseWriter, r *http.Request) {
 	}
 
 	unit := ""
-	metrics, err := h.Store.GetMetricsList(ctx)
+	metrics, err := h.Store.GetMetricsList(ctx, minutes)
 	if err == nil {
 		for _, m := range metrics {
 			if m.Name == name {

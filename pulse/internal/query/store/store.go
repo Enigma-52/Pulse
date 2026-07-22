@@ -154,12 +154,21 @@ func (s *Store) GetLogs(ctx context.Context, filters model.LogFilters) ([]model.
 	return logs, nil
 }
 
-func (s *Store) GetMetricsList(ctx context.Context) ([]model.MetricMeta, error) {
+func (s *Store) GetMetricsList(ctx context.Context, minutes int) ([]model.MetricMeta, error) {
+	if minutes <= 0 {
+		minutes = 15
+	}
+	// Current value averages the most recent half of the window; delta
+	// compares against the older half.
+	half := minutes / 2
+	if half < 1 {
+		half = 1
+	}
 	rows, err := s.conn.Query(ctx, `
 SELECT name, any(type) as type, any(unit) as unit, avg(value) as current_value
-FROM metrics WHERE timestamp >= now() - INTERVAL 5 MINUTE
+FROM metrics WHERE timestamp >= now() - INTERVAL ? MINUTE
 GROUP BY name ORDER BY name
-`)
+`, half)
 	if err != nil {
 		return nil, err
 	}
@@ -180,9 +189,9 @@ GROUP BY name ORDER BY name
 
 	prevRows, err := s.conn.Query(ctx, `
 SELECT name, avg(value) as prev_value
-FROM metrics WHERE timestamp >= now() - INTERVAL 10 MINUTE AND timestamp < now() - INTERVAL 5 MINUTE
+FROM metrics WHERE timestamp >= now() - INTERVAL ? MINUTE AND timestamp < now() - INTERVAL ? MINUTE
 GROUP BY name
-`)
+`, minutes, half)
 	if err != nil {
 		return nil, err
 	}
