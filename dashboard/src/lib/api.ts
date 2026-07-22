@@ -174,13 +174,17 @@ function transformSpans(apiSpans: APISpan[]): UISpan[] {
 
 function formatTimestamp(iso: string): string {
   const ts = new Date(iso);
-  return ts.toLocaleTimeString("en-US", {
+  const time = ts.toLocaleTimeString("en-US", {
     hour12: false,
     hour: "2-digit",
     minute: "2-digit",
     second: "2-digit",
     fractionalSecondDigits: 3,
   });
+  // Prefix the date for rows not from today so long ranges stay unambiguous.
+  const now = new Date();
+  if (ts.toDateString() === now.toDateString()) return time;
+  return `${ts.toLocaleDateString("en-US", { month: "short", day: "2-digit" })} ${time}`;
 }
 
 function formatChartTime(iso: string): string {
