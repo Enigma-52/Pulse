@@ -183,4 +183,4 @@ Delivered: R2-1 through R2-5 (including deferred C2 and C5). Bonus fix found dur
 - Add a short "Troubleshooting" line: empty dashboard right after install is expected until telemetry arrives; link `/readyz` and the local-dev env vars. Keeps first-run users from assuming R3-1-style breakage.
 
 ## Round 3 status
-Pending execution.
+Delivered: R3-1 through R3-6.

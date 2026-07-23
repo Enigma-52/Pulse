@@ -61,6 +61,12 @@ Your App  →  Pulse (:4321)  →  ClickHouse  →  Dashboard (:3301)
 
 That's the whole stack.
 
+## Troubleshooting
+
+- An empty dashboard right after install is normal — pages fill in as soon as your app sends its first OTLP batch to `:4321`.
+- `GET localhost:4321/readyz` tells you whether Pulse can reach ClickHouse; `/healthz` only says the process is up.
+- Running the binary outside Docker against the compose ClickHouse? Set `PULSE_CLICKHOUSE_PASSWORD=pulse` (see [Local Development](docs/local-dev.md)).
+
 ## Documentation
 
 - [Architecture](docs/architecture.md)
