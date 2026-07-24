@@ -18,10 +18,24 @@ export const REFRESH_OPTIONS: { value: RefreshInterval; label: string }[] = [
   { value: 60, label: "60s" },
 ];
 
+const STORAGE_KEY = "pulse_refresh_interval";
+const VALID_INTERVALS: RefreshInterval[] = [0, 5, 10, 30, 60];
+
+function storedInterval(fallback: RefreshInterval): RefreshInterval {
+  const raw = Number(localStorage.getItem(STORAGE_KEY));
+  return VALID_INTERVALS.includes(raw as RefreshInterval) ? (raw as RefreshInterval) : fallback;
+}
+
 export function useAutoRefresh(onRefresh: () => void, defaultInterval: RefreshInterval = 0) {
-  const [interval, setInterval_] = useState<RefreshInterval>(defaultInterval);
+  // The chosen cadence persists across pages and sessions.
+  const [interval, setIntervalState] = useState<RefreshInterval>(() => storedInterval(defaultInterval));
   const callbackRef = useRef(onRefresh);
   callbackRef.current = onRefresh;
+
+  const setInterval_ = useCallback((v: RefreshInterval) => {
+    setIntervalState(v);
+    localStorage.setItem(STORAGE_KEY, String(v));
+  }, []);
 
   useEffect(() => {
     if (interval === 0) return;
