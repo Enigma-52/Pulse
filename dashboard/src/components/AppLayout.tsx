@@ -36,6 +36,14 @@ export default function AppLayout() {
     .map((c) => (c.length > 14 ? `${c.slice(0, 12)}…` : c));
   const [ready, setReady] = useState<boolean | null>(null);
 
+  // New page: reset scroll and set a descriptive tab title.
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    const section = location.pathname.split("/").filter(Boolean)[1];
+    const label = section ? section.charAt(0).toUpperCase() + section.slice(1) : "Overview";
+    document.title = `${label} · Pulse`;
+  }, [location.pathname]);
+
   // Poll backend readiness so the sidebar status dot reflects reality.
   useEffect(() => {
     let cancelled = false;
