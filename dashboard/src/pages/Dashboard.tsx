@@ -50,10 +50,10 @@ export default function Dashboard() {
   const traceCount = summary?.traceCount ?? 0;
 
   const stats = [
-    { label: "Request rate", value: rate.toFixed(1), unit: "req/s", color: chartColors.primary },
-    { label: "p99 latency", value: p99.toFixed(0), unit: "ms", color: chartColors.secondary },
-    { label: "Error rate", value: errRate.toFixed(2), unit: "%", color: errRate > 1 ? statusColors.error : statusColors.ok },
-    { label: "Total traces", value: traceCount.toLocaleString(), unit: "", color: chartColors.tertiary },
+    { label: "Request rate", value: rate.toFixed(1), unit: "req/s", color: chartColors.primary, to: "/app/traces" },
+    { label: "p99 latency", value: p99.toFixed(0), unit: "ms", color: chartColors.secondary, to: "/app/traces?view=analytics" },
+    { label: "Error rate", value: errRate.toFixed(2), unit: "%", color: errRate > 1 ? statusColors.error : statusColors.ok, to: "/app/traces?status=error" },
+    { label: "Total traces", value: traceCount.toLocaleString(), unit: "", color: chartColors.tertiary, to: "/app/traces" },
   ];
 
   return (
@@ -73,14 +73,14 @@ export default function Dashboard() {
       {/* Stat Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {stats.map(s => (
-          <div key={s.label} className="panel p-4 relative overflow-hidden">
+          <Link key={s.label} to={s.to} className="panel p-4 relative overflow-hidden hover:border-ring/40 transition-colors">
             <div className="absolute bottom-0 left-0 right-0 h-[2px]" style={{ background: s.color }} />
             <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{s.label}</div>
             <div className="flex items-baseline gap-1.5 mt-2">
               <span className="text-2xl font-mono font-medium tracking-tight">{s.value}</span>
               {s.unit && <span className="text-xs text-muted-foreground font-mono">{s.unit}</span>}
             </div>
-          </div>
+          </Link>
         ))}
       </div>
 
