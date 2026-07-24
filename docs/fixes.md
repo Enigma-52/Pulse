@@ -184,3 +184,18 @@ Delivered: R2-1 through R2-5 (including deferred C2 and C5). Bonus fix found dur
 
 ## Round 3 status
 Delivered: R3-1 through R3-6.
+
+---
+
+# Round 4 — UX-focused small fixes
+
+- **U1 `fix: add copy buttons for ids and stack traces`** — shared `CopyButton`; trace id on TraceDetail, fingerprint + stacktrace on ExceptionDetail, trace id on LogDetail. Ops workflows constantly copy these.
+- **U2 `fix: persist auto-refresh interval across pages and sessions`** — `useAutoRefresh` reads/writes localStorage so the chosen cadence sticks.
+- **U3 `fix: whole-row click navigation on traces and exceptions tables`** — rows navigate on click (inner links keep working); pointer cursor signals it.
+- **U4 `fix: overview stat cards link to their pages`** — requests→traces, p99→analytics, error rate→traces?status=error, active traces→traces.
+- **U5 `fix: reset scroll and set document titles on route change`** — SPA keeps scroll position across pages and the tab always says "Pulse"; add scroll-to-top + "Traces · Pulse"-style titles.
+- **U6 `fix: pulse-branded svg favicon on both apps`** — replace template favicon with an inline SVG data-URI matching the primary-color activity mark.
+- **U7 `fix: explore page remembers the last query`** — persist the SQL textarea to localStorage.
+
+## Round 4 status
+Pending execution.
