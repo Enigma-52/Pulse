@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import TableSkeleton from "@/components/TableSkeleton";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Search } from "lucide-react";
 import { fetchExceptions, type ExceptionGroup } from "@/lib/api";
 import TimeRangeSelector, { type TimeRange, rangeToMinutes, rangeToLabel, SHORT_RANGES } from "@/components/TimeRangeSelector";
@@ -18,6 +18,7 @@ function relTime(ts: string) {
 }
 
 export default function Exceptions() {
+  const navigate = useNavigate();
   const [groups, setGroups] = useState<ExceptionGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const { range, setRange } = useGlobalTimeRange();
@@ -86,7 +87,11 @@ export default function Exceptions() {
               </tr>
             ) : (
               groups.map((g) => (
-                <tr key={g.fingerprint} className="border-b border-border last:border-0 hover:bg-secondary/40">
+                <tr
+                  key={g.fingerprint}
+                  onClick={() => navigate(`/app/exceptions/${g.fingerprint}`)}
+                  className="border-b border-border last:border-0 hover:bg-secondary/40 cursor-pointer"
+                >
                   <td className="px-5 py-3 max-w-[480px]">
                     <Link to={`/app/exceptions/${g.fingerprint}`} className="block hover:underline">
                       <span className="font-mono text-xs text-status-error">{g.type}</span>
@@ -94,7 +99,7 @@ export default function Exceptions() {
                     </Link>
                   </td>
                   <td className="px-5 py-3">
-                    <Link to={`/app/services/${encodeURIComponent(g.service)}`} className="inline-flex items-center gap-1.5 font-mono text-xs hover:underline">
+                    <Link to={`/app/services/${encodeURIComponent(g.service)}`} onClick={(e) => e.stopPropagation()} className="inline-flex items-center gap-1.5 font-mono text-xs hover:underline">
                       <span className="w-2 h-2 rounded-full" style={{ background: serviceColor(g.service) }} />
                       {g.service}
                     </Link>

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import TableSkeleton from "@/components/TableSkeleton";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import TraceAnalytics from "@/components/TraceAnalytics";
 import EmptyState from "@/components/EmptyState";
 import { GitBranch } from "lucide-react";
@@ -38,6 +38,7 @@ function buildDurationBuckets(traces: Trace[]) {
 }
 
 export default function Traces() {
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const view = searchParams.get("view") === "analytics" ? "analytics" : "list";
   const [traces, setTraces] = useState<Trace[]>([]);
@@ -267,14 +268,18 @@ export default function Traces() {
                 </td>
               </tr>
             ) : sortedTraces.map(t => (
-              <tr key={t.id} className="border-b border-border last:border-0 hover:bg-secondary/40 transition-colors">
+              <tr
+                key={t.id}
+                onClick={() => navigate(`/app/traces/${t.id}`)}
+                className="border-b border-border last:border-0 hover:bg-secondary/40 transition-colors cursor-pointer"
+              >
                 <td className="px-5 py-2.5 font-mono text-muted-foreground">{t.timestamp}</td>
                 <td className="px-5 py-2.5 font-mono">
                   <Link to={`/app/traces/${t.id}`} className="hover:text-foreground text-muted-foreground transition-colors">{t.id.slice(0, 12)}</Link>
                 </td>
                 <td className="px-5 py-2.5 font-mono">{t.name}</td>
                 <td className="px-5 py-2.5 text-muted-foreground">
-                  <Link to={`/app/services/${t.service}`} className="hover:text-foreground transition-colors">{t.service}</Link>
+                  <Link to={`/app/services/${t.service}`} onClick={(e) => e.stopPropagation()} className="hover:text-foreground transition-colors">{t.service}</Link>
                 </td>
                 <td className="px-5 py-2.5 font-mono text-right">{t.duration}ms</td>
                 <td className="px-5 py-2.5">
