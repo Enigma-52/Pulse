@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { fetchLogs } from "@/lib/api";
 import type { Log } from "@/lib/mockData";
+import CopyButton from "@/components/CopyButton";
 
 const levelColors: Record<string, string> = {
   fatal: "text-status-error border-status-error/40",
@@ -96,12 +97,15 @@ export default function LogDetail() {
       {log.trace_id && (
         <div className="panel p-5">
           <div className="data-label mb-3">Linked trace</div>
-          <Link
-            to={`/app/traces/${log.trace_id}`}
-            className="font-mono text-xs hover:underline"
-          >
-            {log.trace_id} →
-          </Link>
+          <div className="flex items-center gap-2.5">
+            <Link
+              to={`/app/traces/${log.trace_id}`}
+              className="font-mono text-xs hover:underline"
+            >
+              {log.trace_id} →
+            </Link>
+            <CopyButton text={log.trace_id} label="trace id" />
+          </div>
           {log.span_id && (
             <div className="mt-2 text-xs font-mono text-muted-foreground">
               span: {log.span_id}

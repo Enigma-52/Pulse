@@ -11,6 +11,7 @@ import {
 import TimeRangeSelector, { type TimeRange, rangeToMinutes, rangeToInterval, SHORT_RANGES, rangeToIntervalMinutes } from "@/components/TimeRangeSelector";
 import { useGlobalTimeRange } from "@/lib/timeRange";
 import { status, serviceColor } from "@/lib/colors";
+import CopyButton from "@/components/CopyButton";
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
@@ -63,7 +64,10 @@ export default function ExceptionDetail() {
             <ArrowLeft className="w-3.5 h-3.5" />
             Exceptions
           </Link>
-          <h1 className="text-xl font-medium tracking-tight mt-2 font-mono text-status-error truncate">{detail.type}</h1>
+          <div className="flex items-center gap-2.5 mt-2 min-w-0">
+            <h1 className="text-xl font-medium tracking-tight font-mono text-status-error truncate">{detail.type}</h1>
+            <CopyButton text={detail.fingerprint} label="fingerprint" />
+          </div>
           <p className="text-sm text-muted-foreground mt-1 break-words">{detail.message || "(no message)"}</p>
         </div>
         <TimeRangeSelector value={range} onChange={setRange} ranges={SHORT_RANGES} />
@@ -104,7 +108,10 @@ export default function ExceptionDetail() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="panel p-5 min-w-0">
-          <div className="data-label mb-3">Stack trace</div>
+          <div className="flex items-center justify-between mb-3">
+            <div className="data-label">Stack trace</div>
+            {detail.stacktrace && <CopyButton text={detail.stacktrace} label="stack" />}
+          </div>
           {detail.stacktrace ? (
             <pre className="text-xs font-mono text-muted-foreground whitespace-pre-wrap break-words max-h-96 overflow-y-auto leading-relaxed">
               {detail.stacktrace}
