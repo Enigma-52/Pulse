@@ -45,8 +45,17 @@ function fmtCell(v: unknown): string {
   return String(v);
 }
 
+const QUERY_STORAGE_KEY = "pulse_explore_query";
+
 export default function Explore() {
-  const [query, setQuery] = useState(EXAMPLES[0].query);
+  // Restore the last query so exploration survives navigation and reloads.
+  const [query, setQueryState] = useState(
+    () => localStorage.getItem(QUERY_STORAGE_KEY) || EXAMPLES[0].query,
+  );
+  const setQuery = (q: string) => {
+    setQueryState(q);
+    localStorage.setItem(QUERY_STORAGE_KEY, q);
+  };
   const [result, setResult] = useState<RawQueryResult | null>(null);
   const [error, setError] = useState("");
   const [running, setRunning] = useState(false);
