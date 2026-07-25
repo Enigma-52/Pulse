@@ -14,20 +14,23 @@ All colors are defined in `src/lib/colors.ts`. Import from there — never hardc
 | Error    | `#EF5350` | Failed spans, critical services      |
 | Info     | `#42A5F5` | Informational badges, links          |
 
-### Chart Palette (sequential)
+### Chart Palette (categorical, fixed order)
+Validated on the dark card surface (#0f0f0f): lightness band, chroma floor,
+colorblind adjacent-pair separation (worst ΔE 9.3), and ≥3:1 contrast all pass.
+Hues are assigned in this fixed order — never re-ranked when series come and go.
 ```
 #4E92F9  blue         — primary metric line
-#26C6DA  teal         — secondary series
-#7C4DFF  purple       — third series
-#FF9800  orange       — fourth series
-#66BB6A  green        — fifth series
-#AB47BC  violet       — sixth series
-#FF7043  deep orange  — seventh series
-#29B6F6  light blue
-#9CCC65  light green
-#EC407A  pink
-#78909C  blue grey
-#FFCA28  yellow
+#D0761F  orange
+#17A0B4  teal
+#E14B7D  pink
+#8A76E0  lavender
+#6F9A2E  olive
+#2492D6  light blue
+#B78A18  gold
+#BE3FA8  magenta
+#3F9E47  green
+#6B85C4  slate blue
+#C96A45  rust
 ```
 
 ### Service Colors
