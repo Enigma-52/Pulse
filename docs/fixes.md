@@ -198,4 +198,4 @@ Delivered: R3-1 through R3-6.
 - **U7 `fix: explore page remembers the last query`** — persist the SQL textarea to localStorage.
 
 ## Round 4 status
-Pending execution.
+Delivered: U1–U7. Note: TraceDetail kept its existing icon-only copy button (dense UI); the shared labeled CopyButton is used on ExceptionDetail and LogDetail.
