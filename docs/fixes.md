@@ -199,3 +199,16 @@ Delivered: R3-1 through R3-6.
 
 ## Round 4 status
 Delivered: U1–U7. Note: TraceDetail kept its existing icon-only copy button (dense UI); the shared labeled CopyButton is used on ExceptionDetail and LogDetail.
+
+---
+
+# Round 5 — UX + validated chart palette
+
+- **V1 `fix: validated colorblind-safe chart palette`** — the old 12-color palette failed dataviz validation on the dark surface (7 colors outside the lightness band, blue-grey below the chroma floor, green↔orange protan clash ΔE 6.3). New palette keeps Pulse's hue identities, re-stepped and reordered: all checks pass (worst adjacent CVD ΔE 9.3, normal-vision 20.9, all ≥3:1 contrast). `colors.ts` + STYLE_GUIDE updated.
+- **V2 `feat: firing alerts badge in sidebar`** (the one small new set) — nav "Alerts" entry shows a red count of currently firing alerts, polled with the readiness check.
+- **V3 `fix: metrics page name filter`** — client-side filter input, matching Services.
+- **V4 `fix: whole-row click on databases and external tables`** — consistency with traces/exceptions rows.
+- **V5 `fix: filtered-empty states say no match instead of no data`** — Services/Metrics distinguish "nothing matches your filter" from "no data yet".
+
+## Round 5 status
+Pending execution.
