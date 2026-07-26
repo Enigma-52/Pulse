@@ -6,6 +6,7 @@ import GlobalSearch from "@/components/GlobalSearch";
 import TimeRangeSelector, { TIME_RANGES } from "@/components/TimeRangeSelector";
 import { useGlobalTimeRange } from "@/lib/timeRange";
 import { useEnvironment } from "@/lib/environment";
+import { fetchAlerts } from "@/lib/api";
 
 const nav = [
   { to: "/app", label: "Overview", icon: Home, end: true },
@@ -35,6 +36,22 @@ export default function AppLayout() {
     .slice(1)
     .map((c) => (c.length > 14 ? `${c.slice(0, 12)}…` : c));
   const [ready, setReady] = useState<boolean | null>(null);
+  const [firingCount, setFiringCount] = useState(0);
+
+  // Surface currently firing alerts as a badge on the Alerts nav entry.
+  useEffect(() => {
+    let cancelled = false;
+    const check = () =>
+      fetchAlerts({ status: "firing", limit: 100 }).then((alerts) => {
+        if (!cancelled) setFiringCount(alerts.length);
+      });
+    check();
+    const t = setInterval(check, 60_000);
+    return () => {
+      cancelled = true;
+      clearInterval(t);
+    };
+  }, []);
 
   // New page: reset scroll and set a descriptive tab title.
   useEffect(() => {
@@ -93,6 +110,11 @@ export default function AppLayout() {
             >
               <Icon className="w-4 h-4" strokeWidth={1.75} />
               {label}
+              {to === "/app/alerts" && firingCount > 0 && (
+                <span className="ml-auto text-[10px] font-mono px-1.5 py-0.5 rounded-full bg-status-error/15 text-status-error border border-status-error/40">
+                  {firingCount > 99 ? "99+" : firingCount}
+                </span>
+              )}
             </NavLink>
           ))}
         </nav>
