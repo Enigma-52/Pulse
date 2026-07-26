@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import TableSkeleton from "@/components/TableSkeleton";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { fetchDatabasesList, type DatabaseSummary } from "@/lib/api";
 import TimeRangeSelector, { type TimeRange, rangeToMinutes, rangeToLabel, SHORT_RANGES } from "@/components/TimeRangeSelector";
 import { useGlobalTimeRange } from "@/lib/timeRange";
@@ -26,6 +26,7 @@ function dbBadge(system: string) {
 }
 
 export default function Databases() {
+  const navigate = useNavigate();
   const [databases, setDatabases] = useState<DatabaseSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const { range, setRange } = useGlobalTimeRange();
@@ -83,7 +84,11 @@ export default function Databases() {
                 const errClass = d.error_rate > 5 ? "text-status-error" : d.error_rate > 1 ? "text-status-warn" : "text-muted-foreground";
                 const lastSeen = d.last_seen ? new Date(d.last_seen).toLocaleTimeString("en-US", { hour12: false, hour: "2-digit", minute: "2-digit", second: "2-digit" }) : "-";
                 return (
-                  <tr key={d.system} className="border-b border-border last:border-0 hover:bg-secondary/40">
+                  <tr
+                    key={d.system}
+                    onClick={() => navigate(`/app/databases/${d.system}`)}
+                    className="border-b border-border last:border-0 hover:bg-secondary/40 cursor-pointer"
+                  >
                     <td className="px-5 py-3">
                       <Link to={`/app/databases/${d.system}`} className="flex items-center gap-2.5 hover:underline">
                         <span className="w-7 h-7 rounded bg-accent border border-border flex items-center justify-center text-[10px] font-mono font-semibold">
