@@ -94,6 +94,8 @@ export default function Services() {
         <div className="text-sm text-muted-foreground">Loading services...</div>
       ) : services.length === 0 ? (
         <div className="panel"><EmptyState icon={Server} title="No services yet" hint="Services appear automatically once any app sends traces with a service.name resource attribute to /v1/traces." /></div>
+      ) : visibleServices.length === 0 ? (
+        <div className="panel px-5 py-8 text-center text-sm text-muted-foreground">No services match “{nameFilter}”.</div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
           {visibleServices.map((s) => {

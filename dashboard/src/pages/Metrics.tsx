@@ -26,7 +26,7 @@ export default function Metrics() {
   const load = useCallback(async (r: TimeRange) => {
     const minutes = rangeToMinutes(r);
     const interval = rangeToInterval(r);
-    const allMetrics = await fetchMetrics(rangeToMinutes(range));
+    const allMetrics = await fetchMetrics(minutes);
 
     // Fetch series for each metric in parallel
     const withSeries = await Promise.all(
@@ -45,6 +45,11 @@ export default function Metrics() {
   }, [range, load]);
 
   const refresh = useAutoRefresh(() => load(range));
+
+  // The query box doubles as a live name filter for the card grid.
+  const visibleMetrics = query.trim()
+    ? metrics.filter((m) => m.name.toLowerCase().includes(query.trim().toLowerCase()))
+    : metrics;
 
   const handleExecute = useCallback(async () => {
     if (!query.trim()) return;
@@ -152,11 +157,15 @@ export default function Metrics() {
       {/* Metric panels with inline charts */}
       {loading ? (
         <div className="text-sm text-muted-foreground">Loading metrics...</div>
-      ) : metrics.length === 0 ? (
-        <div className="panel"><EmptyState icon={BarChart3} title="No metrics yet" hint="Point an OTel metrics exporter at http://<pulse-host>:4321/v1/metrics — counters, gauges, and histograms show up here." /></div>
+      ) : visibleMetrics.length === 0 ? (
+        metrics.length > 0 && query.trim() ? (
+          <div className="panel px-5 py-8 text-center text-sm text-muted-foreground">No metrics match “{query.trim()}”.</div>
+        ) : (
+          <div className="panel"><EmptyState icon={BarChart3} title="No metrics yet" hint="Point an OTel metrics exporter at http://<pulse-host>:4321/v1/metrics — counters, gauges, and histograms show up here." /></div>
+        )
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-          {metrics.map((m, idx) => {
+          {visibleMetrics.map((m, idx) => {
             const color = chartPalette[idx % chartPalette.length];
             const positive = m.delta >= 0;
             const latestValue = m.series.length > 0 ? m.series[m.series.length - 1].value : m.value;
