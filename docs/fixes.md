@@ -212,3 +212,16 @@ Delivered: U1–U7. Note: TraceDetail kept its existing icon-only copy button (d
 
 ## Round 5 status
 Delivered: V1–V5. Notes: External table has no detail page, so V4 applied to Databases only; V3 also fixed a stale-closure bug where the metrics load used the previous range value.
+
+---
+
+# Round 6 — UX + one new set
+
+- **W1 `fix: service detail view-all links carry the service filter`** — "view all →" on Recent traces/logs currently drops the service context; traces link gains `?service=`, and the Logs page learns to read a `service` URL param.
+- **W2 `fix: pause auto-refresh while the tab is hidden`** — background tabs currently keep polling every 5–60s; skip ticks when `document.hidden` and refresh once on return.
+- **W3 `fix: abbreviate large axis ticks in shared chart`** — 12000 → 12k, 3400000 → 3.4M on TimeSeriesChart Y axes.
+- **W4 `fix: autofocus first field on login and setup`** — start typing immediately.
+- **W5 `feat: csv export on explore results`** (the one new set) — download button next to the row count; quotes/escapes cells, names the file by timestamp.
+
+## Round 6 status
+Pending execution.
