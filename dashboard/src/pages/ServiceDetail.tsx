@@ -91,7 +91,7 @@ export default function ServiceDetail() {
         <div className="panel">
           <div className="px-5 py-3 border-b border-border flex items-center justify-between">
             <div className="data-label">Recent traces</div>
-            <Link to="/app/traces" className="text-[10px] font-mono text-muted-foreground hover:text-foreground">view all →</Link>
+            <Link to={`/app/traces?service=${encodeURIComponent(id ?? "")}`} className="text-[10px] font-mono text-muted-foreground hover:text-foreground">view all →</Link>
           </div>
           {recentTraces.length === 0 ? (
             <div className="px-5 py-6 text-xs text-muted-foreground">No traces in this window.</div>
@@ -180,7 +180,7 @@ export default function ServiceDetail() {
         <div className="panel">
           <div className="px-5 py-3 border-b border-border flex items-center justify-between">
             <div className="data-label">Recent logs</div>
-            <Link to="/app/logs" className="text-[10px] font-mono text-muted-foreground hover:text-foreground">view all →</Link>
+            <Link to={`/app/logs?service=${encodeURIComponent(id ?? "")}`} className="text-[10px] font-mono text-muted-foreground hover:text-foreground">view all →</Link>
           </div>
           {recentLogs.length === 0 ? (
             <div className="px-5 py-6 text-xs text-muted-foreground">No logs in this window.</div>

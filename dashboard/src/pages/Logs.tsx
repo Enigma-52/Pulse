@@ -67,8 +67,15 @@ export default function Logs() {
   const [loading, setLoading] = useState(true);
   const [activeLevels, setActiveLevels] = useState<LogLevel[]>([]);
   const [histogram, setHistogram] = useState<LogHistogramPoint[]>([]);
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [search, setSearch] = useState(searchParams.get("search") || "");
+  const serviceFilter = searchParams.get("service") || "";
+  const clearServiceFilter = () =>
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.delete("service");
+      return next;
+    });
   const { range, setRange } = useGlobalTimeRange();
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("stream");
@@ -81,9 +88,10 @@ export default function Logs() {
       const { start, end } = rangeToStartEnd(r);
       const levelParam = levels && levels.length > 0 ? levels.join(",") : undefined;
       const searchParam = searchQuery || undefined;
+      const service = serviceFilter || undefined;
       const [data, hist] = await Promise.all([
-        fetchLogs({ level: levelParam, search: searchParam, start, end }),
-        fetchLogsHistogram({ level: levelParam, search: searchParam, start, end, interval: rangeToIntervalMinutes(r) }),
+        fetchLogs({ level: levelParam, search: searchParam, service, start, end }),
+        fetchLogsHistogram({ level: levelParam, search: searchParam, service, start, end, interval: rangeToIntervalMinutes(r) }),
       ]);
       setLogs(data);
       setHistogram(hist);
@@ -93,7 +101,7 @@ export default function Logs() {
     } finally {
       setLoading(false);
     }
-  }, [range]);
+  }, [range, serviceFilter]);
 
   useEffect(() => {
     loadLogs(activeLevels, search, range);
@@ -187,6 +195,19 @@ export default function Logs() {
               fatal: logLevelColors.error.dot,
             }}
           />
+        </div>
+      )}
+
+      {serviceFilter && (
+        <div className="flex items-center gap-2 text-xs">
+          <span className="text-muted-foreground">Filtered to service</span>
+          <button
+            onClick={clearServiceFilter}
+            title="Clear service filter"
+            className="inline-flex items-center gap-1.5 font-mono px-2 py-0.5 rounded border border-status-info/40 text-status-info hover:bg-secondary"
+          >
+            {serviceFilter} ✕
+          </button>
         </div>
       )}
 
