@@ -39,8 +39,18 @@ export function useAutoRefresh(onRefresh: () => void, defaultInterval: RefreshIn
 
   useEffect(() => {
     if (interval === 0) return;
-    const id = setInterval(() => callbackRef.current(), interval * 1000);
-    return () => clearInterval(id);
+    // Don't poll from background tabs; refresh once when the tab returns.
+    const id = setInterval(() => {
+      if (!document.hidden) callbackRef.current();
+    }, interval * 1000);
+    const onVisible = () => {
+      if (!document.hidden) callbackRef.current();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      clearInterval(id);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
   }, [interval]);
 
   return {
