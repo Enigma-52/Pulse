@@ -211,4 +211,4 @@ Delivered: U1–U7. Note: TraceDetail kept its existing icon-only copy button (d
 - **V5 `fix: filtered-empty states say no match instead of no data`** — Services/Metrics distinguish "nothing matches your filter" from "no data yet".
 
 ## Round 5 status
-Pending execution.
+Delivered: V1–V5. Notes: External table has no detail page, so V4 applied to Databases only; V3 also fixed a stale-closure bug where the metrics load used the previous range value.
