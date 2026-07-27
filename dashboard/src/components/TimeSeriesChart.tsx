@@ -47,6 +47,15 @@ const axisProps = {
   axisLine: false,
 } as const;
 
+// 12000 → 12k, 3400000 → 3.4M — keeps the Y axis narrow and scannable.
+function abbreviateTick(v: number): string {
+  const abs = Math.abs(v);
+  if (abs >= 1_000_000) return `${(v / 1_000_000).toFixed(abs >= 10_000_000 ? 0 : 1)}M`;
+  if (abs >= 1_000) return `${(v / 1_000).toFixed(abs >= 10_000 ? 0 : 1)}k`;
+  if (abs > 0 && abs < 1) return v.toFixed(2);
+  return String(Math.round(v));
+}
+
 // Shared recharts wrapper so every chart carries the same axis, grid,
 // tooltip, and palette treatment from the style guide.
 export default function TimeSeriesChart({
@@ -77,7 +86,7 @@ export default function TimeSeriesChart({
     <>
       <CartesianGrid stroke="hsl(var(--border))" strokeDasharray="2 4" vertical={false} />
       <XAxis dataKey="time" {...axisProps} interval="preserveStartEnd" />
-      <YAxis {...axisProps} width={yWidth} />
+      <YAxis {...axisProps} width={yWidth} tickFormatter={abbreviateTick} />
       <Tooltip contentStyle={tooltipStyle} />
       {showLegend && <Legend wrapperStyle={{ fontSize: 10 }} />}
     </>
