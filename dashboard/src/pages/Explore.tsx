@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Play } from "lucide-react";
+import { Download, Play } from "lucide-react";
 import { runSQL, type RawQueryResult } from "@/lib/api";
 
 const EXAMPLES: { label: string; query: string }[] = [
@@ -38,6 +38,23 @@ GROUP BY name
 ORDER BY points DESC`,
   },
 ];
+
+function csvEscape(v: unknown): string {
+  const str = v === null || v === undefined ? "" : typeof v === "object" ? JSON.stringify(v) : String(v);
+  return /[",\n]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str;
+}
+
+function downloadCSV(columns: string[], rows: unknown[][]) {
+  const lines = [columns.map(csvEscape).join(",")];
+  for (const row of rows) lines.push(row.map(csvEscape).join(","));
+  const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `pulse-query-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-")}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 function fmtCell(v: unknown): string {
   if (v === null || v === undefined) return "";
@@ -137,7 +154,18 @@ export default function Explore() {
         <div className="panel">
           <div className="px-5 py-3 border-b border-border flex items-center justify-between">
             <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Results</div>
-            <div className="text-[10px] font-mono text-muted-foreground">{result.row_count} rows</div>
+            <div className="flex items-center gap-3">
+              <span className="text-[10px] font-mono text-muted-foreground">{result.row_count} rows</span>
+              {result.rows.length > 0 && (
+                <button
+                  onClick={() => downloadCSV(result.columns, result.rows)}
+                  className="inline-flex items-center gap-1 text-[10px] font-mono text-muted-foreground hover:text-foreground border border-border rounded px-1.5 py-0.5 transition-colors"
+                >
+                  <Download className="w-3 h-3" />
+                  CSV
+                </button>
+              )}
+            </div>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
