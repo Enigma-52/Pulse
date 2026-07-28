@@ -40,7 +40,7 @@ Pulse listens on `http://localhost:4321` and serves:
 - **Auth**: `/auth/setup`, `/auth/login`
 - **Health**: `GET /healthz` (liveness), `GET /readyz` (ClickHouse readiness)
 
-Useful env vars while developing: `PULSE_JWT_SECRET`, `PULSE_PIPELINE_CAP`, `PULSE_INGEST_RPS`, `PULSE_ALERT_EVAL_INTERVAL_SECONDS`, `PULSE_RETENTION_{TRACES,LOGS,METRICS,EXCEPTIONS}_DAYS` — see [architecture.md](architecture.md#configuration).
+Useful env vars while developing: `PULSE_JWT_SECRET` (compose defaults this to `change-me-in-production`, override before real use), `PULSE_PIPELINE_CAP`, `PULSE_INGEST_RPS`, `PULSE_ALERT_EVAL_INTERVAL_SECONDS`, `PULSE_RETENTION_{TRACES,LOGS,METRICS,EXCEPTIONS}_DAYS` — see [architecture.md](architecture.md#configuration).
 
 ### 3. Run the product dashboard frontend (`dashboard`)
 
