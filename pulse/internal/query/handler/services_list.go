@@ -45,7 +45,7 @@ func (h *Handler) HandleServicesTimeseries(w http.ResponseWriter, r *http.Reques
 		}
 	}
 
-	points, err := h.Store.GetServicesTimeseries(r.Context(), parseMinutes(r, 15), interval, topN)
+	points, err := h.Store.GetServicesTimeseries(r.Context(), parseMinutes(r, 15), interval, topN, q.Get("environment"))
 	if err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "failed to query services timeseries")
 		return
@@ -54,4 +54,16 @@ func (h *Handler) HandleServicesTimeseries(w http.ResponseWriter, r *http.Reques
 		points = []model.TraceAnalyticsPoint{}
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"points": points})
+}
+
+func (h *Handler) HandleServiceDependencies(w http.ResponseWriter, r *http.Request) {
+	deps, err := h.Store.GetServiceDependencies(r.Context(), parseMinutes(r, 15), r.URL.Query().Get("environment"))
+	if err != nil {
+		writeJSONError(w, http.StatusInternalServerError, "failed to query service dependencies")
+		return
+	}
+	if deps == nil {
+		deps = []model.ServiceDependency{}
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"items": deps})
 }

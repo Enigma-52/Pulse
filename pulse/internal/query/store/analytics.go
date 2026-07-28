@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"github.com/pulse-observability/pulse/pulse/internal/query/model"
@@ -167,7 +168,60 @@ WHERE parent_span_id = '' AND start_time >= now() - INTERVAL ? MINUTE`)
 
 // GetServicesTimeseries returns request-count buckets for the top-N services
 // by volume in one query, for sparklines on the services and overview pages.
-func (s *Store) GetServicesTimeseries(ctx context.Context, minutes, intervalMinutes, topN int) ([]model.TraceAnalyticsPoint, error) {
+// GetServiceDependencies derives the service call graph from spans: a child
+// span whose parent span belongs to a different service is one call from the
+// parent's service to the child's. Aggregated per (from,to) edge with call
+// count, latency, and error rate of the callee side.
+func (s *Store) GetServiceDependencies(ctx context.Context, minutes int, environment string) ([]model.ServiceDependency, error) {
+	if minutes <= 0 {
+		minutes = 15
+	}
+
+	envFilter := ""
+	args := []any{minutes, minutes}
+	if environment != "" {
+		envFilter = " AND child.environment = ? AND parent.environment = ?"
+		args = append(args, environment, environment)
+	}
+
+	rows, err := s.conn.Query(ctx, fmt.Sprintf(`
+SELECT parent.service AS from_service,
+       child.service  AS to_service,
+       count()        AS calls,
+       countIf(lower(child.status) = 'error' OR child.error != '') AS error_count,
+       avg(child.duration_ms)              AS avg_ms,
+       quantile(0.95)(child.duration_ms)   AS p95_ms
+FROM traces AS child
+INNER JOIN traces AS parent
+  ON child.trace_id = parent.trace_id AND child.parent_span_id = parent.span_id
+WHERE child.parent_span_id != ''
+  AND child.service != parent.service
+  AND child.start_time  >= now() - INTERVAL ? MINUTE
+  AND parent.start_time >= now() - INTERVAL ? MINUTE%s
+GROUP BY from_service, to_service
+ORDER BY calls DESC
+LIMIT 200
+`, envFilter), args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var out []model.ServiceDependency
+	for rows.Next() {
+		var d model.ServiceDependency
+		if err := rows.Scan(&d.FromService, &d.ToService, &d.Calls, &d.ErrorCount, &d.AvgMs, &d.P95Ms); err != nil {
+			return nil, err
+		}
+		if d.Calls > 0 {
+			d.ErrorRate = float64(d.ErrorCount) / float64(d.Calls) * 100
+		}
+		out = append(out, d)
+	}
+	return out, nil
+}
+
+func (s *Store) GetServicesTimeseries(ctx context.Context, minutes, intervalMinutes, topN int, environment string) ([]model.TraceAnalyticsPoint, error) {
 	if minutes <= 0 {
 		minutes = 15
 	}
@@ -178,18 +232,35 @@ func (s *Store) GetServicesTimeseries(ctx context.Context, minutes, intervalMinu
 		topN = 10
 	}
 
-	rows, err := s.conn.Query(ctx, `
+	// envFilter is applied to both the outer scan and the top-N subquery so a
+	// selected environment narrows the series consistently.
+	envFilter := ""
+	if environment != "" {
+		envFilter = " AND environment = ?"
+	}
+
+	args := []any{intervalMinutes, minutes}
+	if environment != "" {
+		args = append(args, environment)
+	}
+	args = append(args, minutes)
+	if environment != "" {
+		args = append(args, environment)
+	}
+	args = append(args, topN)
+
+	rows, err := s.conn.Query(ctx, fmt.Sprintf(`
 SELECT toStartOfInterval(start_time, INTERVAL ? MINUTE) AS bucket,
        service AS grp,
        toFloat64(count()) AS value
 FROM traces
-WHERE start_time >= now() - INTERVAL ? MINUTE
+WHERE start_time >= now() - INTERVAL ? MINUTE%s
   AND service IN (
-    SELECT service FROM traces WHERE start_time >= now() - INTERVAL ? MINUTE GROUP BY service ORDER BY count() DESC LIMIT ?
+    SELECT service FROM traces WHERE start_time >= now() - INTERVAL ? MINUTE%s GROUP BY service ORDER BY count() DESC LIMIT ?
   )
 GROUP BY bucket, grp
 ORDER BY bucket
-`, intervalMinutes, minutes, minutes, topN)
+`, envFilter, envFilter), args...)
 	if err != nil {
 		return nil, err
 	}

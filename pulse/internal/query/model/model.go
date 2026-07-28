@@ -249,6 +249,19 @@ type ExternalCallSummary struct {
 	LastSeen   time.Time `json:"last_seen"`
 }
 
+// ServiceDependency is one edge of the service dependency graph: a caller
+// service invoking a callee service, derived from parent/child spans that
+// cross a service boundary within the same trace.
+type ServiceDependency struct {
+	FromService string  `json:"from_service"`
+	ToService   string  `json:"to_service"`
+	Calls       uint64  `json:"calls"`
+	ErrorCount  uint64  `json:"error_count"`
+	ErrorRate   float64 `json:"error_rate"`
+	AvgMs       float64 `json:"avg_ms"`
+	P95Ms       float64 `json:"p95_ms"`
+}
+
 // Trace analytics models
 
 type TraceAnalyticsRow struct {

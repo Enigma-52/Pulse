@@ -1,6 +1,7 @@
 package ingest
 
 import (
+	"compress/gzip"
 	"errors"
 	"io"
 	"log"
@@ -113,7 +114,21 @@ func (h *Handler) send(signal string, data []byte) bool {
 const maxBodyBytes = 32 << 20
 
 func readAndNormalize(w http.ResponseWriter, r *http.Request, msg proto.Message) ([]byte, error) {
-	body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, maxBodyBytes))
+	// The body cap is enforced on the wire (compressed) stream so a small
+	// gzip payload can still not decompress into an unbounded amount of memory
+	// past what MaxBytesReader already read.
+	var reader io.Reader = http.MaxBytesReader(w, r.Body, maxBodyBytes)
+	// OTel exporters (notably the Collector's otlphttp exporter) gzip payloads
+	// by default — decode Content-Encoding before unmarshalling.
+	if strings.Contains(strings.ToLower(r.Header.Get("Content-Encoding")), "gzip") {
+		gz, err := gzip.NewReader(reader)
+		if err != nil {
+			return nil, err
+		}
+		defer gz.Close()
+		reader = gz
+	}
+	body, err := io.ReadAll(reader)
 	r.Body.Close()
 	if err != nil {
 		return nil, err

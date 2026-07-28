@@ -245,13 +245,13 @@ FROM metrics WHERE name = ? AND timestamp >= now() - INTERVAL ? MINUTE`
 	return points, nil
 }
 
-func (s *Store) GetDashboardSummary(ctx context.Context, minutes int) (*model.DashboardSummary, error) {
+func (s *Store) GetDashboardSummary(ctx context.Context, minutes int, environment string) (*model.DashboardSummary, error) {
 	if minutes <= 0 {
 		minutes = 15
 	}
 	seconds := float64(minutes * 60)
 
-	rows, err := s.conn.Query(ctx, fmt.Sprintf(`
+	query := fmt.Sprintf(`
 SELECT
 	count() / %f as request_rate,
 	if(count() = 0, 0, quantile(0.99)(duration_ms)) as p99_latency,
@@ -259,7 +259,14 @@ SELECT
 	count() as trace_count
 FROM traces
 WHERE parent_span_id = '' AND start_time >= now() - INTERVAL ? MINUTE
-`, seconds), minutes)
+`, seconds)
+	args := []any{minutes}
+	if environment != "" {
+		query += " AND environment = ?"
+		args = append(args, environment)
+	}
+
+	rows, err := s.conn.Query(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}

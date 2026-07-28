@@ -84,7 +84,7 @@ func (h *Handler) HandleDashboardSummary(w http.ResponseWriter, r *http.Request)
 		minutes = n
 	}
 
-	summary, err := h.Store.GetDashboardSummary(ctx, minutes)
+	summary, err := h.Store.GetDashboardSummary(ctx, minutes, r.URL.Query().Get("environment"))
 	if err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "failed to query dashboard summary")
 		return
