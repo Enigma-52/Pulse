@@ -1,33 +1,47 @@
 # Pulse TODO (Project-Wide)
 
-Updated: 2026-06-25
+Updated: 2026-07-17
 
 ## What Pulse Has Today
 
 ### Backend
 - Single `pulse` binary on port 4321: OTLP ingest + in-process pipeline + ClickHouse writer + query API
 - OTLP/HTTP endpoints: /v1/traces, /v1/logs, /v1/metrics (protobuf + JSON)
-- In-process buffered channel replaces Kafka/Redpanda (backpressure via 429)
+- In-process buffered channel replaces Kafka/Redpanda (backpressure via 429, capacity via `PULSE_PIPELINE_CAP`)
+- Token-bucket rate limiting on `/v1/*` ingest endpoints (`PULSE_INGEST_RPS`)
 - ClickHouse storage with full OTLP fidelity (resource attrs, scope, links)
-- Query API with endpoints: traces, trace detail, logs, metrics, metric series, metrics query, services list, service overview, dashboard summary
+- Query API: traces, trace detail, trace analytics + timeseries, slowest traces, logs, logs histogram, metrics, metric series, metric attributes, metrics query, services list, service overview, service timeseries, dashboard summary, databases, external calls, exceptions + detail + timeseries, alert rules/channels/history, usage, unified search, environments, guarded SQL passthrough
 - JWT auth with setup/login flow
-- Time-range filtering across all query endpoints
+- Background alert evaluator (Slack + generic webhook notifiers; email stored, not delivered)
+- Write-time exception extraction into a dedicated `exceptions` table (fingerprinted, no backfill)
+- Per-signal TTL retention (`PULSE_RETENTION_*_DAYS`)
+- `/healthz` (liveness) and `/readyz` (ClickHouse readiness) probes
+- Time-range and environment filtering across query endpoints
 
 ### Frontend (dashboard)
 - Dashboard with live stats, request volume chart, recent traces
-- Traces page with service graph, duration histogram, service/status filters
+- Traces page with service graph, duration histogram, service/status filters, analytics tab, search, pagination
 - Trace detail with flamegraph, waterfall, service breakdown, linked logs
-- Logs page with stream/grouped views, expandable rows, level filters, search
+- Logs page with stream/grouped views, stacked level histogram, expandable rows, level/service/trace-id filters, search
 - Log detail page with attributes and linked traces
 - Metrics page with queryable metrics input and metric cards
-- Metric detail with time-series chart
-- Services list page with per-service stats table
-- Time range selector on all pages (5m/15m/1h/6h/24h/7d)
-- Auto-refresh toggle on dashboard, traces, logs, services
+- Metric detail with time-series chart and attribute/label filtering
+- Services list page with per-service stats table, sparklines, sorting
+- Database monitoring page with per-database breakdown and slow query list
+- External calls page with per-host latency/error breakdown
+- Exceptions list + detail (frequency chart, stacktrace, linked traces)
+- Alerts page (rule CRUD, history, notification channels)
+- Settings page with data usage and retention view
+- Explore page for guarded ad hoc SQL
+- Global unified search (traces/logs/metrics/services/exceptions) with `/` shortcut
+- CSV export on Explore results
+- Time range selector + environment selector shared across pages
+- Auto-refresh toggle (paused while the tab is hidden) on dashboard, traces, logs, services
 
 ### Instrumentation
 - OTLP/HTTP ingestion (protobuf + JSON) — works with any OpenTelemetry SDK (Node, Python, Go, Java, etc.)
 - No custom SDK needed — standard OTel exporters point at Pulse
+- OTLP/gRPC receiver deferred by design (see below)
 
 ---
 
@@ -200,6 +214,6 @@ Pulse accepts OTLP/HTTP — all languages with an OTel SDK work out of the box.
 - [x] Add readiness checks for clickhouse dependency (/readyz)
 
 ### P2 - Developer experience
-- [ ] Refresh docs to match current runtime wiring
+- [x] Refresh docs to match current runtime wiring
 - [ ] Add end-to-end smoke test script (ingest -> query assertion)
 - [x] Add CI checks for Go services and frontend builds

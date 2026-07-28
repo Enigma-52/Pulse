@@ -60,7 +60,7 @@ npm install
 npm run dev
 ```
 
-The public app runs on `http://localhost:5174`.
+The public app runs on `http://localhost:8080` by default too — if `dashboard`'s dev server is already running on 8080, Vite auto-picks the next free port (check the terminal output for the actual URL).
 
 ### Full local loop
 

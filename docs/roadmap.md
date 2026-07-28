@@ -10,7 +10,7 @@ Pulse is a self-hosted observability platform: single Go binary (`pulse/`, goril
 - OTel exception data already arrives as span events (`events_json`, event name `exception` with `exception.type/message/stacktrace`) in `writer/writer.go`.
 - Dashboard: pages use `useState/useCallback/useEffect` + hand-written `fetch*` in `dashboard/src/lib/api.ts` (API_BASE `/api`, `authHeaders()`); shared `TimeRangeSelector` (`rangeToMinutes`), `useAutoRefresh` + `AutoRefreshPicker`, `StatCard`, `src/lib/colors.ts` (`chartPalette`, `serviceColor`, `fmtMs/fmtPct` — never hardcode hex, see `dashboard/STYLE_GUIDE.md`). Routes in `src/App.tsx` under `/app`; nav array in `src/components/AppLayout.tsx`. recharts for charts.
 - Landing: `frontend/src/pages/Index.tsx` composes `frontend/src/components/pulse/` sections (Nav→Hero→Marquee→Stats→Features→Pipeline→Deploy→Quote→Integrations→CTA→Footer).
-- Deploy: `deploy/docker-compose.yml` (no PULSE_JWT_SECRET set today); nginx proxies `/api/` → pulse:4321.
+- Deploy: `deploy/docker-compose.yml` (PULSE_JWT_SECRET defaults to `change-me-in-production`, override before real use); nginx proxies `/api/` → pulse:4321.
 
 ## Key design decisions
 1. **Alert/channel storage in ClickHouse** — `ReplacingMergeTree(updated_at) ORDER BY (id)`, soft-delete `deleted` flag, reads use `FINAL WHERE deleted = 0`. Tiny row counts; avoids adding SQLite/Postgres.

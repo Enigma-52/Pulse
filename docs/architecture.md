@@ -110,6 +110,10 @@ All configuration is via environment variables:
 | `PULSE_PIPELINE_CAP` | `10000` | In-process pipeline buffer capacity |
 | `PULSE_INGEST_RPS` | `0` (unlimited) | Max OTLP ingest requests/sec (token bucket, 429 when exceeded) |
 | `PULSE_ALERT_EVAL_INTERVAL_SECONDS` | `30` | Alert rule evaluation interval; `0` disables the evaluator |
+| `PULSE_RETENTION_TRACES_DAYS` | `0` (forever) | TTL retention for the `traces` table, in days |
+| `PULSE_RETENTION_LOGS_DAYS` | `0` (forever) | TTL retention for the `logs` table, in days |
+| `PULSE_RETENTION_METRICS_DAYS` | `0` (forever) | TTL retention for the `metrics` table, in days |
+| `PULSE_RETENTION_EXCEPTIONS_DAYS` | `0` (forever) | TTL retention for the `exceptions` table, in days |
 
 ### Health and readiness
 
