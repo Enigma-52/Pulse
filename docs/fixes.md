@@ -224,4 +224,4 @@ Delivered: V1–V5. Notes: External table has no detail page, so V4 applied to D
 - **W5 `feat: csv export on explore results`** (the one new set) — download button next to the row count; quotes/escapes cells, names the file by timestamp.
 
 ## Round 6 status
-Pending execution.
+Delivered: W1–W5.
