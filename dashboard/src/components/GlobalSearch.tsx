@@ -24,7 +24,7 @@ function resultPath(r: SearchResult): string {
     case "metric":
       return `/app/metrics/${encodeURIComponent(r.id)}`;
     case "exception":
-      return `/app/exceptions/${r.id}`;
+      return `/app/errors/${r.id}`;
   }
 }
 

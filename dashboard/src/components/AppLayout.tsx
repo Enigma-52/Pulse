@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { Activity, BarChart3, Bell, Bug, Database, GitBranch, Globe, Home, LogOut, ScrollText, Settings, Server, Terminal } from "lucide-react";
+import { Activity, BarChart3, Bell, CircleAlert, Database, GitBranch, Globe, Home, LogOut, ScrollText, Settings, Server, Terminal } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import GlobalSearch from "@/components/GlobalSearch";
 import TimeRangeSelector, { TIME_RANGES } from "@/components/TimeRangeSelector";
@@ -8,18 +8,41 @@ import { useGlobalTimeRange } from "@/lib/timeRange";
 import { useEnvironment } from "@/lib/environment";
 import { fetchAlerts } from "@/lib/api";
 
-const nav = [
-  { to: "/app", label: "Overview", icon: Home, end: true },
-  { to: "/app/services", label: "Services", icon: Server },
-  { to: "/app/traces", label: "Traces", icon: GitBranch },
-  { to: "/app/logs", label: "Logs", icon: ScrollText },
-  { to: "/app/exceptions", label: "Exceptions", icon: Bug },
-  { to: "/app/databases", label: "Databases", icon: Database },
-  { to: "/app/external", label: "External", icon: Globe },
-  { to: "/app/metrics", label: "Metrics", icon: BarChart3 },
-  { to: "/app/alerts", label: "Alerts", icon: Bell },
-  { to: "/app/explore", label: "Explore", icon: Terminal },
-  { to: "/app/settings", label: "Settings", icon: Settings },
+// Grouped navigation: each section clusters related destinations so the sidebar
+// reads as distinct concerns (application health vs. raw telemetry vs. issues)
+// rather than one long flat list.
+const navSections: { title?: string; items: { to: string; label: string; icon: typeof Home; end?: boolean }[] }[] = [
+  { items: [{ to: "/app", label: "Overview", icon: Home, end: true }] },
+  {
+    title: "Application",
+    items: [
+      { to: "/app/services", label: "Services", icon: Server },
+      { to: "/app/traces", label: "Traces", icon: GitBranch },
+      { to: "/app/databases", label: "Databases", icon: Database },
+      { to: "/app/external", label: "External APIs", icon: Globe },
+    ],
+  },
+  {
+    title: "Telemetry",
+    items: [
+      { to: "/app/logs", label: "Logs", icon: ScrollText },
+      { to: "/app/metrics", label: "Metrics", icon: BarChart3 },
+    ],
+  },
+  {
+    title: "Issues",
+    items: [
+      { to: "/app/errors", label: "Errors", icon: CircleAlert },
+      { to: "/app/alerts", label: "Alerts", icon: Bell },
+    ],
+  },
+  {
+    title: "Tools",
+    items: [
+      { to: "/app/explore", label: "Explore", icon: Terminal },
+      { to: "/app/settings", label: "Settings", icon: Settings },
+    ],
+  },
 ];
 
 export default function AppLayout() {
@@ -109,29 +132,35 @@ export default function AppLayout() {
           <span className="ml-auto text-[10px] font-mono text-muted-foreground border border-border px-1.5 py-0.5 rounded">v0.1</span>
         </div>
 
-        <nav className="px-3 mt-2 space-y-0.5 flex-1">
-          <div className="data-label px-2 mb-2 mt-2">Telemetry</div>
-          {nav.map(({ to, label, icon: Icon, end }) => (
-            <NavLink
-              key={to}
-              to={to}
-              end={end}
-              className={({ isActive }) =>
-                `flex items-center gap-2.5 px-2 py-1.5 text-sm rounded transition-colors ${
-                  isActive
-                    ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                    : "text-sidebar-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"
-                }`
-              }
-            >
-              <Icon className="w-4 h-4" strokeWidth={1.75} />
-              {label}
-              {to === "/app/alerts" && firingCount > 0 && (
-                <span className="ml-auto text-[10px] font-mono px-1.5 py-0.5 rounded-full bg-status-error/15 text-status-error border border-status-error/40">
-                  {firingCount > 99 ? "99+" : firingCount}
-                </span>
-              )}
-            </NavLink>
+        <nav className="px-3 mt-2 flex-1 overflow-y-auto">
+          {navSections.map((section, si) => (
+            <div key={si} className={si === 0 ? "mb-1" : "mb-1 mt-3"}>
+              {section.title && <div className="data-label px-2 mb-1.5">{section.title}</div>}
+              <div className="space-y-0.5">
+                {section.items.map(({ to, label, icon: Icon, end }) => (
+                  <NavLink
+                    key={to}
+                    to={to}
+                    end={end}
+                    className={({ isActive }) =>
+                      `flex items-center gap-2.5 px-2 py-1.5 text-sm rounded transition-colors ${
+                        isActive
+                          ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                          : "text-sidebar-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"
+                      }`
+                    }
+                  >
+                    <Icon className="w-4 h-4" strokeWidth={1.75} />
+                    {label}
+                    {to === "/app/alerts" && firingCount > 0 && (
+                      <span className="ml-auto text-[10px] font-mono px-1.5 py-0.5 rounded-full bg-status-error/15 text-status-error border border-status-error/40">
+                        {firingCount > 99 ? "99+" : firingCount}
+                      </span>
+                    )}
+                  </NavLink>
+                ))}
+              </div>
+            </div>
           ))}
         </nav>
 

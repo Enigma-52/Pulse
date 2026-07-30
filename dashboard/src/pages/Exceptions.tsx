@@ -46,7 +46,7 @@ export default function Exceptions() {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-medium tracking-tight">Exceptions</h1>
+          <h1 className="text-xl font-medium tracking-tight">Errors</h1>
           <p className="text-sm text-muted-foreground mt-1">Errors grouped by fingerprint from span exception events · {rangeToLabel(range)}</p>
         </div>
         <div className="flex items-center gap-3">
@@ -69,7 +69,7 @@ export default function Exceptions() {
         <table className="w-full text-sm">
           <thead>
             <tr className="text-left text-muted-foreground border-b border-border">
-              <th className="px-5 py-2.5 font-medium text-[11px] uppercase tracking-wider">Exception</th>
+              <th className="px-5 py-2.5 font-medium text-[11px] uppercase tracking-wider">Error</th>
               <th className="px-5 py-2.5 font-medium text-[11px] uppercase tracking-wider">Service</th>
               <th className="px-5 py-2.5 font-medium text-[11px] uppercase tracking-wider text-right">Occurrences</th>
               <th className="px-5 py-2.5 font-medium text-[11px] uppercase tracking-wider text-right">First seen</th>
@@ -89,11 +89,11 @@ export default function Exceptions() {
               groups.map((g) => (
                 <tr
                   key={g.fingerprint}
-                  onClick={() => navigate(`/app/exceptions/${g.fingerprint}`)}
+                  onClick={() => navigate(`/app/errors/${g.fingerprint}`)}
                   className="border-b border-border last:border-0 hover:bg-secondary/40 cursor-pointer"
                 >
                   <td className="px-5 py-3 max-w-[480px]">
-                    <Link to={`/app/exceptions/${g.fingerprint}`} className="block hover:underline">
+                    <Link to={`/app/errors/${g.fingerprint}`} className="block hover:underline">
                       <span className="font-mono text-xs text-status-error">{g.type}</span>
                       <span className="block text-xs text-muted-foreground truncate mt-0.5">{g.message || "(no message)"}</span>
                     </Link>

@@ -66,8 +66,8 @@ const App = () => (
               <Route path="databases/:system" element={<DatabaseDetail />} />
               <Route path="metrics" element={<Metrics />} />
               <Route path="metrics/:id" element={<MetricDetail />} />
-              <Route path="exceptions" element={<Exceptions />} />
-              <Route path="exceptions/:fingerprint" element={<ExceptionDetail />} />
+              <Route path="errors" element={<Exceptions />} />
+              <Route path="errors/:fingerprint" element={<ExceptionDetail />} />
               <Route path="alerts" element={<Alerts />} />
               <Route path="alerts/rules/new" element={<AlertRuleForm />} />
               <Route path="alerts/rules/:id/edit" element={<AlertRuleForm />} />

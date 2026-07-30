@@ -26,7 +26,7 @@ function storedInterval(fallback: RefreshInterval): RefreshInterval {
   return VALID_INTERVALS.includes(raw as RefreshInterval) ? (raw as RefreshInterval) : fallback;
 }
 
-export function useAutoRefresh(onRefresh: () => void, defaultInterval: RefreshInterval = 0) {
+export function useAutoRefresh(onRefresh: () => void, defaultInterval: RefreshInterval = 10) {
   // The chosen cadence persists across pages and sessions.
   const [interval, setIntervalState] = useState<RefreshInterval>(() => storedInterval(defaultInterval));
   const callbackRef = useRef(onRefresh);
