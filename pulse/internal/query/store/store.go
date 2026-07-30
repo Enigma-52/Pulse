@@ -418,29 +418,47 @@ FROM logs WHERE 1=1
 	return sb.String(), args
 }
 
+// traceBase picks the row that represents a "trace" for the list. Without a
+// service filter that's the root span (one row per trace). With a service
+// filter it's that service's entry (server) span — so a mid-tier service that
+// is never a trace root (e.g. payment-service) still lists the requests it
+// handled, each linking to the full trace.
+func traceBase(filters model.TraceFilters) (string, []any) {
+	if filters.Service != "" {
+		base := "WHERE service = ?"
+		args := []any{filters.Service}
+		if filters.Kind == "" {
+			base += " AND kind = 'server'"
+		}
+		return base, args
+	}
+	return "WHERE parent_span_id = ''", nil
+}
+
 func buildTraceQuery(filters model.TraceFilters) (string, []any) {
-	where, args := buildTraceWhere(filters)
+	base, args := traceBase(filters)
+	where, whereArgs := buildTraceWhere(filters)
+	args = append(args, whereArgs...)
 	query := `
 SELECT trace_id, service, name, route, duration_ms, status, start_time
-FROM traces WHERE parent_span_id = ''
-` + where + " ORDER BY start_time DESC LIMIT ? OFFSET ?"
+FROM traces ` + base + where + " ORDER BY start_time DESC LIMIT ? OFFSET ?"
 	args = append(args, filters.Limit, filters.Offset)
 	return query, args
 }
 
 func buildTraceCountQuery(filters model.TraceFilters) (string, []any) {
-	where, args := buildTraceWhere(filters)
-	return "SELECT count() FROM traces WHERE parent_span_id = ''" + where, args
+	base, args := traceBase(filters)
+	where, whereArgs := buildTraceWhere(filters)
+	args = append(args, whereArgs...)
+	return "SELECT count() FROM traces " + base + where, args
 }
 
 func buildTraceWhere(filters model.TraceFilters) (string, []any) {
 	var sb strings.Builder
 	args := make([]any, 0, 12)
 
-	if filters.Service != "" {
-		sb.WriteString(" AND service = ?")
-		args = append(args, filters.Service)
-	}
+	// NB: the service predicate is applied by traceBase (it selects the entry
+	// span), so it is intentionally not repeated here.
 	if filters.Route != "" {
 		sb.WriteString(" AND route = ?")
 		args = append(args, filters.Route)
