@@ -1,4 +1,4 @@
-import type { Span as UISpan, SpanKind, Log, Trace, Metric } from "./mockData";
+import type { Span as UISpan, SpanKind, Log, Trace, Metric } from "./types";
 
 // Raw API response types
 interface APISpanEvent {
@@ -252,6 +252,7 @@ export async function fetchTracesPage(params?: {
 export async function fetchTraces(params?: {
   service?: string;
   status?: string;
+  environment?: string;
   start?: string;
   end?: string;
   limit?: number;
@@ -260,6 +261,7 @@ export async function fetchTraces(params?: {
   q.set("limit", String(params?.limit ?? 50));
   if (params?.service) q.set("service", params.service);
   if (params?.status) q.set("status", params.status);
+  if (params?.environment) q.set("environment", params.environment);
   if (params?.start) q.set("start", params.start);
   if (params?.end) q.set("end", params.end);
 
@@ -531,8 +533,10 @@ export interface DashboardData {
   traceCount: number;
 }
 
-export async function fetchDashboardSummary(minutes = 15): Promise<DashboardData> {
-  const res = await apiFetch(`${API_BASE}/dashboard/summary?minutes=${minutes}`, { headers: authHeaders() });
+export async function fetchDashboardSummary(minutes = 15, environment = ""): Promise<DashboardData> {
+  const q = new URLSearchParams({ minutes: String(minutes) });
+  if (environment) q.set("environment", environment);
+  const res = await apiFetch(`${API_BASE}/dashboard/summary?${q}`, { headers: authHeaders() });
   if (!res.ok) return { requestRate: 0, p99Latency: 0, errorRate: 0, traceCount: 0 };
   const data: APIDashboardSummary = await res.json();
   return {
@@ -909,12 +913,34 @@ export async function fetchLogsHistogram(params?: {
 
 // ── Services timeseries ─────────────────────────────────────────────────
 
-export async function fetchServicesTimeseries(minutes = 15, interval = 1, top = 12): Promise<TraceAnalyticsPoint[]> {
+export async function fetchServicesTimeseries(minutes = 15, interval = 1, top = 12, environment = ""): Promise<TraceAnalyticsPoint[]> {
   const q = new URLSearchParams({ minutes: String(minutes), interval: String(interval), top: String(top) });
+  if (environment) q.set("environment", environment);
   const res = await apiFetch(`${API_BASE}/services/timeseries?${q}`, { headers: authHeaders() });
   if (!res.ok) return [];
   const data: { points: TraceAnalyticsPoint[] } = await res.json();
   return data.points || [];
+}
+
+// ── Service dependencies (service map) ──────────────────────────────────
+
+export interface ServiceDependency {
+  from_service: string;
+  to_service: string;
+  calls: number;
+  error_count: number;
+  error_rate: number;
+  avg_ms: number;
+  p95_ms: number;
+}
+
+export async function fetchServiceDependencies(minutes = 15, environment = ""): Promise<ServiceDependency[]> {
+  const q = new URLSearchParams({ minutes: String(minutes) });
+  if (environment) q.set("environment", environment);
+  const res = await apiFetch(`${API_BASE}/services/dependencies?${q}`, { headers: authHeaders() });
+  if (!res.ok) return [];
+  const data: { items: ServiceDependency[] } = await res.json();
+  return data.items || [];
 }
 
 export interface MetricAttribute {

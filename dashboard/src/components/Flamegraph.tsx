@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Span } from "@/lib/mockData";
+import { Span } from "@/lib/types";
 import { chartPalette } from "@/lib/colors";
 
 const PALETTE = chartPalette as unknown as string[];

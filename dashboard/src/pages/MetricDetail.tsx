@@ -3,7 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 import { fetchMetrics, fetchMetricSeries, fetchMetricAttributes, type MetricAttribute } from "@/lib/api";
-import type { Metric } from "@/lib/mockData";
+import type { Metric } from "@/lib/types";
 import TimeRangeSelector, { type TimeRange, TIME_RANGES, rangeToMinutes, rangeToInterval, rangeToLabel } from "@/components/TimeRangeSelector";
 import { useGlobalTimeRange } from "@/lib/timeRange";
 import AutoRefreshPicker from "@/components/AutoRefreshPicker";

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
-import type { Trace, Log } from "@/lib/mockData";
+import type { Trace, Log } from "@/lib/types";
 import TimeRangeSelector, { type TimeRange, rangeToStartEnd, rangeToLabel, rangeToMinutes, SHORT_RANGES } from "@/components/TimeRangeSelector";
 import { useGlobalTimeRange } from "@/lib/timeRange";
 import { fetchTraces, fetchLogs, fetchServicesList, fetchTraceAnalytics, fetchExternalCalls, type ServiceSummary, type TraceAnalyticsRow, type ExternalCallSummary } from "@/lib/api";

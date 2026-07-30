@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { fetchLogs } from "@/lib/api";
-import type { Log } from "@/lib/mockData";
+import type { Log } from "@/lib/types";
 import CopyButton from "@/components/CopyButton";
 
 const levelColors: Record<string, string> = {

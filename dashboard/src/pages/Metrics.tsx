@@ -4,7 +4,7 @@ import EmptyState from "@/components/EmptyState";
 import { Link } from "react-router-dom";
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid, LineChart, Line } from "recharts";
 import { fetchMetrics, fetchMetricSeries, queryMetrics } from "@/lib/api";
-import type { Metric } from "@/lib/mockData";
+import type { Metric } from "@/lib/types";
 import TimeRangeSelector, { type TimeRange, rangeToMinutes, rangeToInterval, rangeToLabel, SHORT_RANGES } from "@/components/TimeRangeSelector";
 import { useGlobalTimeRange } from "@/lib/timeRange";
 import AutoRefreshPicker from "@/components/AutoRefreshPicker";

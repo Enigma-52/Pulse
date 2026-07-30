@@ -2,7 +2,8 @@ import { useEffect, useState, useCallback } from "react";
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 import TimeRangeSelector, { type TimeRange, rangeToMinutes, rangeToLabel, rangeToStartEnd, rangeToIntervalMinutes } from "@/components/TimeRangeSelector";
 import { useGlobalTimeRange } from "@/lib/timeRange";
-import type { Trace } from "@/lib/mockData";
+import { useEnvironment } from "@/lib/environment";
+import type { Trace } from "@/lib/types";
 import { fetchTraces, fetchDashboardSummary, fetchServicesTimeseries, type DashboardData } from "@/lib/api";
 import { Link } from "react-router-dom";
 import AutoRefreshPicker from "@/components/AutoRefreshPicker";
@@ -12,17 +13,23 @@ import { chart as chartColors, status as statusColors } from "@/lib/colors";
 export default function Dashboard() {
   const [summary, setSummary] = useState<DashboardData | null>(null);
   const [traces, setTraces] = useState<Trace[]>([]);
+  const [errorTraces, setErrorTraces] = useState<Trace[]>([]);
   const [reqSeries, setReqSeries] = useState<{ t: string; value: number }[]>([]);
   const { range, setRange } = useGlobalTimeRange();
+  const { environment } = useEnvironment();
+  const intervalMinutes = rangeToIntervalMinutes(range);
 
-  const load = useCallback((r: TimeRange) => {
+  const load = useCallback((r: TimeRange, env: string) => {
     const minutes = rangeToMinutes(r);
     const { start, end } = rangeToStartEnd(r);
 
-    fetchDashboardSummary(minutes).then(setSummary);
-    fetchTraces({ start, end, limit: 6 }).then(setTraces);
+    fetchDashboardSummary(minutes, env).then(setSummary);
+    fetchTraces({ start, end, limit: 6, environment: env }).then(setTraces);
+    // Recent activity panel = recent errors only, so it complements (not
+    // duplicates) the full recent-traces table below.
+    fetchTraces({ start, end, limit: 8, status: "error", environment: env }).then(setErrorTraces);
     // Request volume from traces: sum per-service counts into one series.
-    fetchServicesTimeseries(minutes, rangeToIntervalMinutes(r)).then((points) => {
+    fetchServicesTimeseries(minutes, rangeToIntervalMinutes(r), 12, env).then((points) => {
       const byTime = new Map<string, number>();
       for (const pt of points) {
         byTime.set(pt.timestamp, (byTime.get(pt.timestamp) ?? 0) + pt.value);
@@ -39,10 +46,10 @@ export default function Dashboard() {
   }, []);
 
   useEffect(() => {
-    load(range);
-  }, [range, load]);
+    load(range, environment);
+  }, [range, environment, load]);
 
-  const refresh = useAutoRefresh(() => load(range));
+  const refresh = useAutoRefresh(() => load(range, environment));
 
   const rate = summary?.requestRate ?? 0;
   const p99 = summary?.p99Latency ?? 0;
@@ -62,7 +69,7 @@ export default function Dashboard() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-medium tracking-tight">Overview</h1>
-          <p className="text-sm text-muted-foreground mt-1">production · {rangeToLabel(range)}</p>
+          <p className="text-sm text-muted-foreground mt-1">{environment || "all environments"} · {rangeToLabel(range)}</p>
         </div>
         <div className="flex items-center gap-3">
           <AutoRefreshPicker value={refresh.interval} onChange={refresh.setInterval} isActive={refresh.isActive} />
@@ -91,7 +98,7 @@ export default function Dashboard() {
           <div className="flex items-center justify-between mb-4">
             <div>
               <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Request volume</div>
-              <div className="text-sm text-muted-foreground mt-0.5">http.server.duration</div>
+              <div className="text-sm text-muted-foreground mt-0.5">requests · {intervalMinutes}m buckets</div>
             </div>
           </div>
           <div className="h-64">
@@ -125,19 +132,20 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Recent Activity */}
+        {/* Recent Errors — complements the full recent-traces table below */}
         <div className="panel flex flex-col">
-          <div className="px-5 py-3 border-b border-border">
-            <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Recent activity</div>
+          <div className="px-5 py-3 border-b border-border flex items-center justify-between">
+            <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Recent errors</div>
+            <Link to="/app/traces?status=error" className="text-[10px] font-mono text-muted-foreground hover:text-foreground transition-colors">view all →</Link>
           </div>
           <div className="flex-1 overflow-y-auto">
-            {traces.length === 0 ? (
-              <div className="px-5 py-8 text-xs text-muted-foreground text-center">No traces yet</div>
+            {errorTraces.length === 0 ? (
+              <div className="px-5 py-8 text-xs text-muted-foreground text-center">No errors in this range</div>
             ) : (
               <div className="divide-y divide-border">
-                {traces.slice(0, 8).map(t => (
+                {errorTraces.map(t => (
                   <Link key={t.id} to={`/app/traces/${t.id}`} className="flex items-center gap-3 px-4 py-2.5 hover:bg-secondary/40 transition-colors">
-                    <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${t.status === "error" ? "bg-status-error" : "bg-status-ok"}`} />
+                    <span className="w-1.5 h-1.5 rounded-full flex-shrink-0 bg-status-error" />
                     <span className="flex-1 truncate font-mono text-xs">{t.name || t.service}</span>
                     <span className="font-mono text-[10px] text-muted-foreground w-16 text-right">{t.duration}ms</span>
                   </Link>

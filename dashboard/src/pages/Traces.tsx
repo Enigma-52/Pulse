@@ -10,7 +10,7 @@ import { useGlobalTimeRange } from "@/lib/timeRange";
 import { useEnvironment } from "@/lib/environment";
 import AutoRefreshPicker from "@/components/AutoRefreshPicker";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
-import type { Trace } from "@/lib/mockData";
+import type { Trace } from "@/lib/types";
 import { fetchTracesPage } from "@/lib/api";
 import { chart as chartColors, status as statusColors } from "@/lib/colors";
 

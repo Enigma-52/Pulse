@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { ScrollText } from "lucide-react";
 import EmptyState from "@/components/EmptyState";
 import { Link, useSearchParams } from "react-router-dom";
-import type { LogLevel, Log } from "@/lib/mockData";
+import type { LogLevel, Log } from "@/lib/types";
 import { fetchLogs, fetchLogsHistogram, type LogHistogramPoint } from "@/lib/api";
 import TimeSeriesChart from "@/components/TimeSeriesChart";
 import { logLevel as logLevelColors } from "@/lib/colors";

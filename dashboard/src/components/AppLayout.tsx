@@ -37,6 +37,22 @@ export default function AppLayout() {
     .map((c) => (c.length > 14 ? `${c.slice(0, 12)}…` : c));
   const [ready, setReady] = useState<boolean | null>(null);
   const [firingCount, setFiringCount] = useState(0);
+  const [helpOpen, setHelpOpen] = useState(false);
+
+  // `?` opens a shortcut cheatsheet; Escape closes it. Ignored while typing.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const tag = document.activeElement?.tagName;
+      if (e.key === "?" && tag !== "INPUT" && tag !== "TEXTAREA") {
+        e.preventDefault();
+        setHelpOpen((v) => !v);
+      } else if (e.key === "Escape") {
+        setHelpOpen(false);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   // Surface currently firing alerts as a badge on the Alerts nav entry.
   useEffect(() => {
@@ -173,6 +189,36 @@ export default function AppLayout() {
           <Outlet />
         </main>
       </div>
+
+      {/* Keyboard shortcut cheatsheet (toggle with ?) */}
+      {helpOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-background/70 backdrop-blur-sm"
+          onClick={() => setHelpOpen(false)}
+        >
+          <div
+            className="panel w-full max-w-sm p-5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <div className="text-sm font-medium">Keyboard shortcuts</div>
+              <button onClick={() => setHelpOpen(false)} className="text-xs text-muted-foreground hover:text-foreground">esc</button>
+            </div>
+            <div className="space-y-2 text-sm">
+              {[
+                ["/", "Focus global search"],
+                ["?", "Toggle this help"],
+                ["Esc", "Close search / dialogs"],
+              ].map(([key, desc]) => (
+                <div key={key} className="flex items-center justify-between">
+                  <span className="text-muted-foreground">{desc}</span>
+                  <kbd className="font-mono text-[11px] px-1.5 py-0.5 rounded border border-border bg-secondary">{key}</kbd>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

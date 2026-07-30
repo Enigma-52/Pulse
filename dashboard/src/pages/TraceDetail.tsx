@@ -4,7 +4,7 @@ import {
   ArrowLeft, ChevronDown, ChevronRight, Copy, Check,
   Clock, Loader2, Info, AlertTriangle, Search,
 } from "lucide-react";
-import type { Span, Log } from "@/lib/mockData";
+import type { Span, Log } from "@/lib/types";
 import { fetchTraceDetail, type TraceDetail as TraceDetailData } from "@/lib/api";
 import { buildSpanColorMapping, type ColorMapResult, ERROR_COLOR, formatDuration, TimelineMinimap } from "@/components/Flamegraph";
 

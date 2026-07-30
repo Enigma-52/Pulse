@@ -3,29 +3,35 @@ import { Server } from "lucide-react";
 import EmptyState from "@/components/EmptyState";
 import { Link } from "react-router-dom";
 import { useMemo } from "react";
-import { fetchServicesList, fetchServicesTimeseries, type ServiceSummary, type TraceAnalyticsPoint } from "@/lib/api";
+import { fetchServicesList, fetchServicesTimeseries, fetchServiceDependencies, type ServiceSummary, type TraceAnalyticsPoint, type ServiceDependency } from "@/lib/api";
 import { ResponsiveContainer, AreaChart, Area } from "recharts";
 import TimeRangeSelector, { rangeToMinutes, rangeToLabel, rangeToInterval, SHORT_RANGES, rangeToIntervalMinutes } from "@/components/TimeRangeSelector";
 import { useGlobalTimeRange } from "@/lib/timeRange";
+import { useEnvironment } from "@/lib/environment";
 import AutoRefreshPicker from "@/components/AutoRefreshPicker";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import { serviceColor, status as statusColors } from "@/lib/colors";
+import ServiceGraph from "@/components/ServiceGraph";
 
 export default function Services() {
   const [services, setServices] = useState<ServiceSummary[]>([]);
   const [series, setSeries] = useState<TraceAnalyticsPoint[]>([]);
+  const [deps, setDeps] = useState<ServiceDependency[]>([]);
   const [loading, setLoading] = useState(true);
+  const [view, setView] = useState<"list" | "map">("list");
   const [sortKey, setSortKey] = useState<"trace_count" | "p99_duration_ms" | "error_rate">("trace_count");
   const [nameFilter, setNameFilter] = useState("");
   const { range, setRange } = useGlobalTimeRange();
+  const { environment } = useEnvironment();
 
   const load = useCallback(() => {
     const minutes = rangeToMinutes(range);
     Promise.all([
       fetchServicesList(minutes).then(setServices),
       fetchServicesTimeseries(minutes, rangeToIntervalMinutes(range)).then(setSeries),
+      fetchServiceDependencies(minutes, environment).then(setDeps),
     ]).finally(() => setLoading(false));
-  }, [range]);
+  }, [range, environment]);
 
   useEffect(() => {
     load();
@@ -64,12 +70,25 @@ export default function Services() {
           <p className="text-sm text-muted-foreground mt-1">All instrumented services · {rangeToLabel(range)}</p>
         </div>
         <div className="flex items-center gap-3">
+          <div className="flex rounded border border-border overflow-hidden">
+            {(["list", "map"] as const).map((v) => (
+              <button
+                key={v}
+                onClick={() => setView(v)}
+                className={`h-8 px-3 text-xs capitalize transition-colors ${
+                  view === v ? "bg-secondary text-foreground" : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {v}
+              </button>
+            ))}
+          </div>
           <AutoRefreshPicker value={refresh.interval} onChange={refresh.setInterval} isActive={refresh.isActive} />
           <TimeRangeSelector value={range} onChange={setRange} ranges={SHORT_RANGES} />
         </div>
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className={`flex items-center gap-2 ${view === "map" ? "hidden" : ""}`}>
         <input
           value={nameFilter}
           onChange={e => setNameFilter(e.target.value)}
@@ -90,7 +109,9 @@ export default function Services() {
         ))}
       </div>
 
-      {loading ? (
+      {view === "map" ? (
+        <ServiceGraph deps={deps} />
+      ) : loading ? (
         <div className="text-sm text-muted-foreground">Loading services...</div>
       ) : services.length === 0 ? (
         <div className="panel"><EmptyState icon={Server} title="No services yet" hint="Services appear automatically once any app sends traces with a service.name resource attribute to /v1/traces." /></div>

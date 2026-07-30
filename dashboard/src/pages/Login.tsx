@@ -72,7 +72,6 @@ export default function Login() {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="admin@example.com"
                 required
-                autoFocus
               />
             </div>
             <div className="space-y-2">
