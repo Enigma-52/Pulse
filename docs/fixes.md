@@ -225,3 +225,59 @@ Delivered: V1–V5. Notes: External table has no detail page, so V4 applied to D
 
 ## Round 6 status
 Delivered: W1–W5.
+
+---
+
+# Round 7 (2026-07-18) — Backend API robustness + frontend integration + landing polish
+
+Theme: harden the ingest/query APIs and tighten how the dashboard consumes them, plus two landing gaps. Same rules: one shippable commit per item, one-liner message, compile-verified (`cd pulse && go build ./...` / `npm run build`), no co-author trailer, no services started.
+
+## Backend APIs
+
+### X1. `fix: decompress gzip-encoded otlp payloads` — **headline, correctness**
+`pulse/internal/ingest/handler.go`
+- **Confirmed bug:** `readAndNormalize` reads the body raw and never inspects `Content-Encoding`. The OTel **Collector's `otlphttp` exporter gzips by default**, and many SDKs enable gzip — those requests currently hit `proto.Unmarshal` on compressed bytes and get a `400`, so a path the docs claim as supported ("Collector as a data forwarder") silently fails.
+- Fix: when `Content-Encoding: gzip`, wrap the (still `MaxBytesReader`-capped) body in `gzip.NewReader` before reading. Reject malformed gzip as `400`. Cap stays enforced on the compressed stream.
+
+### X2. `feat: gzip query API responses` — perf, backend↔frontend
+`pulse/internal/server/server.go`
+- Query responses (trace/log lists, analytics) are sent uncompressed. Add a small gzip response middleware: when the client sends `Accept-Encoding: gzip` and the payload is JSON, wrap the writer, set `Content-Encoding: gzip` + `Vary`. Browsers negotiate and decompress transparently — no dashboard change needed. Skip OTLP ingest routes and already-encoded responses.
+
+### X3. `feat: structured access logging middleware` — ops (todo P1)
+`pulse/internal/server/server.go`
+- todo P1 "internal service metrics and structured logs" is unchecked. Add a request-logging middleware wrapping a `statusRecorder` ResponseWriter: log `method path status dur_ms bytes` one line per request. Skip `/healthz`/`/readyz` to avoid probe spam. Gated by `PULSE_ACCESS_LOG` (default on; `0` disables).
+
+### X4. `fix: propagate environment filter to dashboard summary and services timeseries`
+`pulse/internal/query/handler/*.go` + stores (audit)
+- Verify `environment` param is honored on `/dashboard/summary` and `/services/timeseries` (the Overview page needs it once X6 wires the selector through). Add the param where missing, mirroring the existing `services`/`traces` env-filter pattern. No new endpoints.
+
+## Dashboard (frontend integration with the APIs)
+
+### X5. `fix: overview hardcodes 'production' and mislabels the request chart`
+`dashboard/src/pages/Dashboard.tsx`
+- **Confirmed:** the header subtitle is hardcoded `production · …` even though a real environment selector exists in the shell, and the request-volume chart subtitle still reads `http.server.duration` — stale since R2-2 rerouted that series to trace request-counts.
+- Fix: subtitle uses the selected environment (`all environments` when unset) from `useEnvironment`; chart subtitle → `requests per <interval>`; pass `environment` into `fetchDashboardSummary`/`fetchServicesTimeseries` (X4) so Overview honors the global env filter like every other page.
+
+### X6. `fix: differentiate overview 'recent activity' from 'recent traces'`
+`dashboard/src/pages/Dashboard.tsx`
+- **Confirmed redundancy:** "Recent activity" and the "Recent traces" table render the same 6 rows (and slice(0,8) over a limit:6 fetch). Repoint "Recent activity" at recent **error** traces (`fetchTraces({status:"error"})`) so the two panels earn their space — an at-a-glance failure feed beside the full recent list. Empty state: "No errors in this range" (good news framing).
+
+### X7. `feat: keyboard shortcut help overlay` — UX (optional/last)
+`dashboard/src/components/AppLayout.tsx` (+ small `ShortcutHelp` component)
+- `?` opens a modal cheatsheet (`/` search, `?` help, sign-out); documents what already exists rather than adding bindings. Self-contained, no route change.
+
+## Landing (`frontend/`)
+
+### X8. `feat: mobile nav menu`
+`frontend/src/components/pulse/Nav.tsx`
+- **Confirmed gap:** nav links are `hidden md:flex` with no hamburger — on phones there's no way to reach Features/Deploy/etc. Add a `useState` toggle + hamburger button that reveals a stacked menu below `md`.
+
+### X9. `fix: respect prefers-reduced-motion on landing`
+`frontend/src/index.css`
+- The hero/marquee lean on `animate-rise`, `animate-ping`, `animate-blink`, marquee scroll. Add a global `@media (prefers-reduced-motion: reduce)` block that disables/decelerates these — accessibility + stops motion-sensitivity issues on first impression.
+
+## Execution order
+X1 (headline) → X2 → X3 → X4 → X5 → X6 → X8 → X9 → X7 (optional). Compile-verify backend and the touched frontend after each. Runtime verification of gzip ingest deferred (no services this session) — implemented by mirroring stdlib `gzip` usage; noted in todo if follow-up needed.
+
+## Round 7 status
+_in progress_

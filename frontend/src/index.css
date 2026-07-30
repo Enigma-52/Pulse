@@ -156,3 +156,17 @@
   }
   .animate-scan { animation: scan 8s linear infinite; }
 }
+
+/* Respect users who ask for less motion: freeze looping/entrance animations
+   (marquee, ping, blink, rise, scan, pulse-line) and neutralize transitions
+   so the landing page is comfortable on first impression. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
