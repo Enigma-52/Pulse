@@ -239,14 +239,17 @@ func randID(size int) []byte {
 	return b
 }
 
-// place walks the tree, assigning ids and timing (children fan out with a small
-// stagger), appending each span to out. Returns the node's end offset in ms.
+// place walks the tree, assigning ids and timing, appending each span to out.
+// Children run sequentially (each starts a hair after the previous sibling
+// finishes) so the waterfall reads as a clean left-to-right cascade rather than
+// a pile of near-simultaneous stubs. Returns the node's end offset in ms.
 func place(n *node, traceID, parentID []byte, baseNano uint64, startMs int64, out *[]placedSpan) int64 {
 	id := randID(8)
 	end := startMs + n.durMs
-	for i, c := range n.children {
-		cs := startMs + 2 + int64(i*3)
-		ce := place(c, traceID, id, baseNano, cs, out)
+	cursor := startMs + 2 // small delay before the first child begins
+	for _, c := range n.children {
+		ce := place(c, traceID, id, baseNano, cursor, out)
+		cursor = ce + 1 // next sibling starts after this one ends
 		if ce+1 > end {
 			end = ce + 1
 		}
