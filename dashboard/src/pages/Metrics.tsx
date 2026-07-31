@@ -10,6 +10,7 @@ import { useGlobalTimeRange } from "@/lib/timeRange";
 import AutoRefreshPicker from "@/components/AutoRefreshPicker";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import { chartPalette, chart as chartColors } from "@/lib/colors";
+import { axisTick, fullTimestamp, spanMinutes } from "@/lib/chartTime";
 
 type MetricWithSeries = Metric & {
   series: { t: string; value: number }[];
@@ -137,10 +138,11 @@ export default function Metrics() {
                       <ResponsiveContainer>
                         <LineChart data={s.points}>
                           <CartesianGrid stroke="hsl(var(--border))" strokeDasharray="2 4" vertical={false} />
-                          <XAxis dataKey="t" stroke="hsl(var(--muted-foreground))" fontSize={9} tickLine={false} axisLine={false} />
+                          <XAxis dataKey="tms" stroke="hsl(var(--muted-foreground))" fontSize={9} tickLine={false} axisLine={false} minTickGap={44} tickFormatter={(v) => axisTick(v, spanMinutes(s.points.map((p) => ({ timestamp: p.tms }))))} />
                           <YAxis stroke="hsl(var(--muted-foreground))" fontSize={9} tickLine={false} axisLine={false} width={40} />
                           <Tooltip
                             contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 6, fontSize: 11, fontFamily: "JetBrains Mono, monospace" }}
+                            labelFormatter={(v) => fullTimestamp(Number(v))}
                           />
                           <Line type="monotone" dataKey="value" stroke={color} strokeWidth={1.5} dot={false} />
                         </LineChart>
@@ -215,12 +217,14 @@ export default function Metrics() {
                         </defs>
                         <CartesianGrid stroke="hsl(var(--border))" strokeDasharray="2 4" vertical={false} />
                         <XAxis
-                          dataKey="t"
+                          dataKey="tms"
                           stroke="hsl(var(--muted-foreground))"
                           fontSize={8}
                           tickLine={false}
                           axisLine={false}
                           interval="preserveStartEnd"
+                          minTickGap={40}
+                          tickFormatter={(v) => axisTick(v, spanMinutes(m.series.map((p) => ({ timestamp: p.tms }))))}
                         />
                         <YAxis
                           stroke="hsl(var(--muted-foreground))"
@@ -233,7 +237,7 @@ export default function Metrics() {
                         <Tooltip
                           contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 6, fontSize: 10, fontFamily: "JetBrains Mono, monospace" }}
                           formatter={(value: number) => [fmtValue(value) + (m.unit ? ` ${m.unit}` : ""), m.name]}
-                          labelFormatter={(label: string) => label}
+                          labelFormatter={(v) => fullTimestamp(Number(v))}
                         />
                         <Area type="monotone" dataKey="value" stroke={color} strokeWidth={1.5} fill={`url(#mg-${m.id})`} dot={false} />
                       </AreaChart>

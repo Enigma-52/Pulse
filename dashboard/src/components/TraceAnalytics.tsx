@@ -11,6 +11,7 @@ import {
 } from "@/lib/api";
 import { type TimeRange, rangeToMinutes, rangeToInterval, rangeToIntervalMinutes } from "@/components/TimeRangeSelector";
 import { serviceColor, chartPalette, fmtMs } from "@/lib/colors";
+import { axisTick, fullTimestamp, spanMinutes } from "@/lib/chartTime";
 
 type GroupBy = "service" | "route" | "name";
 type Metric = "count" | "p95" | "error_rate";
@@ -62,9 +63,7 @@ export default function TraceAnalytics({ range, service }: { range: TimeRange; s
       if (!groupSet.includes(p.group)) groupSet.push(p.group);
       const key = p.timestamp;
       if (!byTime.has(key)) {
-        byTime.set(key, {
-          time: new Date(p.timestamp).toLocaleTimeString("en-US", { hour12: false, hour: "2-digit", minute: "2-digit" }),
-        });
+        byTime.set(key, { tms: new Date(p.timestamp).getTime() });
       }
       byTime.get(key)![p.group] = p.value;
     }
@@ -125,9 +124,9 @@ export default function TraceAnalytics({ range, service }: { range: TimeRange; s
             <ResponsiveContainer>
               <LineChart data={chartData}>
                 <CartesianGrid stroke="hsl(var(--border))" strokeDasharray="2 4" vertical={false} />
-                <XAxis dataKey="time" stroke="hsl(var(--muted-foreground))" fontSize={9} tickLine={false} axisLine={false} />
+                <XAxis dataKey="tms" stroke="hsl(var(--muted-foreground))" fontSize={9} tickLine={false} axisLine={false} minTickGap={44} tickFormatter={(v) => axisTick(v, spanMinutes(chartData.map((d) => ({ timestamp: d.tms as number }))))} />
                 <YAxis stroke="hsl(var(--muted-foreground))" fontSize={9} tickLine={false} axisLine={false} width={40} />
-                <Tooltip contentStyle={tooltipStyle} />
+                <Tooltip contentStyle={tooltipStyle} labelFormatter={(v) => fullTimestamp(Number(v))} />
                 <Legend wrapperStyle={{ fontSize: 10 }} />
                 {groups.map((g, i) => (
                   <Line key={g} type="monotone" dataKey={g} stroke={groupColor(g, i)} strokeWidth={1.5} dot={false} connectNulls />

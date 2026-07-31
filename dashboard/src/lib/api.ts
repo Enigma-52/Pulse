@@ -410,7 +410,7 @@ export async function queryMetrics(params: {
   minutes?: number;
   interval?: number;
 }): Promise<{
-  series: { name: string; unit: string; points: { t: string; value: number }[] }[];
+  series: { name: string; unit: string; points: { tms: number; value: number }[] }[];
 }> {
   const q = new URLSearchParams();
   if (params.name) q.set("name", params.name);
@@ -428,7 +428,7 @@ export async function queryMetrics(params: {
       name: s.name,
       unit: s.unit,
       points: (s.points || []).map((p: { timestamp: string; value: number }) => ({
-        t: formatChartTime(p.timestamp),
+        tms: new Date(p.timestamp).getTime(),
         value: p.value,
       })),
     })),
