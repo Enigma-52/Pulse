@@ -249,6 +249,38 @@ type ExternalCallSummary struct {
 	LastSeen   time.Time `json:"last_seen"`
 }
 
+// External host drill-down models.
+
+type ExternalHostOverview struct {
+	Host       string    `json:"host"`
+	CallCount  uint64    `json:"call_count"`
+	ErrorCount uint64    `json:"error_count"`
+	ErrorRate  float64   `json:"error_rate"`
+	AvgMs      float64   `json:"avg_ms"`
+	P50Ms      float64   `json:"p50_ms"`
+	P95Ms      float64   `json:"p95_ms"`
+	P99Ms      float64   `json:"p99_ms"`
+	FirstSeen  time.Time `json:"first_seen"`
+	LastSeen   time.Time `json:"last_seen"`
+}
+
+type ExternalCaller struct {
+	Service    string  `json:"service"`
+	CallCount  uint64  `json:"call_count"`
+	ErrorCount uint64  `json:"error_count"`
+	ErrorRate  float64 `json:"error_rate"`
+	P95Ms      float64 `json:"p95_ms"`
+}
+
+type ExternalHostTrace struct {
+	TraceID    string    `json:"trace_id"`
+	Service    string    `json:"service"`
+	Name       string    `json:"name"`
+	DurationMs int64     `json:"duration_ms"`
+	Status     string    `json:"status"`
+	Timestamp  time.Time `json:"timestamp"`
+}
+
 // ServiceDependency is one edge of the service dependency graph: a caller
 // service invoking a callee service, derived from parent/child spans that
 // cross a service boundary within the same trace.
@@ -302,8 +334,20 @@ type ExceptionDetail struct {
 	Occurrences uint64    `json:"occurrences"`
 	FirstSeen   time.Time `json:"first_seen"`
 	LastSeen    time.Time `json:"last_seen"`
-	Stacktrace  string    `json:"stacktrace"`
-	TraceIDs    []string  `json:"trace_ids"`
+	Stacktrace  string           `json:"stacktrace"`
+	TraceIDs    []string         `json:"trace_ids"`
+	Traces      []ExceptionTrace `json:"traces"`
+}
+
+// ExceptionTrace summarizes a trace in which an exception occurred, for the
+// "related traces" list on the error detail page.
+type ExceptionTrace struct {
+	TraceID    string    `json:"trace_id"`
+	Service    string    `json:"service"`
+	Name       string    `json:"name"`
+	DurationMs int64     `json:"duration_ms"`
+	Status     string    `json:"status"`
+	Timestamp  time.Time `json:"timestamp"`
 }
 
 type ExceptionBucket struct {

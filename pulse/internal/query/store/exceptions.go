@@ -105,28 +105,38 @@ LIMIT 1
 		}
 	}
 
-	// Recent distinct traces containing this exception, newest first.
+	// Recent distinct traces containing this exception, newest first, joined to
+	// each trace's root span for a rich summary (operation, duration, status).
 	traces, err := s.conn.Query(ctx, `
-SELECT trace_id
-FROM exceptions
-WHERE fingerprint = ? AND trace_id != ''
-GROUP BY trace_id
-ORDER BY max(timestamp) DESC
-LIMIT 20
+SELECT e.trace_id, t.service, t.name, t.duration_ms, t.status, e.ts
+FROM (
+    SELECT trace_id, max(timestamp) AS ts
+    FROM exceptions
+    WHERE fingerprint = ? AND trace_id != ''
+    GROUP BY trace_id
+    ORDER BY ts DESC
+    LIMIT 20
+) AS e
+INNER JOIN traces AS t ON t.trace_id = e.trace_id AND t.parent_span_id = ''
+ORDER BY e.ts DESC
 `, fingerprint)
 	if err != nil {
 		return nil, err
 	}
 	defer traces.Close()
 	for traces.Next() {
-		var tid string
-		if err := traces.Scan(&tid); err != nil {
+		var t model.ExceptionTrace
+		if err := traces.Scan(&t.TraceID, &t.Service, &t.Name, &t.DurationMs, &t.Status, &t.Timestamp); err != nil {
 			return nil, err
 		}
-		d.TraceIDs = append(d.TraceIDs, tid)
+		d.Traces = append(d.Traces, t)
+		d.TraceIDs = append(d.TraceIDs, t.TraceID)
 	}
 	if d.TraceIDs == nil {
 		d.TraceIDs = []string{}
+	}
+	if d.Traces == nil {
+		d.Traces = []model.ExceptionTrace{}
 	}
 	return &d, nil
 }

@@ -122,34 +122,54 @@ export default function ExceptionDetail() {
         </div>
 
         <div className="panel p-5">
-          <div className="data-label mb-3">Recent traces</div>
-          {detail.trace_ids.length === 0 ? (
+          <div className="flex items-center justify-between mb-3">
+            <div className="data-label">Related traces</div>
+            <span className="text-[10px] font-mono text-muted-foreground">{detail.traces.length} shown</span>
+          </div>
+          {detail.traces.length === 0 ? (
             <p className="text-sm text-muted-foreground">No linked traces.</p>
           ) : (
-            <div className="space-y-1.5">
-              {detail.trace_ids.map((tid) => (
+            <div className="divide-y divide-border -mx-5">
+              {detail.traces.map((t) => (
                 <Link
-                  key={tid}
-                  to={`/app/traces/${tid}`}
-                  className="block font-mono text-xs text-status-info hover:underline truncate"
+                  key={t.trace_id}
+                  to={`/app/traces/${t.trace_id}`}
+                  className="grid grid-cols-12 gap-2 px-5 py-2 items-center hover:bg-secondary/40 text-xs"
                 >
-                  {tid}
+                  <div className="col-span-5 min-w-0">
+                    <div className="font-mono truncate">{t.name}</div>
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      <span className="w-1.5 h-1.5 rounded-full" style={{ background: serviceColor(t.service) }} />
+                      <span className="text-[10px] text-muted-foreground truncate">{t.service}</span>
+                    </div>
+                  </div>
+                  <div className="col-span-3 font-mono text-muted-foreground text-[10px] truncate">
+                    {new Date(t.timestamp).toLocaleTimeString("en-US", { hour12: false })}
+                  </div>
+                  <div className="col-span-2 font-mono text-right">{t.duration_ms}ms</div>
+                  <div className="col-span-2 text-right">
+                    <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded border ${
+                      t.status === "error" ? "border-status-error/40 text-status-error" : "border-status-ok/40 text-status-ok"
+                    }`}>{t.status.toUpperCase()}</span>
+                  </div>
                 </Link>
               ))}
             </div>
           )}
-          {detail.route && (
-            <div className="mt-4">
-              <div className="data-label mb-1.5">Route</div>
-              <span className="font-mono text-xs">{detail.route}</span>
-            </div>
-          )}
-          {detail.environment && (
-            <div className="mt-4">
-              <div className="data-label mb-1.5">Environment</div>
-              <span className="font-mono text-xs">{detail.environment}</span>
-            </div>
-          )}
+          <div className="flex flex-wrap gap-x-8 gap-y-3 mt-4">
+            {detail.route && (
+              <div>
+                <div className="data-label mb-1.5">Route</div>
+                <span className="font-mono text-xs">{detail.route}</span>
+              </div>
+            )}
+            {detail.environment && (
+              <div>
+                <div className="data-label mb-1.5">Environment</div>
+                <span className="font-mono text-xs">{detail.environment}</span>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

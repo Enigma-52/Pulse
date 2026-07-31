@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import TableSkeleton from "@/components/TableSkeleton";
-import { Globe } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { Globe, ChevronRight } from "lucide-react";
 import { fetchExternalCalls, type ExternalCallSummary } from "@/lib/api";
 import TimeRangeSelector, { type TimeRange, rangeToMinutes, rangeToLabel, SHORT_RANGES } from "@/components/TimeRangeSelector";
 import { useGlobalTimeRange } from "@/lib/timeRange";
@@ -12,6 +13,7 @@ export default function External() {
   const [calls, setCalls] = useState<ExternalCallSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const { range, setRange } = useGlobalTimeRange();
+  const navigate = useNavigate();
 
   const load = useCallback(() => {
     fetchExternalCalls({ minutes: rangeToMinutes(range) })
@@ -64,20 +66,26 @@ export default function External() {
                 const errClass = c.error_rate > 5 ? "text-status-error" : c.error_rate > 1 ? "text-status-warn" : "text-muted-foreground";
                 const lastSeen = c.last_seen ? new Date(c.last_seen).toLocaleTimeString("en-US", { hour12: false, hour: "2-digit", minute: "2-digit", second: "2-digit" }) : "-";
                 return (
-                  <tr key={c.host} className="border-b border-border last:border-0 hover:bg-secondary/40">
+                  <tr
+                    key={c.host}
+                    onClick={() => navigate(`/app/external/${encodeURIComponent(c.host)}`)}
+                    className="border-b border-border last:border-0 hover:bg-secondary/40 cursor-pointer group"
+                  >
                     <td className="px-5 py-3">
                       <span className="flex items-center gap-2.5">
                         <span className="w-7 h-7 rounded bg-accent border border-border flex items-center justify-center">
                           <Globe className="w-3.5 h-3.5 text-muted-foreground" strokeWidth={1.75} />
                         </span>
-                        <span className="font-mono text-xs">{c.host}</span>
+                        <Link to={`/app/external/${encodeURIComponent(c.host)}`} onClick={(e) => e.stopPropagation()} className="font-mono text-xs hover:underline">{c.host}</Link>
                       </span>
                     </td>
                     <td className="px-5 py-3 font-mono text-xs text-right">{c.call_count.toLocaleString()}</td>
                     <td className={`px-5 py-3 font-mono text-xs text-right ${errClass}`}>{c.error_rate.toFixed(2)}%</td>
                     <td className="px-5 py-3 font-mono text-xs text-right text-muted-foreground">{fmtMs(c.avg_ms)}</td>
                     <td className="px-5 py-3 font-mono text-xs text-right">{fmtMs(c.p95_ms)}</td>
-                    <td className="px-5 py-3 font-mono text-xs text-right text-muted-foreground">{lastSeen}</td>
+                    <td className="px-5 py-3 font-mono text-xs text-right text-muted-foreground">
+                      <span className="inline-flex items-center gap-2">{lastSeen}<ChevronRight className="w-3.5 h-3.5 text-muted-foreground/40 group-hover:text-muted-foreground" /></span>
+                    </td>
                   </tr>
                 );
               })

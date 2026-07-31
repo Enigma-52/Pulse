@@ -695,11 +695,21 @@ export interface ExceptionGroup {
   last_seen: string;
 }
 
+export interface ExceptionTrace {
+  trace_id: string;
+  service: string;
+  name: string;
+  duration_ms: number;
+  status: string;
+  timestamp: string;
+}
+
 export interface ExceptionDetail extends ExceptionGroup {
   environment: string;
   route: string;
   stacktrace: string;
   trace_ids: string[];
+  traces: ExceptionTrace[];
 }
 
 export interface ExceptionBucket {
@@ -878,6 +888,45 @@ export async function fetchExternalCalls(params?: { service?: string; minutes?: 
   if (!res.ok) return [];
   const data: { items: ExternalCallSummary[] } = await res.json();
   return data.items || [];
+}
+
+export interface ExternalHostOverview {
+  host: string;
+  call_count: number;
+  error_count: number;
+  error_rate: number;
+  avg_ms: number;
+  p50_ms: number;
+  p95_ms: number;
+  p99_ms: number;
+  first_seen: string;
+  last_seen: string;
+}
+export interface ExternalCaller {
+  service: string;
+  call_count: number;
+  error_count: number;
+  error_rate: number;
+  p95_ms: number;
+}
+export interface ExternalHostTrace {
+  trace_id: string;
+  service: string;
+  name: string;
+  duration_ms: number;
+  status: string;
+  timestamp: string;
+}
+export interface ExternalHostDetail {
+  overview: ExternalHostOverview;
+  callers: ExternalCaller[];
+  recent: ExternalHostTrace[];
+}
+
+export async function fetchExternalHostDetail(host: string, minutes = 15): Promise<ExternalHostDetail | null> {
+  const res = await apiFetch(`${API_BASE}/external/${encodeURIComponent(host)}/detail?minutes=${minutes}`, { headers: authHeaders() });
+  if (!res.ok) return null;
+  return res.json();
 }
 
 // ── Logs histogram ──────────────────────────────────────────────────────
