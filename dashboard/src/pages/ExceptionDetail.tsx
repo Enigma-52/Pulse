@@ -11,6 +11,7 @@ import {
 import TimeRangeSelector, { type TimeRange, rangeToMinutes, rangeToInterval, SHORT_RANGES, rangeToIntervalMinutes } from "@/components/TimeRangeSelector";
 import { useGlobalTimeRange } from "@/lib/timeRange";
 import { status, serviceColor } from "@/lib/colors";
+import { axisTick, fullTimestamp, spanMinutes } from "@/lib/chartTime";
 import CopyButton from "@/components/CopyButton";
 
 function Stat({ label, value }: { label: string; value: string }) {
@@ -51,10 +52,8 @@ export default function ExceptionDetail() {
   if (loading) return <div className="p-6 text-sm text-muted-foreground">Loading exception...</div>;
   if (!detail) return <div className="p-6 text-sm text-muted-foreground">Exception not found in this time range.</div>;
 
-  const chartData = buckets.map((b) => ({
-    time: new Date(b.timestamp).toLocaleTimeString("en-US", { hour12: false, hour: "2-digit", minute: "2-digit" }),
-    count: b.count,
-  }));
+  const chartData = buckets.map((b) => ({ tms: new Date(b.timestamp).getTime(), count: b.count }));
+  const chartSpan = spanMinutes(buckets.map((b) => ({ timestamp: b.timestamp })));
 
   return (
     <div className="p-6 space-y-6">
@@ -94,10 +93,11 @@ export default function ExceptionDetail() {
           <div className="h-48">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData}>
-                <XAxis dataKey="time" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
+                <XAxis dataKey="tms" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} minTickGap={44} tickFormatter={(v) => axisTick(v, chartSpan)} />
                 <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} allowDecimals={false} width={32} />
                 <Tooltip
                   contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 4, fontSize: 11 }}
+                  labelFormatter={(v) => fullTimestamp(Number(v))}
                 />
                 <Bar dataKey="count" fill={status.error} radius={[2, 2, 0, 0]} />
               </BarChart>

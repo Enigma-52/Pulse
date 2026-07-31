@@ -335,7 +335,10 @@ export default function Logs() {
                     </div>
                   </div>
                   {expandedId === l.id && (
-                    <div className="px-4 pb-3 pt-1 bg-secondary/20 border-t border-border/50">
+                    <div className="px-4 pb-3 pt-2 bg-secondary/20 border-t border-border/50">
+                      <div className="mb-2 ml-[calc(100%/12*2)]">
+                        <Link to={`/app/logs/${encodeURIComponent(l.id)}`} className="text-[11px] text-status-info hover:underline">Open full detail →</Link>
+                      </div>
                       <div className="grid grid-cols-2 gap-x-6 gap-y-1.5 max-w-2xl ml-[calc(100%/12*2)]">
                         {l.service && (
                           <div className="flex gap-2">

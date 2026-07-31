@@ -4,7 +4,6 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import TraceAnalytics from "@/components/TraceAnalytics";
 import EmptyState from "@/components/EmptyState";
 import { GitBranch } from "lucide-react";
-import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Cell } from "recharts";
 import TimeRangeSelector, { type TimeRange, rangeToStartEnd, rangeToLabel, SHORT_RANGES } from "@/components/TimeRangeSelector";
 import { useGlobalTimeRange } from "@/lib/timeRange";
 import { useEnvironment } from "@/lib/environment";
@@ -13,29 +12,6 @@ import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import type { Trace } from "@/lib/types";
 import { fetchTracesPage } from "@/lib/api";
 import { chart as chartColors, status as statusColors } from "@/lib/colors";
-
-function buildDurationBuckets(traces: Trace[]) {
-  if (traces.length === 0) return [];
-  const durations = traces.map(t => t.duration);
-  const max = Math.max(...durations);
-  const bucketCount = Math.min(20, Math.max(5, Math.ceil(Math.sqrt(traces.length))));
-  const bucketSize = Math.max(1, Math.ceil(max / bucketCount));
-  const buckets: { label: string; count: number; from: number; to: number }[] = [];
-
-  for (let i = 0; i < bucketCount; i++) {
-    const from = i * bucketSize;
-    const to = (i + 1) * bucketSize;
-    const count = durations.filter(d => d >= from && d < to).length;
-    if (i < bucketCount - 1 || count > 0) {
-      buckets.push({ label: `${from}`, count, from, to });
-    }
-  }
-
-  while (buckets.length > 0 && buckets[buckets.length - 1].count === 0) {
-    buckets.pop();
-  }
-  return buckets;
-}
 
 export default function Traces() {
   const navigate = useNavigate();
@@ -116,7 +92,6 @@ export default function Traces() {
     return traces;
   }, [traces, sortKey]);
 
-  const durationBuckets = useMemo(() => buildDurationBuckets(traces), [traces]);
   const p50 = useMemo(() => {
     if (traces.length === 0) return 0;
     const sorted = [...traces].sort((a, b) => a.duration - b.duration);
@@ -204,32 +179,24 @@ export default function Traces() {
         </div>
       </div>
 
-      {/* Duration Distribution */}
-      {durationBuckets.length > 0 && (
-        <div className="panel p-5">
-          <div className="flex items-center justify-between mb-3">
-            <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Duration distribution</div>
-            <div className="text-[10px] font-mono text-muted-foreground">{traces.length} traces · p50 = {p50}ms</div>
-          </div>
-          <div className="h-28">
-            <ResponsiveContainer>
-              <BarChart data={durationBuckets}>
-                <CartesianGrid stroke="hsl(var(--border))" strokeDasharray="2 4" vertical={false} />
-                <XAxis dataKey="label" stroke="hsl(var(--muted-foreground))" fontSize={9} tickLine={false} axisLine={false} interval="preserveStartEnd" />
-                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={9} tickLine={false} axisLine={false} width={28} />
-                <Tooltip
-                  contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 6, fontSize: 11, fontFamily: "JetBrains Mono, monospace" }}
-                  formatter={(value: number) => [`${value} traces`, "Count"]}
-                  labelFormatter={(label: string) => `${label}ms`}
-                />
-                <Bar dataKey="count" radius={[2, 2, 0, 0]}>
-                  {durationBuckets.map((_, i) => (
-                    <Cell key={i} fill={chartColors.primary} fillOpacity={0.7} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+      {(serviceFilter || statusFilter || textFilter) && (
+        <div className="flex items-center gap-2 text-xs flex-wrap">
+          <span className="text-muted-foreground">Filtering</span>
+          {serviceFilter && (
+            <button onClick={() => { setServiceFilter(""); setPage(0); }} className="inline-flex items-center gap-1.5 font-mono px-2 py-0.5 rounded border border-status-info/40 text-status-info hover:bg-secondary">
+              service = {serviceFilter} ✕
+            </button>
+          )}
+          {statusFilter && (
+            <button onClick={() => { setStatusFilter(""); setPage(0); }} className="inline-flex items-center gap-1.5 font-mono px-2 py-0.5 rounded border border-status-info/40 text-status-info hover:bg-secondary">
+              status = {statusFilter} ✕
+            </button>
+          )}
+          {textFilter && (
+            <button onClick={() => { setTextFilter(""); setPage(0); }} className="inline-flex items-center gap-1.5 font-mono px-2 py-0.5 rounded border border-status-info/40 text-status-info hover:bg-secondary">
+              “{textFilter}” ✕
+            </button>
+          )}
         </div>
       )}
 

@@ -14,6 +14,7 @@ import {
   Legend,
 } from "recharts";
 import { chartPalette } from "@/lib/colors";
+import { axisTick, fullTimestamp, spanMinutes, windowCaption } from "@/lib/chartTime";
 
 export interface SeriesPoint {
   timestamp: string | number;
@@ -30,6 +31,8 @@ interface TimeSeriesChartProps {
   colors?: Record<string, string>;
   showLegend?: boolean;
   yWidth?: number;
+  /** Show the "date-range · timezone" caption under the chart (default true). */
+  showCaption?: boolean;
 }
 
 const tooltipStyle = {
@@ -67,16 +70,12 @@ export default function TimeSeriesChart({
   colors,
   showLegend = false,
   yWidth = 36,
+  showCaption = true,
 }: TimeSeriesChartProps) {
+  const span = useMemo(() => spanMinutes(data), [data]);
+  const caption = useMemo(() => windowCaption(data), [data]);
   const chartData = useMemo(
-    () =>
-      data.map((d) => ({
-        ...d,
-        time:
-          typeof d.timestamp === "string"
-            ? new Date(d.timestamp).toLocaleTimeString("en-US", { hour12: false, hour: "2-digit", minute: "2-digit" })
-            : d.timestamp,
-      })),
+    () => data.map((d) => ({ ...d, tms: new Date(d.timestamp).getTime() })),
     [data],
   );
 
@@ -85,14 +84,15 @@ export default function TimeSeriesChart({
   const common = (
     <>
       <CartesianGrid stroke="hsl(var(--border))" strokeDasharray="2 4" vertical={false} />
-      <XAxis dataKey="time" {...axisProps} interval="preserveStartEnd" />
+      <XAxis dataKey="tms" {...axisProps} interval="preserveStartEnd" minTickGap={44} tickFormatter={(v) => axisTick(v, span)} />
       <YAxis {...axisProps} width={yWidth} tickFormatter={abbreviateTick} />
-      <Tooltip contentStyle={tooltipStyle} />
+      <Tooltip contentStyle={tooltipStyle} labelFormatter={(v) => fullTimestamp(Number(v))} />
       {showLegend && <Legend wrapperStyle={{ fontSize: 10 }} />}
     </>
   );
 
   return (
+    <div>
     <div style={{ height }}>
       <ResponsiveContainer>
         {mode === "bar" ? (
@@ -134,6 +134,10 @@ export default function TimeSeriesChart({
           </LineChart>
         )}
       </ResponsiveContainer>
+    </div>
+      {showCaption && caption && (
+        <div className="mt-1 text-[10px] font-mono text-muted-foreground text-right">{caption}</div>
+      )}
     </div>
   );
 }

@@ -9,12 +9,13 @@ import { Link } from "react-router-dom";
 import AutoRefreshPicker from "@/components/AutoRefreshPicker";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import { chart as chartColors, status as statusColors } from "@/lib/colors";
+import { axisTick, fullTimestamp, spanMinutes, windowCaption } from "@/lib/chartTime";
 
 export default function Dashboard() {
   const [summary, setSummary] = useState<DashboardData | null>(null);
   const [traces, setTraces] = useState<Trace[]>([]);
   const [errorTraces, setErrorTraces] = useState<Trace[]>([]);
-  const [reqSeries, setReqSeries] = useState<{ t: string; value: number }[]>([]);
+  const [reqSeries, setReqSeries] = useState<{ tms: number; value: number }[]>([]);
   const { range, setRange } = useGlobalTimeRange();
   const { environment } = useEnvironment();
   const intervalMinutes = rangeToIntervalMinutes(range);
@@ -37,10 +38,7 @@ export default function Dashboard() {
       setReqSeries(
         Array.from(byTime.entries())
           .sort(([a], [b]) => a.localeCompare(b))
-          .map(([ts, value]) => ({
-            t: new Date(ts).toLocaleTimeString("en-US", { hour12: false, hour: "2-digit", minute: "2-digit" }),
-            value,
-          })),
+          .map(([ts, value]) => ({ tms: new Date(ts).getTime(), value })),
       );
     });
   }, []);
@@ -114,7 +112,7 @@ export default function Dashboard() {
                     </linearGradient>
                   </defs>
                   <CartesianGrid stroke="hsl(var(--border))" strokeDasharray="2 4" vertical={false} />
-                  <XAxis dataKey="t" stroke="hsl(var(--muted-foreground))" fontSize={10} tickLine={false} axisLine={false} />
+                  <XAxis dataKey="tms" stroke="hsl(var(--muted-foreground))" fontSize={10} tickLine={false} axisLine={false} minTickGap={44} tickFormatter={(v) => axisTick(v, spanMinutes(reqSeries.map((p) => ({ timestamp: p.tms }))))} />
                   <YAxis stroke="hsl(var(--muted-foreground))" fontSize={10} tickLine={false} axisLine={false} width={32} />
                   <Tooltip
                     contentStyle={{
@@ -124,12 +122,16 @@ export default function Dashboard() {
                       fontSize: 11,
                       fontFamily: "JetBrains Mono, monospace",
                     }}
+                    labelFormatter={(v) => fullTimestamp(Number(v))}
                   />
                   <Area type="monotone" dataKey="value" stroke={chartColors.primary} strokeWidth={1.5} fill="url(#req)" />
                 </AreaChart>
               </ResponsiveContainer>
             )}
           </div>
+          {reqSeries.length > 0 && (
+            <div className="mt-1 text-[10px] font-mono text-muted-foreground text-right">{windowCaption(reqSeries.map((p) => ({ timestamp: p.tms })))}</div>
+          )}
         </div>
 
         {/* Recent Errors — complements the full recent-traces table below */}

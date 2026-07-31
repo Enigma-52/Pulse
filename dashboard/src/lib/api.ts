@@ -384,7 +384,7 @@ export async function fetchMetricSeries(
   minutes = 15,
   interval = 30,
   attr?: { key: string; value: string }
-): Promise<{ t: string; value: number }[]> {
+): Promise<{ tms: number; value: number }[]> {
   const q = new URLSearchParams({ minutes: String(minutes), interval: String(interval) });
   if (attr) {
     q.set("attr_key", attr.key);
@@ -398,7 +398,7 @@ export async function fetchMetricSeries(
   const data: { points: APIMetricSeriesPoint[] } = await res.json();
   if (!data.points) return [];
   return data.points.map((p) => ({
-    t: formatChartTime(p.timestamp),
+    tms: new Date(p.timestamp).getTime(),
     value: p.value,
   }));
 }

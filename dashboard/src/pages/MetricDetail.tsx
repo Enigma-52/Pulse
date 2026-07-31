@@ -9,6 +9,7 @@ import { useGlobalTimeRange } from "@/lib/timeRange";
 import AutoRefreshPicker from "@/components/AutoRefreshPicker";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import { chart as chartColors, fmtMs } from "@/lib/colors";
+import { axisTick, fullTimestamp, spanMinutes } from "@/lib/chartTime";
 
 function fmtValue(v: number, unit: string): string {
   if (unit === "ms") return fmtMs(v).replace("ms", "");
@@ -20,7 +21,7 @@ function fmtValue(v: number, unit: string): string {
 export default function MetricDetail() {
   const { id } = useParams();
   const [metric, setMetric] = useState<Metric | null>(null);
-  const [series, setSeries] = useState<{ t: string; value: number }[]>([]);
+  const [series, setSeries] = useState<{ tms: number; value: number }[]>([]);
   const [attributes, setAttributes] = useState<MetricAttribute[]>([]);
   const [attrFilter, setAttrFilter] = useState(""); // "key=value" or ""
   const [loading, setLoading] = useState(true);
@@ -170,7 +171,7 @@ export default function MetricDetail() {
                   </linearGradient>
                 </defs>
                 <CartesianGrid stroke="hsl(var(--border))" strokeDasharray="2 4" vertical={false} />
-                <XAxis dataKey="t" stroke="hsl(var(--muted-foreground))" fontSize={10} tickLine={false} axisLine={false} />
+                <XAxis dataKey="tms" stroke="hsl(var(--muted-foreground))" fontSize={10} tickLine={false} axisLine={false} minTickGap={44} tickFormatter={(v) => axisTick(v, spanMinutes(series.map((p) => ({ timestamp: p.tms }))))} />
                 <YAxis
                   stroke="hsl(var(--muted-foreground))"
                   fontSize={10}
@@ -188,6 +189,7 @@ export default function MetricDetail() {
                     fontFamily: "JetBrains Mono, monospace",
                   }}
                   formatter={(value: number) => [`${fmtValue(value, unit)} ${unit}`, metric.name]}
+                  labelFormatter={(v) => fullTimestamp(Number(v))}
                 />
                 <Area type="monotone" dataKey="value" stroke={chartColors.primary} strokeWidth={1.5} fill="url(#m-detail)" dot={false} />
               </AreaChart>
