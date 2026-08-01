@@ -36,7 +36,12 @@ app.post("/orders", async (req, res) => {
   }
 
   // 1) Validate the product via the catalog-service (cross-service HTTP span).
-  const pr = await fetch(`${CATALOG_URL}/products/${product_id}`);
+  let pr;
+  try {
+    pr = await fetch(`${CATALOG_URL}/products/${product_id}`);
+  } catch (e) {
+    return res.status(502).json({ error: "catalog unreachable" });
+  }
   if (pr.status === 404) return res.status(404).json({ error: "product not found" });
   if (!pr.ok) return res.status(502).json({ error: "catalog lookup failed" });
   const product = await pr.json();
