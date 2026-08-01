@@ -1,0 +1,74 @@
+# Real, instrumented microservices that export OTLP to a running Pulse instance.
+# Pulse + ClickHouse are expected to already be up (deploy/docker-compose.yml);
+# these services reach Pulse on the host at host.docker.internal:4321.
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: demo
+      POSTGRES_PASSWORD: demo
+      POSTGRES_DB: shop
+    volumes:
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U demo -d shop"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  catalog-service:
+    build: ./catalog-service
+    environment:
+      PG_DSN: postgresql://demo:demo@postgres:5432/shop
+      REDIS_URL: redis://redis:6379
+      OTEL_SERVICE_NAME: catalog-service
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://host.docker.internal:4321
+      OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
+      OTEL_RESOURCE_ATTRIBUTES: deployment.environment=production,service.version=1.3.0
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+
+  order-service:
+    build: ./order-service
+    environment:
+      PG_DSN: postgresql://demo:demo@postgres:5432/shop
+      REDIS_URL: redis://redis:6379
+      CATALOG_URL: http://catalog-service:8000
+      EXTERNAL_URL: https://httpbin.org/anything/charge
+      OTEL_SERVICE_NAME: order-service
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://host.docker.internal:4321
+      OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
+      OTEL_RESOURCE_ATTRIBUTES: deployment.environment=production,service.version=2.4.1
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      catalog-service: { condition: service_started }
+
+  traffic-gen:
+    build: ./traffic-gen
+    environment:
+      ORDER_URL: http://order-service:3000
+      CATALOG_URL: http://catalog-service:8000
+      RPS: "4"
+      OTEL_SERVICE_NAME: storefront-web
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://host.docker.internal:4321
+      OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
+      OTEL_RESOURCE_ATTRIBUTES: deployment.environment=production,service.version=0.9.0
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      order-service: { condition: service_started }
+      catalog-service: { condition: service_started }
