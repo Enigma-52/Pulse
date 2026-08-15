@@ -11,5 +11,11 @@
     <background_merges_mutations_concurrency_ratio>1</background_merges_mutations_concurrency_ratio>
     <background_schedule_pool_size>16</background_schedule_pool_size>
     <background_common_pool_size>4</background_common_pool_size>
+    <!-- Must stay <= background_pool_size * background_merges_mutations_concurrency_ratio
+         (4 above) or ClickHouse refuses to start with a sanity-check error. -->
+    <merge_tree>
+        <number_of_free_entries_in_pool_to_execute_mutation>2</number_of_free_entries_in_pool_to_execute_mutation>
+        <number_of_free_entries_in_pool_to_execute_optimize_entire_mtree>2</number_of_free_entries_in_pool_to_execute_optimize_entire_mtree>
+    </merge_tree>
     <skip_check_for_incorrect_settings>1</skip_check_for_incorrect_settings>
 </clickhouse>
