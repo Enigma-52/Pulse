@@ -1,6 +1,15 @@
 <clickhouse>
+    <!-- Ratio applies against the container's cgroup memory limit (set via
+         `mem_limit` in docker-compose.yml), so it auto-adapts instead of
+         needing a hardcoded byte value kept in sync with the container cap. -->
     <max_server_memory_usage_ratio>0.8</max_server_memory_usage_ratio>
-    <mark_cache_size>134217728</mark_cache_size>
-    <uncompressed_cache_size>67108864</uncompressed_cache_size>
+    <mark_cache_size>33554432</mark_cache_size>
+    <uncompressed_cache_size>0</uncompressed_cache_size>
+    <mmap_cache_size>200</mmap_cache_size>
+    <max_thread_pool_size>2000</max_thread_pool_size>
+    <background_pool_size>4</background_pool_size>
+    <background_merges_mutations_concurrency_ratio>1</background_merges_mutations_concurrency_ratio>
+    <background_schedule_pool_size>16</background_schedule_pool_size>
+    <background_common_pool_size>4</background_common_pool_size>
     <skip_check_for_incorrect_settings>1</skip_check_for_incorrect_settings>
 </clickhouse>

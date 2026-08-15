@@ -1,0 +1,36 @@
+name: Build & Push Pulse Images
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - context: pulse
+            image: ghcr.io/enigma-52/pulse
+          - context: dashboard
+            image: ghcr.io/enigma-52/pulse-dashboard
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Login to GHCR
+        run: echo ${{ secrets.GHCR_PAT }} | docker login ghcr.io -u Enigma-52 --password-stdin
+
+      - name: Build Docker image
+        run: |
+          docker build -t ${{ matrix.image }}:latest ${{ matrix.context }}
+
+      - name: Push image
+        run: |
+          docker push ${{ matrix.image }}:latest
